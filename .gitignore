@@ -1,0 +1,8 @@
+**/arm/
+**/x64/
+**/arm64/
+**/onecore/
+**/store/
+*.pdb
+libucrtd.lib
+ucrtd.lib
