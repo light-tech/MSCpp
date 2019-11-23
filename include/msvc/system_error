@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _SYSTEM_ERROR_
 #define _SYSTEM_ERROR_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <cerrno>
 #include <cstdlib> // for strerror
 #include <stdexcept> // for runtime_error
@@ -62,8 +63,7 @@ _NODISCARD const error_category& system_category() noexcept;
 
 class __declspec(novtable) error_category { // categorize an error
 public:
-    /* constexpr */ error_category() noexcept { // TRANSITION
-        // default constructor
+    /* constexpr */ error_category() noexcept { // TRANSITION, ABI
         _Addr = reinterpret_cast<uintptr_t>(this);
     }
 
@@ -291,20 +291,20 @@ _NODISCARD inline error_condition error_code::default_error_condition() const
 
 // FUNCTION make_error_code
 _NODISCARD inline error_code make_error_code(errc _Errno) noexcept { // make an error_code
-    return error_code((int) _Errno, generic_category());
+    return error_code(static_cast<int>(_Errno), generic_category());
 }
 
 _NODISCARD inline error_code make_error_code(io_errc _Errno) noexcept { // make an error_code
-    return error_code((int) _Errno, iostream_category());
+    return error_code(static_cast<int>(_Errno), iostream_category());
 }
 
 // FUNCTION make_error_condition
 _NODISCARD inline error_condition make_error_condition(errc _Errno) noexcept { // make an error_condition
-    return error_condition((int) _Errno, generic_category());
+    return error_condition(static_cast<int>(_Errno), generic_category());
 }
 
 _NODISCARD inline error_condition make_error_condition(io_errc _Errno) noexcept { // make an error_condition
-    return error_condition((int) _Errno, iostream_category());
+    return error_condition(static_cast<int>(_Errno), iostream_category());
 }
 
 // STRUCT TEMPLATE SPECIALIZATION hash
@@ -393,6 +393,10 @@ protected:
 #endif // _HAS_EXCEPTIONS
 };
 
+[[noreturn]] inline void _Throw_system_error(const errc _Errno) {
+    _THROW(system_error{_STD make_error_code(_Errno)});
+}
+
 _CRTIMP2_PURE const char* __CLRCALL_PURE_OR_CDECL _Syserror_map(int);
 _CRTIMP2_PURE int __CLRCALL_PURE_OR_CDECL _Winerror_map(int);
 _CRTIMP2_PURE unsigned long __CLRCALL_PURE_OR_CDECL _Winerror_message(
@@ -401,7 +405,7 @@ _CRTIMP2_PURE unsigned long __CLRCALL_PURE_OR_CDECL _Winerror_message(
 // CLASS _Generic_error_category
 class _Generic_error_category : public error_category { // categorize a generic error
 public:
-    _Generic_error_category() noexcept { // default constructor
+    _Generic_error_category() noexcept {
         _Addr = _Generic_addr;
     }
 
@@ -417,7 +421,7 @@ public:
 // CLASS _Iostream_error_category
 class _Iostream_error_category : public _Generic_error_category { // categorize an iostream error
 public:
-    _Iostream_error_category() noexcept { // default constructor
+    _Iostream_error_category() noexcept {
         _Addr = _Iostream_addr;
     }
 
@@ -426,7 +430,7 @@ public:
     }
 
     _NODISCARD virtual string message(int _Errcode) const override { // convert to name of error
-        if (_Errcode == (int) io_errc::stream) {
+        if (_Errcode == static_cast<int>(io_errc::stream)) {
             return "iostream stream error";
         } else {
             return _Generic_error_category::message(_Errcode);
@@ -437,7 +441,7 @@ public:
 // CLASS _System_error_category
 class _System_error_category : public error_category { // categorize an operating system error
 public:
-    _System_error_category() noexcept { // default constructor
+    _System_error_category() noexcept {
         _Addr = _System_addr;
     }
 
@@ -471,47 +475,6 @@ public:
     }
 };
 
-#ifdef _M_CEE_PURE
-template <class _Ty>
-struct _Immortalizer { // constructs _Ty, never destroys
-    _Immortalizer() { // construct _Ty inside _Storage
-        ::new (static_cast<void*>(&_Storage)) _Ty();
-    }
-
-    _Immortalizer(const _Immortalizer&) = delete;
-    _Immortalizer& operator=(const _Immortalizer&) = delete;
-
-    aligned_union_t<1, _Ty> _Storage;
-};
-
-template <class _Ty>
-inline _Ty& _Immortalize() { // return a reference to an object that will live forever
-    /* MAGIC */ static _Immortalizer<_Ty> _Static;
-    return reinterpret_cast<_Ty&>(_Static._Storage);
-}
-#else // ^^^ _M_CEE_PURE ^^^ // vvv !_M_CEE_PURE vvv
-template <class _Ty>
-inline int __stdcall _Immortalize_impl(
-    void*, void* _Storage_ptr, void**) noexcept { // adapt True Placement New to _Execute_once
-    ::new (_Storage_ptr) _Ty();
-    return 1;
-}
-
-template <class _Ty>
-inline _Ty& _Immortalize() { // return a reference to an object that will live forever
-    static_assert(sizeof(void*) == sizeof(once_flag), "TRANSITION, VSO#406237");
-    static_assert(alignof(void*) == alignof(once_flag), "TRANSITION, VSO#406237");
-    static void* _Flag = nullptr;
-    static aligned_union_t<1, _Ty> _Storage;
-    if (_Execute_once(reinterpret_cast<once_flag&>(_Flag), _Immortalize_impl<_Ty>, &_Storage)
-        == 0) { // _Execute_once should never fail if the callback never fails
-        _STD terminate();
-    }
-
-    return reinterpret_cast<_Ty&>(_Storage);
-}
-#endif // _M_CEE_PURE
-
 _NODISCARD inline const error_category& generic_category() noexcept { // get generic_category
     return _Immortalize<_Generic_error_category>();
 }
@@ -528,7 +491,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _SYSTEM_ERROR_
 
 /*

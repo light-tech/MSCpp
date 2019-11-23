@@ -2,9 +2,8 @@
 #pragma once
 #ifndef _CSTDINT_
 #define _CSTDINT_
-#ifndef RC_INVOKED
-
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <stdint.h>
 
@@ -90,7 +89,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CSTDINT_
 
 /*

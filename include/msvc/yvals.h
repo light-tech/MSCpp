@@ -2,9 +2,8 @@
 #pragma once
 #ifndef _YVALS
 #define _YVALS
-#ifndef RC_INVOKED
-
 #include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <crtdbg.h>
 
@@ -58,9 +57,9 @@ _STL_DISABLE_CLANG_WARNINGS
 // A2. Inspect _HAS_ITERATOR_DEBUGGING.
 #ifdef _HAS_ITERATOR_DEBUGGING // A2i. _HAS_ITERATOR_DEBUGGING is already defined, validate it.
 #if _ITERATOR_DEBUG_LEVEL == 2 && _HAS_ITERATOR_DEBUGGING != 1
-#error _ITERATOR_DEBUG_LEVEL == 2 must imply _HAS_ITERATOR_DEBUGGING == 1 .
+#error _ITERATOR_DEBUG_LEVEL == 2 must imply _HAS_ITERATOR_DEBUGGING == 1.
 #elif _ITERATOR_DEBUG_LEVEL < 2 && _HAS_ITERATOR_DEBUGGING != 0
-#error _ITERATOR_DEBUG_LEVEL < 2 must imply _HAS_ITERATOR_DEBUGGING == 0 .
+#error _ITERATOR_DEBUG_LEVEL < 2 must imply _HAS_ITERATOR_DEBUGGING == 0.
 #endif
 #else // A2ii. _HAS_ITERATOR_DEBUGGING is not yet defined, derive it.
 #if _ITERATOR_DEBUG_LEVEL == 2
@@ -73,9 +72,9 @@ _STL_DISABLE_CLANG_WARNINGS
 // A3. Inspect _SECURE_SCL.
 #ifdef _SECURE_SCL // A3i. _SECURE_SCL is already defined, validate it.
 #if _ITERATOR_DEBUG_LEVEL > 0 && _SECURE_SCL != 1
-#error _ITERATOR_DEBUG_LEVEL > 0 must imply _SECURE_SCL == 1 .
+#error _ITERATOR_DEBUG_LEVEL > 0 must imply _SECURE_SCL == 1.
 #elif _ITERATOR_DEBUG_LEVEL == 0 && _SECURE_SCL != 0
-#error _ITERATOR_DEBUG_LEVEL == 0 must imply _SECURE_SCL == 0 .
+#error _ITERATOR_DEBUG_LEVEL == 0 must imply _SECURE_SCL == 0.
 #endif
 #else // A3ii. _SECURE_SCL is not yet defined, derive it.
 #if _ITERATOR_DEBUG_LEVEL > 0
@@ -90,7 +89,7 @@ _STL_DISABLE_CLANG_WARNINGS
 // B1. Inspect _HAS_ITERATOR_DEBUGGING.
 #ifdef _HAS_ITERATOR_DEBUGGING // B1i. _HAS_ITERATOR_DEBUGGING is already defined, validate it.
 #if _HAS_ITERATOR_DEBUGGING > 1
-#error _HAS_ITERATOR_DEBUGGING must be either 0 or 1 .
+#error _HAS_ITERATOR_DEBUGGING must be either 0 or 1.
 #elif _HAS_ITERATOR_DEBUGGING == 1 && !defined(_DEBUG)
 #error _HAS_ITERATOR_DEBUGGING == 1 is not supported in release mode.
 #endif
@@ -105,7 +104,7 @@ _STL_DISABLE_CLANG_WARNINGS
 // B2. Inspect _SECURE_SCL.
 #ifdef _SECURE_SCL // B2i. _SECURE_SCL is already defined, validate it.
 #if _SECURE_SCL > 1
-#error _SECURE_SCL must be either 0 or 1 .
+#error _SECURE_SCL must be either 0 or 1.
 #endif
 #else // B2ii. _SECURE_SCL is not yet defined, default it.
 #if _HAS_ITERATOR_DEBUGGING == 1
@@ -150,9 +149,9 @@ _STL_DISABLE_CLANG_WARNINGS
 
 #ifdef _ITERATOR_DEBUG_ARRAY_OVERLOADS
 #if _ITERATOR_DEBUG_ARRAY_OVERLOADS != 0 && _ITERATOR_DEBUG_ARRAY_OVERLOADS != 1
-#error _ITERATOR_DEBUG_ARRAY_OVERLOADS must be either 0 or 1 .
+#error _ITERATOR_DEBUG_ARRAY_OVERLOADS must be either 0 or 1.
 #elif _ITERATOR_DEBUG_LEVEL == 0 && _ITERATOR_DEBUG_ARRAY_OVERLOADS == 1
-#error _ITERATOR_DEBUG_LEVEL == 0 must imply _ITERATOR_DEBUG_ARRAY_OVERLOADS == 0 .
+#error _ITERATOR_DEBUG_LEVEL == 0 must imply _ITERATOR_DEBUG_ARRAY_OVERLOADS == 0.
 #endif
 #else // _ITERATOR_DEBUG_ARRAY_OVERLOADS
 #if _ITERATOR_DEBUG_LEVEL == 0
@@ -161,6 +160,18 @@ _STL_DISABLE_CLANG_WARNINGS
 #define _ITERATOR_DEBUG_ARRAY_OVERLOADS 1
 #endif
 #endif // _ITERATOR_DEBUG_ARRAY_OVERLOADS
+
+#ifndef _CONTAINER_DEBUG_LEVEL
+#if _ITERATOR_DEBUG_LEVEL == 0
+#define _CONTAINER_DEBUG_LEVEL 0
+#else // ^^^ _ITERATOR_DEBUG_LEVEL == 0 // _ITERATOR_DEBUG_LEVEL != 0 vvv
+#define _CONTAINER_DEBUG_LEVEL 1
+#endif // _ITERATOR_DEBUG_LEVEL == 0
+#endif // _CONTAINER_DEBUG_LEVEL
+
+#if _ITERATOR_DEBUG_LEVEL != 0 && _CONTAINER_DEBUG_LEVEL == 0
+#error _ITERATOR_DEBUG_LEVEL != 0 must imply _CONTAINER_DEBUG_LEVEL == 1.
+#endif // _ITERATOR_DEBUG_LEVEL != 0 && _CONTAINER_DEBUG_LEVEL == 0
 
 #define _STL_REPORT_ERROR(mesg)              \
     do {                                     \
@@ -262,30 +273,32 @@ _STL_DISABLE_CLANG_WARNINGS
 #define _cpp_stdin (__acrt_iob_func(0))
 #define _cpp_stdout (__acrt_iob_func(1))
 #define _cpp_stderr (__acrt_iob_func(2))
-#define _cpp_isleadbyte(c) (__pctype_func()[(unsigned char) (c)] & _LEADBYTE)
+#define _cpp_isleadbyte(c) (__pctype_func()[static_cast<unsigned char>(c)] & _LEADBYTE)
 #endif // _CRTBLD
 
 #ifndef _CRTIMP2_IMPORT
 #if defined(CRTDLL2) && defined(_CRTBLD)
 #define _CRTIMP2_IMPORT __declspec(dllexport)
-#else
-#if defined(_DLL) && !defined(_STATIC_CPPLIB)
+#elif defined(_DLL) && !defined(_STATIC_CPPLIB)
 #define _CRTIMP2_IMPORT __declspec(dllimport)
 #else
 #define _CRTIMP2_IMPORT
 #endif
 #endif
-#endif
 
 #ifndef _CRTIMP2_PURE_IMPORT
-#if defined(MRTDLL) && defined(_CRTBLD)
-#define _CRTIMP2_PURE_IMPORT
-#else
-#ifdef _M_CEE_PURE
+#if defined(MRTDLL) && defined(_CRTBLD) || defined(_M_CEE_PURE)
 #define _CRTIMP2_PURE_IMPORT
 #else
 #define _CRTIMP2_PURE_IMPORT _CRTIMP2_IMPORT
 #endif
+#endif
+
+#ifndef _CRTIMP2_PURE_IMPORT_UNLESS_CODECVT_ID_SATELLITE
+#ifdef _BUILDING_SATELLITE_CODECVT_IDS
+#define _CRTIMP2_PURE_IMPORT_UNLESS_CODECVT_ID_SATELLITE
+#else
+#define _CRTIMP2_PURE_IMPORT_UNLESS_CODECVT_ID_SATELLITE _CRTIMP2_PURE_IMPORT
 #endif
 #endif
 
@@ -329,7 +342,7 @@ enum _Uninitialized { // tag for suppressing initialization
 class _CRTIMP2_PURE_IMPORT _Lockit { // lock while object in existence -- MUST NEST
 public:
 #if defined(_M_CEE_PURE) || defined(MRTDLL)
-    __CLR_OR_THIS_CALL _Lockit() : _Locktype(0) { // default construct
+    __CLR_OR_THIS_CALL _Lockit() : _Locktype(0) {
         _Lockit_ctor(this);
     }
 
@@ -342,7 +355,7 @@ public:
     }
 
 #else // defined(_M_CEE_PURE) || defined(MRTDLL)
-    __thiscall _Lockit(); // default construct
+    __thiscall _Lockit();
     explicit __thiscall _Lockit(int); // set the lock
     __thiscall ~_Lockit() noexcept; // clear the lock
 #endif // defined(_M_CEE_PURE) || defined(MRTDLL)
@@ -439,11 +452,11 @@ private:
 class _CRTIMP2_PURE_IMPORT _Init_locks { // initialize mutexes
 public:
 #if defined(_M_CEE_PURE) || defined(MRTDLL)
-    __CLR_OR_THIS_CALL _Init_locks() { // default construct
+    __CLR_OR_THIS_CALL _Init_locks() {
         _Init_locks_ctor(this);
     }
 
-    __CLR_OR_THIS_CALL ~_Init_locks() noexcept { // destroy the object
+    __CLR_OR_THIS_CALL ~_Init_locks() noexcept {
         _Init_locks_dtor(this);
     }
 
@@ -515,7 +528,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _YVALS
 
 /*

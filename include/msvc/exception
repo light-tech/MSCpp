@@ -2,9 +2,8 @@
 #pragma once
 #ifndef _EXCEPTION_
 #define _EXCEPTION_
-#ifndef RC_INVOKED
-
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <type_traits>
 
@@ -96,15 +95,14 @@ public:
         return *this;
     }
 
-    virtual __CLR_OR_THIS_CALL ~exception() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~exception() noexcept {}
 
     _NODISCARD virtual const char* __CLR_OR_THIS_CALL what() const noexcept { // return pointer to message string
-        return _Ptr != nullptr ? _Ptr : "unknown exception";
+        return _Ptr ? _Ptr : "unknown exception";
     }
 
     void __CLR_OR_THIS_CALL _Raise() const { // raise the exception
-        if (_STD _Raise_handler != nullptr) {
+        if (_STD _Raise_handler) {
             (*_STD _Raise_handler)(*this); // call raise handler if present
         }
 
@@ -127,8 +125,7 @@ public:
         : exception(_Message) { // construct from message string
     }
 
-    virtual __CLR_OR_THIS_CALL ~bad_exception() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~bad_exception() noexcept {}
 
 protected:
     virtual void __CLR_OR_THIS_CALL _Doraise() const { // raise this exception
@@ -143,8 +140,7 @@ public:
         : exception("bad allocation", 1) { // construct from message string with no memory allocation
     }
 
-    virtual __CLR_OR_THIS_CALL ~bad_alloc() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~bad_alloc() noexcept {}
 
 private:
     friend class bad_array_new_length;
@@ -157,6 +153,11 @@ protected:
     virtual void __CLR_OR_THIS_CALL _Doraise() const { // perform class-specific exception handling
         _RAISE(*this);
     }
+};
+
+class bad_array_new_length : public bad_alloc {
+public:
+    bad_array_new_length() noexcept : bad_alloc("bad array new length") {}
 };
 
 _STDEXT_END
@@ -192,23 +193,24 @@ _NODISCARD inline unexpected_handler __CRTDECL get_unexpected() noexcept { // ge
 #endif // _HAS_UNEXPECTED
 
 using _STDEXT bad_alloc;
+using _STDEXT bad_array_new_length;
 using _STDEXT bad_exception;
 
 _STD_END
 
 #endif // _HAS_EXCEPTIONS
 
-_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCreate(_Out_ void*);
-_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrDestroy(_Inout_ void*);
-_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCopy(_Out_ void*, _In_ const void*);
-_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrAssign(_Inout_ void*, _In_ const void*);
-_CRTIMP2_PURE bool __CLRCALL_PURE_OR_CDECL __ExceptionPtrCompare(_In_ const void*, _In_ const void*);
-_CRTIMP2_PURE bool __CLRCALL_PURE_OR_CDECL __ExceptionPtrToBool(_In_ const void*);
-_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrSwap(_Inout_ void*, _Inout_ void*);
-_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCurrentException(_Out_ void*);
+_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCreate(_Out_ void*) noexcept;
+_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrDestroy(_Inout_ void*) noexcept;
+_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCopy(_Out_ void*, _In_ const void*) noexcept;
+_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrAssign(_Inout_ void*, _In_ const void*) noexcept;
+_CRTIMP2_PURE bool __CLRCALL_PURE_OR_CDECL __ExceptionPtrCompare(_In_ const void*, _In_ const void*) noexcept;
+_CRTIMP2_PURE bool __CLRCALL_PURE_OR_CDECL __ExceptionPtrToBool(_In_ const void*) noexcept;
+_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrSwap(_Inout_ void*, _Inout_ void*) noexcept;
+_CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCurrentException(_Out_ void*) noexcept;
 [[noreturn]] _CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrRethrow(_In_ const void*);
 _CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCopyException(
-    _Inout_ void*, _In_ const void*, _In_ const void*);
+    _Inout_ void*, _In_ const void*, _In_ const void*) noexcept;
 
 _STD_BEGIN
 
@@ -243,10 +245,6 @@ public:
 
     explicit operator bool() const noexcept {
         return __ExceptionPtrToBool(this);
-    }
-
-    [[noreturn]] void _RethrowException() const {
-        __ExceptionPtrRethrow(this);
     }
 
     static exception_ptr _Current_exception() noexcept {
@@ -310,7 +308,7 @@ _NODISCARD inline exception_ptr current_exception() noexcept {
 }
 
 [[noreturn]] inline void rethrow_exception(_In_ exception_ptr _Ptr) {
-    _Ptr._RethrowException();
+    __ExceptionPtrRethrow(&_Ptr);
 }
 
 template <class _Ex>
@@ -321,11 +319,15 @@ _NODISCARD exception_ptr make_exception_ptr(_Ex _Except) noexcept {
     return exception_ptr::_Copy_exception(_STD addressof(_Except), __GetExceptionInfo(_Except));
 }
 
+// FUNCTION _Throw_bad_array_new_length
+[[noreturn]] inline void _Throw_bad_array_new_length() {
+    _THROW(bad_array_new_length{});
+}
+
 // CLASS nested_exception
 class nested_exception { // wrap an exception_ptr
 public:
-    nested_exception() noexcept : _Exc(_STD current_exception()) { // default construct
-    }
+    nested_exception() noexcept : _Exc(_STD current_exception()) {}
 
     nested_exception(const nested_exception&) noexcept = default;
     nested_exception& operator=(const nested_exception&) noexcept = default;
@@ -355,8 +357,23 @@ struct _With_nested : _Uty, nested_exception { // glue user exception to nested_
     }
 };
 
+#if _HAS_IF_CONSTEXPR
 template <class _Ty>
-[[noreturn]] inline void _Throw_with_nested(_Ty&& _Arg, true_type) { // throw user exception glued to nested_exception
+[[noreturn]] void throw_with_nested(_Ty&& _Arg) { // throw user exception, glued to nested_exception if possible
+    using _Uty = decay_t<_Ty>;
+
+    if constexpr (is_class_v<_Uty> && !is_base_of_v<nested_exception, _Uty> && !is_final_v<_Uty>) {
+        // throw user exception glued to nested_exception
+        using _Glued = _With_nested<_Ty, _Uty>;
+        _THROW(_Glued(_STD forward<_Ty>(_Arg)));
+    } else {
+        // throw user exception by itself
+        _THROW(_STD forward<_Ty>(_Arg));
+    }
+}
+#else // ^^^ _HAS_IF_CONSTEXPR ^^^ // vvv !_HAS_IF_CONSTEXPR vvv
+template <class _Ty>
+[[noreturn]] void _Throw_with_nested(_Ty&& _Arg, true_type) { // throw user exception glued to nested_exception
     using _Uty   = decay_t<_Ty>;
     using _Glued = _With_nested<_Ty, _Uty>;
 
@@ -364,23 +381,24 @@ template <class _Ty>
 }
 
 template <class _Ty>
-[[noreturn]] inline void _Throw_with_nested(_Ty&& _Arg, false_type) { // throw user exception by itself
+[[noreturn]] void _Throw_with_nested(_Ty&& _Arg, false_type) { // throw user exception by itself
     _THROW(_STD forward<_Ty>(_Arg));
 }
 
 template <class _Ty>
-[[noreturn]] inline void throw_with_nested(_Ty&& _Arg) { // throw user exception, glued to nested_exception if possible
+[[noreturn]] void throw_with_nested(_Ty&& _Arg) { // throw user exception, glued to nested_exception if possible
     using _Uty = decay_t<_Ty>;
 
     bool_constant<is_class_v<_Uty> && !is_base_of_v<nested_exception, _Uty> && !is_final_v<_Uty>> _Tag;
 
     _Throw_with_nested(_STD forward<_Ty>(_Arg), _Tag);
 }
+#endif // _HAS_IF_CONSTEXPR
 
 #ifdef _CPPRTTI
 // FUNCTION TEMPLATE rethrow_if_nested
 template <class _Ty>
-inline void _Rethrow_if_nested(const _Ty* _Ptr, true_type) { // use dynamic_cast
+void _Rethrow_if_nested(const _Ty* _Ptr, true_type) { // use dynamic_cast
     const auto _Nested = dynamic_cast<const nested_exception*>(_Ptr);
 
     if (_Nested) {
@@ -389,11 +407,11 @@ inline void _Rethrow_if_nested(const _Ty* _Ptr, true_type) { // use dynamic_cast
 }
 
 template <class _Ty>
-inline void _Rethrow_if_nested(const _Ty*, false_type) { // can't use dynamic_cast
+void _Rethrow_if_nested(const _Ty*, false_type) { // can't use dynamic_cast
 }
 
 template <class _Ty>
-inline void rethrow_if_nested(const _Ty& _Arg) { // detect nested_exception inheritance
+void rethrow_if_nested(const _Ty& _Arg) { // detect nested_exception inheritance
     bool_constant<
         is_polymorphic_v<_Ty> && (!is_base_of_v<nested_exception, _Ty> || is_convertible_v<_Ty*, nested_exception*>)>
         _Tag;
@@ -412,7 +430,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _EXCEPTION_
 
 /*

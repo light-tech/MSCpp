@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _STDEXCEPT_
 #define _STDEXCEPT_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <exception>
 #include <xstring>
 
@@ -201,12 +202,16 @@ protected:
     }
 #endif // _HAS_EXCEPTIONS
 };
+
+[[noreturn]] inline void _Throw_range_error(const char* const _Message) {
+    _THROW(range_error{_Message});
+}
 _STD_END
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _STDEXCEPT_
 
 /*

@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _MUTEX_
 #define _MUTEX_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #ifdef _M_CEE_PURE
 #error <mutex> is not supported when compiling with /clr:pure.
@@ -81,9 +82,8 @@ private:
 
 class mutex : public _Mutex_base { // class for mutual exclusion
 public:
-    /* constexpr */ mutex() noexcept // TRANSITION
-        : _Mutex_base() { // default construct
-    }
+    /* constexpr */ mutex() noexcept // TRANSITION, ABI
+        : _Mutex_base() {}
 
     mutex(const mutex&) = delete;
     mutex& operator=(const mutex&) = delete;
@@ -91,8 +91,7 @@ public:
 
 class recursive_mutex : public _Mutex_base { // class for recursive mutual exclusion
 public:
-    recursive_mutex() : _Mutex_base(_Mtx_recursive) { // default construct
-    }
+    recursive_mutex() : _Mutex_base(_Mtx_recursive) {}
 
     _NODISCARD bool try_lock() noexcept { // try to lock the mutex
         return _Mutex_base::try_lock();
@@ -127,8 +126,7 @@ public:
     using mutex_type = _Mutex;
 
     // CONSTRUCT, ASSIGN, AND DESTROY
-    unique_lock() noexcept : _Pmtx(nullptr), _Owns(false) { // default construct
-    }
+    unique_lock() noexcept : _Pmtx(nullptr), _Owns(false) {}
 
     explicit unique_lock(_Mutex& _Mtx) : _Pmtx(_STD addressof(_Mtx)), _Owns(false) { // construct and lock
         _Pmtx->lock();
@@ -225,7 +223,7 @@ public:
 
     void unlock() { // try to unlock the mutex
         if (!_Pmtx || !_Owns) {
-            _THROW(system_error(_STD make_error_code(errc::operation_not_permitted)));
+            _Throw_system_error(errc::operation_not_permitted);
         }
 
         _Pmtx->unlock();
@@ -262,11 +260,11 @@ private:
 
     void _Validate() const { // check if the mutex can be locked
         if (!_Pmtx) {
-            _THROW(system_error(_STD make_error_code(errc::operation_not_permitted)));
+            _Throw_system_error(errc::operation_not_permitted);
         }
 
         if (_Owns) {
-            _THROW(system_error(_STD make_error_code(errc::resource_deadlock_would_occur)));
+            _Throw_system_error(errc::resource_deadlock_would_occur);
         }
     }
 };
@@ -280,14 +278,14 @@ void swap(unique_lock<_Mutex>& _Left,
 
 // FUNCTION TEMPLATE _Lock_from_locks
 template <size_t... _Indices, class... _LockN>
-inline void _Lock_from_locks(const int _Target, index_sequence<_Indices...>, _LockN&... _LkN) { // lock _LkN[_Target]
+void _Lock_from_locks(const int _Target, index_sequence<_Indices...>, _LockN&... _LkN) { // lock _LkN[_Target]
     int _Ignored[] = {((static_cast<int>(_Indices) == _Target ? (void) _LkN.lock() : void()), 0)...};
     (void) _Ignored;
 }
 
 // FUNCTION TEMPLATE _Try_lock_from_locks
 template <size_t... _Indices, class... _LockN>
-inline bool _Try_lock_from_locks(
+bool _Try_lock_from_locks(
     const int _Target, index_sequence<_Indices...>, _LockN&... _LkN) { // try to lock _LkN[_Target]
     bool _Result{};
     int _Ignored[] = {((static_cast<int>(_Indices) == _Target ? (void) (_Result = _LkN.try_lock()) : void()), 0)...};
@@ -297,7 +295,7 @@ inline bool _Try_lock_from_locks(
 
 // FUNCTION TEMPLATE _Unlock_locks
 template <size_t... _Indices, class... _LockN>
-inline void _Unlock_locks(
+void _Unlock_locks(
     const int _First, const int _Last, index_sequence<_Indices...>, _LockN&... _LkN) noexcept { // enforces termination
     // unlock locks in _LkN[_First, _Last)
     int _Ignored[] = {
@@ -308,7 +306,7 @@ inline void _Unlock_locks(
 
 // FUNCTION TEMPLATE try_lock
 template <class... _LockN>
-inline int _Try_lock_range(
+int _Try_lock_range(
     const int _First, const int _Last, _LockN&... _LkN) { // try to lock all locks in _LkN[_First, _Last)
     using _Indices = index_sequence_for<_LockN...>;
     int _Next      = _First;
@@ -328,12 +326,12 @@ inline int _Try_lock_range(
 }
 
 template <class _Lock0, class _Lock1, class _Lock2, class... _LockN>
-inline int _Try_lock1(_Lock0& _Lk0, _Lock1& _Lk1, _Lock2& _Lk2, _LockN&... _LkN) { // try to lock 3 or more locks
+int _Try_lock1(_Lock0& _Lk0, _Lock1& _Lk1, _Lock2& _Lk2, _LockN&... _LkN) { // try to lock 3 or more locks
     return _Try_lock_range(0, sizeof...(_LockN) + 3, _Lk0, _Lk1, _Lk2, _LkN...);
 }
 
 template <class _Lock0, class _Lock1>
-inline int _Try_lock1(_Lock0& _Lk0,
+int _Try_lock1(_Lock0& _Lk0,
     _Lock1& _Lk1) { // try to lock 2 locks, special case for better codegen and reduced metaprogramming for common case
     if (!_Lk0.try_lock()) {
         return 0;
@@ -353,16 +351,15 @@ inline int _Try_lock1(_Lock0& _Lk0,
 }
 
 template <class _Lock0, class _Lock1, class... _LockN>
-_NODISCARD inline int try_lock(_Lock0& _Lk0, _Lock1& _Lk1, _LockN&... _LkN) { // try to lock multiple locks
+_NODISCARD int try_lock(_Lock0& _Lk0, _Lock1& _Lk1, _LockN&... _LkN) { // try to lock multiple locks
     return _Try_lock1(_Lk0, _Lk1, _LkN...);
 }
 
 
 // FUNCTION TEMPLATE lock
 template <class... _LockN>
-inline int _Lock_attempt(
-    const int _Hard_lock, _LockN&... _LkN) { // attempt to lock 3 or more locks, starting by locking _LkN[_Hard_lock]
-                                             // and trying to lock the rest
+int _Lock_attempt(const int _Hard_lock, _LockN&... _LkN) { // attempt to lock 3 or more locks, starting by locking
+                                                           // _LkN[_Hard_lock] and trying to lock the rest
     using _Indices = index_sequence_for<_LockN...>;
     _Lock_from_locks(_Hard_lock, _Indices{}, _LkN...);
     int _Failed        = -1;
@@ -389,7 +386,7 @@ inline int _Lock_attempt(
 }
 
 template <class _Lock0, class _Lock1, class _Lock2, class... _LockN>
-inline void _Lock_nonmember1(
+void _Lock_nonmember1(
     _Lock0& _Lk0, _Lock1& _Lk1, _Lock2& _Lk2, _LockN&... _LkN) { // lock 3 or more locks, without deadlock
     int _Hard_lock = 0;
     while (_Hard_lock != -1) {
@@ -398,8 +395,8 @@ inline void _Lock_nonmember1(
 }
 
 template <class _Lock0, class _Lock1>
-inline bool _Lock_attempt_small(_Lock0& _Lk0, _Lock1& _Lk1) { // attempt to lock 2 locks, by first locking _Lk0, and
-                                                              // then trying to lock _Lk1 returns whether to try again
+bool _Lock_attempt_small(_Lock0& _Lk0, _Lock1& _Lk1) { // attempt to lock 2 locks, by first locking _Lk0, and
+                                                       // then trying to lock _Lk1 returns whether to try again
     _Lk0.lock();
     _TRY_BEGIN
     if (_Lk1.try_lock()) {
@@ -416,14 +413,14 @@ inline bool _Lock_attempt_small(_Lock0& _Lk0, _Lock1& _Lk1) { // attempt to lock
 }
 
 template <class _Lock0, class _Lock1>
-inline void _Lock_nonmember1(_Lock0& _Lk0, _Lock1& _Lk1) { // lock 2 locks, without deadlock, special case for better
-                                                           // codegen and reduced metaprogramming for common case
+void _Lock_nonmember1(_Lock0& _Lk0, _Lock1& _Lk1) { // lock 2 locks, without deadlock, special case for better
+                                                    // codegen and reduced metaprogramming for common case
     while (_Lock_attempt_small(_Lk0, _Lk1) && _Lock_attempt_small(_Lk1, _Lk0)) { // keep trying
     }
 }
 
 template <class _Lock0, class _Lock1, class... _LockN>
-inline void lock(_Lock0& _Lk0, _Lock1& _Lk1, _LockN&... _LkN) { // lock multiple locks, without deadlock
+void lock(_Lock0& _Lk0, _Lock1& _Lk1, _LockN&... _LkN) { // lock multiple locks, without deadlock
     _Lock_nonmember1(_Lk0, _Lk1, _LkN...);
 }
 
@@ -465,7 +462,8 @@ public:
     }
 
     ~scoped_lock() noexcept { // unlock all
-        _For_each_tuple_element(_MyMutexes, [](auto& _Mutex) noexcept { _Mutex.unlock(); });
+        _For_each_tuple_element(
+            _MyMutexes, [](auto& _Mutex) noexcept { _Mutex.unlock(); });
     }
 
     scoped_lock(const scoped_lock&) = delete;
@@ -517,14 +515,14 @@ public:
 
 // FUNCTION TEMPLATE _Invoke_stored_explicit
 template <class... _Types, size_t... _Indices>
-inline auto _Invoke_stored_explicit(tuple<_Types...>&& _Tuple, index_sequence<_Indices...>) -> decltype(
+auto _Invoke_stored_explicit(tuple<_Types...>&& _Tuple, index_sequence<_Indices...>) -> decltype(
     _STD invoke(_STD get<_Indices>(_STD move(_Tuple))...)) { // invoke() a tuple with explicit parameter ordering
     return _STD invoke(_STD get<_Indices>(_STD move(_Tuple))...);
 }
 
 // FUNCTION TEMPLATE _Invoke_stored
 template <class... _Types>
-inline auto _Invoke_stored(tuple<_Types...>&& _Tuple)
+auto _Invoke_stored(tuple<_Types...>&& _Tuple)
     -> decltype(_Invoke_stored_explicit(_STD move(_Tuple), index_sequence_for<_Types...>())) { // invoke() a tuple
     return _Invoke_stored_explicit(_STD move(_Tuple), index_sequence_for<_Types...>());
 }
@@ -533,7 +531,7 @@ inline auto _Invoke_stored(tuple<_Types...>&& _Tuple)
 [[noreturn]] _CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL _XGetLastError();
 
 template <class _Tuple, class _Seq, size_t _Idx>
-inline int __stdcall _Callback_once(void*, void* _Pv, void**) { // adapt call_once() to callback API
+int __stdcall _Callback_once(void*, void* _Pv, void**) { // adapt call_once() to callback API
     _Tuple* _Ptup = static_cast<_Tuple*>(_Pv);
 
     _TRY_BEGIN
@@ -550,7 +548,7 @@ inline int __stdcall _Callback_once(void*, void* _Pv, void**) { // adapt call_on
 }
 
 template <class _Fn, class... _Args>
-inline void(call_once)(once_flag& _Flag, _Fn&& _Fx, _Args&&... _Ax) { // call _Fx(_Ax...) once
+void(call_once)(once_flag& _Flag, _Fn&& _Fx, _Args&&... _Ax) { // call _Fx(_Ax...) once
     using _Tuple = tuple<_Fn&&, _Args&&..., exception_ptr&>;
     using _Seq   = make_index_sequence<1 + sizeof...(_Args)>;
 
@@ -747,8 +745,7 @@ struct _UInt_is_zero {
 
 class timed_mutex { // class for timed mutual exclusion
 public:
-    timed_mutex() noexcept : _My_locked(0) { // default construct
-    }
+    timed_mutex() noexcept : _My_locked(0) {}
 
     timed_mutex(const timed_mutex&) = delete;
     timed_mutex& operator=(const timed_mutex&) = delete;
@@ -815,8 +812,7 @@ private:
 
 class recursive_timed_mutex { // class for recursive timed mutual exclusion
 public:
-    recursive_timed_mutex() noexcept : _My_locked(0) { // default construct
-    }
+    recursive_timed_mutex() noexcept : _My_locked(0) {}
 
     recursive_timed_mutex(const recursive_timed_mutex&) = delete;
     recursive_timed_mutex& operator=(const recursive_timed_mutex&) = delete;
@@ -830,7 +826,7 @@ public:
             if (_My_locked < UINT_MAX) {
                 ++_My_locked;
             } else {
-                _THROW(system_error(_STD make_error_code(errc::device_or_resource_busy)));
+                _Throw_system_error(errc::device_or_resource_busy);
             }
         } else {
             while (_My_locked != 0) {
@@ -931,7 +927,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _MUTEX_
 
 /*

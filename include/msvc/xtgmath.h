@@ -4,8 +4,8 @@
 #pragma once
 #ifndef _XTGMATH
 #define _XTGMATH
-#ifndef RC_INVOKED
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <cstdlib>
 #include <xtr1common>
@@ -24,91 +24,85 @@ using _Common_float_type_t = conditional_t<is_same_v<_Ty1, long double> || is_sa
         double>>; // find type for two-argument math function
 _STD_END
 
-#define _CRTDEFAULT
-#define _CRTSPECIAL _ACRTIMP
 
-#define _GENERIC_MATH1R(FUN, RET, CRTTYPE)                                  \
-    extern "C" _Check_return_ CRTTYPE RET __cdecl FUN(_In_ double);         \
-    template <class _Ty, class = _STD enable_if_t<_STD is_integral_v<_Ty>>> \
-    _NODISCARD inline RET FUN(_Ty _Left) {                                  \
-        return _CSTD FUN(static_cast<double>(_Left));                       \
+#define _GENERIC_MATH1R(FUN, RET)                                     \
+    template <class _Ty, class = _STD enable_if_t<_STD is_integral_v<_Ty>>>    \
+    _NODISCARD RET FUN(_Ty _Left) noexcept { /* strengthened */                \
+        return _CSTD FUN(static_cast<double>(_Left));                          \
     }
 
-#define _GENERIC_MATH1(FUN, CRTTYPE) _GENERIC_MATH1R(FUN, double, CRTTYPE)
+#define _GENERIC_MATH1(FUN) _GENERIC_MATH1R(FUN, double)
 
-#define _GENERIC_MATH1X(FUN, ARG2, CRTTYPE)                                  \
-    extern "C" _Check_return_ CRTTYPE double __cdecl FUN(_In_ double, ARG2); \
-    template <class _Ty, class = _STD enable_if_t<_STD is_integral_v<_Ty>>>  \
-    _NODISCARD inline double FUN(_Ty _Left, ARG2 _Arg2) {                    \
-        return _CSTD FUN(static_cast<double>(_Left), _Arg2);                 \
+#define _GENERIC_MATH1X(FUN, ARG2)                                             \
+    template <class _Ty, class = _STD enable_if_t<_STD is_integral_v<_Ty>>>             \
+    _NODISCARD double FUN(_Ty _Left, ARG2 _Arg2) noexcept { /* strengthened */          \
+        return _CSTD FUN(static_cast<double>(_Left), _Arg2);                            \
     }
 
-#define _GENERIC_MATH2_CALL(FUN, CRTTYPE, CALL_OPT)                                         \
-    extern "C" _Check_return_ CRTTYPE double CALL_OPT FUN(_In_ double, _In_ double);        \
-    template <class _Ty1, class _Ty2,                                                       \
-        class = _STD enable_if_t<_STD is_arithmetic_v<_Ty1> && _STD is_arithmetic_v<_Ty2>>> \
-    _NODISCARD inline _STD _Common_float_type_t<_Ty1, _Ty2> FUN(_Ty1 _Left, _Ty2 _Right) {  \
-        using _Common = _STD _Common_float_type_t<_Ty1, _Ty2>;                              \
-        return _CSTD FUN(static_cast<_Common>(_Left), static_cast<_Common>(_Right));        \
+#define _GENERIC_MATH2(FUN)                                                             \
+    template <class _Ty1, class _Ty2,                                                                           \
+        class = _STD enable_if_t<_STD is_arithmetic_v<_Ty1> && _STD is_arithmetic_v<_Ty2>>>                     \
+    _NODISCARD _STD _Common_float_type_t<_Ty1, _Ty2> FUN(_Ty1 _Left, _Ty2 _Right) noexcept { /* strengthened */ \
+        using _Common = _STD _Common_float_type_t<_Ty1, _Ty2>;                                                  \
+        return _CSTD FUN(static_cast<_Common>(_Left), static_cast<_Common>(_Right));                            \
     }
-
-#define _GENERIC_MATH2(FUN, CRTTYPE) _GENERIC_MATH2_CALL(FUN, CRTTYPE, __cdecl)
 
 template <class _Ty1, class _Ty2, class = _STD enable_if_t<_STD is_arithmetic_v<_Ty1> && _STD is_arithmetic_v<_Ty2>>>
-_NODISCARD inline _STD _Common_float_type_t<_Ty1, _Ty2> pow(
-    const _Ty1 _Left, const _Ty2 _Right) { // bring mixed types to a common type
+_NODISCARD _STD _Common_float_type_t<_Ty1, _Ty2> pow(const _Ty1 _Left, const _Ty2 _Right) noexcept { // strengthened
     using _Common = _STD _Common_float_type_t<_Ty1, _Ty2>;
     return _CSTD pow(static_cast<_Common>(_Left), static_cast<_Common>(_Right));
 }
 
-// _GENERIC_MATH1(abs, _CRTDEFAULT) // has integer overloads
-_GENERIC_MATH1(acos, _CRTDEFAULT)
-_GENERIC_MATH1(asin, _CRTDEFAULT)
-_GENERIC_MATH1(atan, _CRTDEFAULT)
-_GENERIC_MATH2(atan2, _CRTDEFAULT)
-_GENERIC_MATH1(ceil, _CRTSPECIAL)
-_GENERIC_MATH1(cos, _CRTDEFAULT)
-_GENERIC_MATH1(cosh, _CRTDEFAULT)
-_GENERIC_MATH1(exp, _CRTDEFAULT)
+// _GENERIC_MATH1(abs) // has integer overloads
+_GENERIC_MATH1(acos)
+_GENERIC_MATH1(asin)
+_GENERIC_MATH1(atan)
+_GENERIC_MATH2(atan2)
+_GENERIC_MATH1(ceil)
+_GENERIC_MATH1(cos)
+_GENERIC_MATH1(cosh)
+_GENERIC_MATH1(exp)
+_GENERIC_MATH1(fabs)
+_GENERIC_MATH1(floor)
+_GENERIC_MATH2(fmod)
 
-_GENERIC_MATH1(fabs, _CRT_JIT_INTRINSIC)
+template <class _Ty, class = _STD enable_if_t<_STD is_integral_v<_Ty>>>
+double frexp(_Ty _Value, _Out_ int* const _Exp) noexcept { // strengthened
+    return _CSTD frexp(static_cast<double>(_Value), _Exp);
+}
 
-_GENERIC_MATH1(floor, _CRTSPECIAL)
-_GENERIC_MATH2(fmod, _CRTDEFAULT)
-_GENERIC_MATH1X(frexp, _Out_ int*, _CRTSPECIAL)
-_GENERIC_MATH1X(ldexp, _In_ int, _CRTSPECIAL)
-_GENERIC_MATH1(log, _CRTDEFAULT)
-_GENERIC_MATH1(log10, _CRTDEFAULT)
-// _GENERIC_MATH1(modf, _CRTDEFAULT) // types must match
-// _GENERIC_MATH2(pow, _CRTDEFAULT) // hand crafted
-_GENERIC_MATH1(sin, _CRTDEFAULT)
-_GENERIC_MATH1(sinh, _CRTDEFAULT)
-_GENERIC_MATH1(sqrt, _CRTDEFAULT)
-_GENERIC_MATH1(tan, _CRTDEFAULT)
-_GENERIC_MATH1(tanh, _CRTDEFAULT)
+_GENERIC_MATH1X(ldexp, _In_ int)
+_GENERIC_MATH1(log)
+_GENERIC_MATH1(log10)
+// _GENERIC_MATH1_DISCARD(modf) // types must match
+// _GENERIC_MATH2(pow) // hand crafted
+_GENERIC_MATH1(sin)
+_GENERIC_MATH1(sinh)
+_GENERIC_MATH1(sqrt)
+_GENERIC_MATH1(tan)
+_GENERIC_MATH1(tanh)
 
 // C99 MATH FUNCTIONS
 
 // FUNCTION TEMPLATE fma
 #if !_HAS_IF_CONSTEXPR
-inline float _Fma(float _Left, float _Middle, float _Right) { // call float fma
+inline float _Fma(float _Left, float _Middle, float _Right) noexcept { // strengthened
     return _CSTD fmaf(_Left, _Middle, _Right);
 }
 
-inline double _Fma(double _Left, double _Middle, double _Right) { // call double fma
+inline double _Fma(double _Left, double _Middle, double _Right) noexcept { // strengthened
     return _CSTD fma(_Left, _Middle, _Right);
 }
 
-inline long double _Fma(long double _Left, long double _Middle,
-    long double _Right) { // call long double fma
+inline long double _Fma(long double _Left, long double _Middle, long double _Right) noexcept { // strengthened
     return _CSTD fmal(_Left, _Middle, _Right);
 }
-#endif // ^^^ original code ^^^
+#endif // !_HAS_IF_CONSTEXPR
 
 template <class _Ty1, class _Ty2, class _Ty3,
     class = _STD enable_if_t<_STD is_arithmetic_v<_Ty1> && _STD is_arithmetic_v<_Ty2> && _STD is_arithmetic_v<_Ty3>>>
-_NODISCARD inline _STD _Common_float_type_t<_Ty1, _STD _Common_float_type_t<_Ty2, _Ty3>> fma(
-    _Ty1 _Left, _Ty2 _Middle, _Ty3 _Right) { // bring mixed types to a common type
+_NODISCARD _STD _Common_float_type_t<_Ty1, _STD _Common_float_type_t<_Ty2, _Ty3>> fma(
+    _Ty1 _Left, _Ty2 _Middle, _Ty3 _Right) noexcept { // strengthened
     using _Common = _STD _Common_float_type_t<_Ty1, _STD _Common_float_type_t<_Ty2, _Ty3>>;
 #if _HAS_IF_CONSTEXPR
     if constexpr (_STD is_same_v<_Common, float>) {
@@ -118,29 +112,28 @@ _NODISCARD inline _STD _Common_float_type_t<_Ty1, _STD _Common_float_type_t<_Ty2
     } else {
         return _CSTD fmal(static_cast<_Common>(_Left), static_cast<_Common>(_Middle), static_cast<_Common>(_Right));
     }
-#else // vvv original code vvv
+#else // ^^^ use "if constexpr" dispatch / use overload resolution vvv
     return _Fma(static_cast<_Common>(_Left), static_cast<_Common>(_Middle), static_cast<_Common>(_Right));
-#endif // ^^^ original code ^^^
+#endif // _HAS_IF_CONSTEXPR
 }
 
 // FUNCTION TEMPLATE remquo
 #if !_HAS_IF_CONSTEXPR
-inline float _Remquo(float _Left, float _Right, int* _Pquo) { // call float remquo
+inline float _Remquo(float _Left, float _Right, int* _Pquo) noexcept { // strengthened
     return _CSTD remquof(_Left, _Right, _Pquo);
 }
 
-inline double _Remquo(double _Left, double _Right, int* _Pquo) { // call double remquo
+inline double _Remquo(double _Left, double _Right, int* _Pquo) noexcept { // strengthened
     return _CSTD remquo(_Left, _Right, _Pquo);
 }
 
-inline long double _Remquo(long double _Left, long double _Right, int* _Pquo) { // call long double remquo
+inline long double _Remquo(long double _Left, long double _Right, int* _Pquo) noexcept { // strengthened
     return _CSTD remquol(_Left, _Right, _Pquo);
 }
-#endif // ^^^ original code ^^^
+#endif // !_HAS_IF_CONSTEXPR
 
 template <class _Ty1, class _Ty2, class = _STD enable_if_t<_STD is_arithmetic_v<_Ty1> && _STD is_arithmetic_v<_Ty2>>>
-inline _STD _Common_float_type_t<_Ty1, _Ty2> remquo(
-    _Ty1 _Left, _Ty2 _Right, int* _Pquo) { // bring mixed types to a common type
+_STD _Common_float_type_t<_Ty1, _Ty2> remquo(_Ty1 _Left, _Ty2 _Right, int* _Pquo) noexcept { // strengthened
     using _Common = _STD _Common_float_type_t<_Ty1, _Ty2>;
 #if _HAS_IF_CONSTEXPR
     if constexpr (_STD is_same_v<_Common, float>) {
@@ -150,59 +143,56 @@ inline _STD _Common_float_type_t<_Ty1, _Ty2> remquo(
     } else {
         return _CSTD remquol(static_cast<_Common>(_Left), static_cast<_Common>(_Right), _Pquo);
     }
-#else // vvv original code vvv
+#else // ^^^ use "if constexpr" dispatch / use overload resolution vvv
     return _Remquo(static_cast<_Common>(_Left), static_cast<_Common>(_Right), _Pquo);
-#endif // ^^^ original code ^^^
+#endif // _HAS_IF_CONSTEXPR
 }
 
-_GENERIC_MATH1(acosh, _CRTSPECIAL)
-_GENERIC_MATH1(asinh, _CRTSPECIAL)
-_GENERIC_MATH1(atanh, _CRTSPECIAL)
-_GENERIC_MATH1(cbrt, _CRTSPECIAL)
-_GENERIC_MATH2(copysign, _CRTSPECIAL)
-_GENERIC_MATH1(erf, _CRTSPECIAL)
-_GENERIC_MATH1(erfc, _CRTSPECIAL)
-_GENERIC_MATH1(expm1, _CRTSPECIAL)
-_GENERIC_MATH1(exp2, _CRTSPECIAL)
-_GENERIC_MATH2(fdim, _CRTSPECIAL)
-// _GENERIC_MATH3(fma, _CRTSPECIAL) // hand crafted
-_GENERIC_MATH2(fmax, _CRTSPECIAL)
-_GENERIC_MATH2(fmin, _CRTSPECIAL)
-_GENERIC_MATH2(hypot, _CRTSPECIAL)
-_GENERIC_MATH1R(ilogb, int, _CRTSPECIAL)
-_GENERIC_MATH1(lgamma, _CRTSPECIAL)
-_GENERIC_MATH1R(llrint, long long, _CRTSPECIAL)
-_GENERIC_MATH1R(llround, long long, _CRTSPECIAL)
-_GENERIC_MATH1(log1p, _CRTSPECIAL)
-_GENERIC_MATH1(log2, _CRTSPECIAL)
-_GENERIC_MATH1(logb, _CRTSPECIAL)
-_GENERIC_MATH1R(lrint, long, _CRTSPECIAL)
-_GENERIC_MATH1R(lround, long, _CRTSPECIAL)
-_GENERIC_MATH1(nearbyint, _CRTSPECIAL)
-_GENERIC_MATH2(nextafter, _CRTSPECIAL)
-_GENERIC_MATH1X(nexttoward, _In_ long double, _CRTSPECIAL)
-_GENERIC_MATH2(remainder, _CRTSPECIAL)
-// _GENERIC_MATH2X(remquo, _CRTSPECIAL) // hand crafted
-_GENERIC_MATH1(rint, _CRTSPECIAL)
-_GENERIC_MATH1(round, _CRTSPECIAL)
-_GENERIC_MATH1X(scalbln, _In_ long, _CRTSPECIAL)
-_GENERIC_MATH1X(scalbn, _In_ int, _CRTSPECIAL)
-_GENERIC_MATH1(tgamma, _CRTSPECIAL)
-_GENERIC_MATH1(trunc, _CRTSPECIAL)
+_GENERIC_MATH1(acosh)
+_GENERIC_MATH1(asinh)
+_GENERIC_MATH1(atanh)
+_GENERIC_MATH1(cbrt)
+_GENERIC_MATH2(copysign)
+_GENERIC_MATH1(erf)
+_GENERIC_MATH1(erfc)
+_GENERIC_MATH1(expm1)
+_GENERIC_MATH1(exp2)
+_GENERIC_MATH2(fdim)
+// _GENERIC_MATH3(fma) // hand crafted
+_GENERIC_MATH2(fmax)
+_GENERIC_MATH2(fmin)
+_GENERIC_MATH2(hypot)
+_GENERIC_MATH1R(ilogb, int)
+_GENERIC_MATH1(lgamma)
+_GENERIC_MATH1R(llrint, long long)
+_GENERIC_MATH1R(llround, long long)
+_GENERIC_MATH1(log1p)
+_GENERIC_MATH1(log2)
+_GENERIC_MATH1(logb)
+_GENERIC_MATH1R(lrint, long)
+_GENERIC_MATH1R(lround, long)
+_GENERIC_MATH1(nearbyint)
+_GENERIC_MATH2(nextafter)
+_GENERIC_MATH1X(nexttoward, _In_ long double)
+_GENERIC_MATH2(remainder)
+// _GENERIC_MATH2X_DISCARD(remquo) // hand crafted
+_GENERIC_MATH1(rint)
+_GENERIC_MATH1(round)
+_GENERIC_MATH1X(scalbln, _In_ long)
+_GENERIC_MATH1X(scalbn, _In_ int)
+_GENERIC_MATH1(tgamma)
+_GENERIC_MATH1(trunc)
 
-#undef _CRTDEFAULT
-#undef _CRTSPECIAL
 #undef _GENERIC_MATH1R
 #undef _GENERIC_MATH1
 #undef _GENERIC_MATH1X
-#undef _GENERIC_MATH2_CALL
 #undef _GENERIC_MATH2
 
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XTGMATH
 #endif // defined(__cplusplus)
 

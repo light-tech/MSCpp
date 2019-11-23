@@ -2,9 +2,8 @@
 #pragma once
 #ifndef _CLOCALE_
 #define _CLOCALE_
-#ifndef RC_INVOKED
-
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <locale.h>
 
@@ -26,7 +25,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CLOCALE_
 
 /*

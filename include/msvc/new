@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _NEW_
 #define _NEW_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <exception>
 #include <vcruntime_new.h>
 
@@ -20,11 +21,7 @@ template <class _Ty>
 _NODISCARD constexpr _Ty* launder(_Ty* _Ptr) noexcept {
     static_assert(!is_function_v<_Ty> && !is_void_v<_Ty>,
         "N4727 21.6.4 [ptr.launder]/3: The program is ill-formed if T is a function type or cv void.");
-#if _HAS_LAUNDER
     return __builtin_launder(_Ptr);
-#else // _HAS_LAUNDER
-    return _Ptr;
-#endif // _HAS_LAUNDER
 }
 
 #if defined(_M_IX86) || defined(_M_X64) || defined(_M_ARM) || defined(_M_ARM64)
@@ -52,7 +49,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _NEW_
 
 /*

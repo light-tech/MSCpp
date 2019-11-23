@@ -19,7 +19,7 @@ extern "C++" {
 
 #ifndef _MFC_OVERRIDES_NEW
 
-    _Check_return_ _Ret_notnull_ _Post_writable_byte_size_(_Size)
+    _NODISCARD _Check_return_ _Ret_notnull_ _Post_writable_byte_size_(_Size)
     _VCRT_ALLOCATOR void* __CRTDECL operator new(
         _In_   size_t      _Size,
         _In_   int         _BlockUse,
@@ -27,7 +27,7 @@ extern "C++" {
         _In_   int         _LineNumber
         );
 
-    _Check_return_ _Ret_notnull_ _Post_writable_byte_size_(_Size)
+    _NODISCARD _Check_return_ _Ret_notnull_ _Post_writable_byte_size_(_Size)
     _VCRT_ALLOCATOR void* __CRTDECL operator new[](
         _In_   size_t      _Size,
         _In_   int         _BlockUse,

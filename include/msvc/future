@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _FUTURE_
 #define _FUTURE_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #ifdef _M_CEE
 #error <future> is not supported when compiling with /clr or /clr:pure.
@@ -30,6 +31,30 @@ _STL_DISABLE_CLANG_WARNINGS
 #undef new
 
 _STD_BEGIN
+// FUNCTION TEMPLATE _Make_unique_alloc
+template <class _Alloc>
+struct _Allocator_deleter {
+    _Alloc _Al;
+
+    using pointer = typename allocator_traits<_Alloc>::pointer;
+    void operator()(pointer _Ptr) noexcept { // delete the pointer
+        _Destroy_in_place(*_Ptr);
+        _Al.deallocate(_Ptr, 1);
+    }
+};
+
+template <class _Alloc>
+using _Unique_ptr_alloc = unique_ptr<typename _Alloc::value_type, _Allocator_deleter<_Alloc>>;
+
+template <class _Alloc, class... _Args>
+_NODISCARD _Unique_ptr_alloc<_Alloc> _Make_unique_alloc(_Alloc& _Al, _Args&&... _Vals) {
+    // construct an object with an allocator and return it owned by a unique_ptr
+    _Alloc_construct_ptr<_Alloc> _Constructor{_Al};
+    _Constructor._Allocate();
+    _Construct_in_place(*_Constructor._Ptr, _STD forward<_Args>(_Vals)...);
+    return _Unique_ptr_alloc<_Alloc>(_Constructor._Release(), _Allocator_deleter<_Alloc>{_Al});
+}
+
 // STRUCT _Nil
 struct _Nil { // empty struct, for unused argument types
 };
@@ -66,7 +91,7 @@ template <>
 struct is_error_code_enum<future_errc> : public true_type { // tests for error_code enumeration
 };
 
-const error_category& future_category() noexcept;
+_NODISCARD const error_category& future_category() noexcept;
 
 _NODISCARD inline error_code make_error_code(future_errc _Errno) noexcept { // make an error_code object
     return error_code(static_cast<int>(_Errno), future_category());
@@ -130,7 +155,7 @@ private:
 // CLASS _Future_error_category
 class _Future_error_category : public _Generic_error_category { // categorize a future error
 public:
-    _Future_error_category() { // default constructor
+    _Future_error_category() {
         _Addr = _Future_addr;
     }
 
@@ -140,11 +165,11 @@ public:
 
     virtual string message(int _Errcode) const override { // convert to name of error
         const char* _Name = _Future_error_map(_Errcode);
-        if (_Name != nullptr) {
+        if (_Name) {
             return _Name;
-        } else {
-            return _Generic_error_category::message(_Errcode);
         }
+
+        return _Generic_error_category::message(_Errcode);
     }
 };
 
@@ -159,12 +184,10 @@ class _Associated_state;
 template <class _Ty>
 struct __declspec(novtable) _Deleter_base { // abstract base class for managing deletion of state objects
     virtual void _Delete(_Associated_state<_Ty>*) = 0;
-    virtual ~_Deleter_base() noexcept { // destroy the object
-    }
+    virtual ~_Deleter_base() noexcept {}
 };
 
-template <class _Ty, class _Derived,
-    class _Alloc>
+template <class _Ty, class _Derived, class _Alloc>
 struct _State_deleter : _Deleter_base<_Ty> { // manage allocator and deletion state objects
     _State_deleter(const _Alloc& _Al) : _My_alloc(_Al) { // construct with allocator
     }
@@ -172,7 +195,7 @@ struct _State_deleter : _Deleter_base<_Ty> { // manage allocator and deletion st
     _State_deleter(const _State_deleter&) = delete;
     _State_deleter& operator=(const _State_deleter&) = delete;
 
-    inline void _Delete(_Associated_state<_Ty>* _State);
+    void _Delete(_Associated_state<_Ty>* _State);
 
     _Alloc _My_alloc;
 };
@@ -422,7 +445,7 @@ public:
 };
 
 template <class _Ty, class _Derived, class _Alloc>
-inline void _State_deleter<_Ty, _Derived, _Alloc>::_Delete(
+void _State_deleter<_Ty, _Derived, _Alloc>::_Delete(
     _Associated_state<_Ty>* _State) { // delete _State and this using stored allocator
     using _State_allocator = _Rebind_alloc_t<_Alloc, _Derived>;
     _State_allocator _St_alloc(_My_alloc);
@@ -432,16 +455,15 @@ inline void _State_deleter<_Ty, _Derived, _Alloc>::_Delete(
 
     _Derived* _Ptr = static_cast<_Derived*>(_State);
 
-    _Delete_plain(_St_alloc, _Ptr);
-    _Delete_plain(_Del_alloc, this);
+    _Delete_plain_internal(_St_alloc, _Ptr);
+    _Delete_plain_internal(_Del_alloc, this);
 }
 
 // CLASS TEMPLATE _Packaged_state
 template <class>
 class _Packaged_state;
 
-template <class _Ret,
-    class... _ArgTypes>
+template <class _Ret, class... _ArgTypes>
 class _Packaged_state<_Ret(_ArgTypes...)>
     : public _Associated_state<_Ret> { // class for managing associated asynchronous state for packaged_task
 public:
@@ -499,8 +521,7 @@ private:
     function<_Ret(_ArgTypes...)> _Fn;
 };
 
-template <class _Ret,
-    class... _ArgTypes>
+template <class _Ret, class... _ArgTypes>
 class _Packaged_state<_Ret&(_ArgTypes...)>
     : public _Associated_state<_Ret*> { // class for managing associated asynchronous state for packaged_task
 public:
@@ -619,9 +640,8 @@ private:
 };
 
 
-template <class _Ty,
-    class _Alloc>
-inline _Associated_state<_Ty>* _Make_associated_state(
+template <class _Ty, class _Alloc>
+_Associated_state<_Ty>* _Make_associated_state(
     const _Alloc& _Al) { // construct an _Associated_state object with an allocator
     using _Delty   = _State_deleter<_Ty, _Associated_state<_Ty>, _Alloc>;
     using _Aldelty = _Rebind_alloc_t<_Alloc, _Delty>;
@@ -637,9 +657,8 @@ inline _Associated_state<_Ty>* _Make_associated_state(
 
 #if _HAS_FUNCTION_ALLOCATOR_SUPPORT
 template <class _Pack_state, class _Fty2, class _Alloc>
-inline _Pack_state* _Make_packaged_state(
-    _Fty2&& _Fnarg, const _Alloc& _Al) { // construct a _Packaged_state object with an allocator from
-                                         // an rvalue function object
+_Pack_state* _Make_packaged_state(_Fty2&& _Fnarg, const _Alloc& _Al) { // construct a _Packaged_state object with an
+                                                                       // allocator from an rvalue function object
     using _Delty   = _State_deleter<typename _Pack_state::_Mybase::_State_type, _Pack_state, _Alloc>;
     using _Aldelty = _Rebind_alloc_t<_Alloc, _Delty>;
     using _Alstate = _Rebind_alloc_t<_Alloc, _Pack_state>;
@@ -741,7 +760,7 @@ public:
     }
 
     ~_State_manager() noexcept { // destroy
-        if (_Assoc_state != nullptr) {
+        if (_Assoc_state) {
             _Assoc_state->_Release();
         }
     }
@@ -757,7 +776,7 @@ public:
     }
 
     _NODISCARD bool valid() const noexcept { // return status
-        return _Assoc_state != nullptr && !(_Get_only_once && _Assoc_state->_Already_retrieved());
+        return _Assoc_state && !(_Get_only_once && _Assoc_state->_Already_retrieved());
     }
 
     void wait() const { // wait for signal
@@ -838,12 +857,12 @@ public:
                 _Assoc_state->_Release();
             }
 
-            if (_Other._Assoc_state == nullptr) {
-                _Assoc_state = nullptr;
-            } else { // do the copy
+            if (_Other._Assoc_state) { // do the copy
                 _Other._Assoc_state->_Retain();
                 _Assoc_state   = _Other._Assoc_state;
                 _Get_only_once = _Other._Get_only_once;
+            } else {
+                _Assoc_state = nullptr;
             }
         }
     }
@@ -1382,8 +1401,12 @@ private:
     _Promise<int> _MyPromise;
 };
 
+template <class _Ty, class _Alloc>
+struct uses_allocator<promise<_Ty>, _Alloc> : true_type { // asserts that promise<_Ty> can use an allocator
+};
+
 template <class _Ty>
-inline void swap(promise<_Ty>& _Left, promise<_Ty>& _Right) noexcept { // exchange _Left and _Right
+void swap(promise<_Ty>& _Left, promise<_Ty>& _Right) noexcept { // exchange _Left and _Right
     _Left.swap(_Right);
 }
 
@@ -1406,8 +1429,7 @@ struct _P_arg_type<void> { // type for functions returning void
 template <class>
 class packaged_task; // not defined
 
-template <class _Ret,
-    class... _ArgTypes>
+template <class _Ret, class... _ArgTypes>
 class packaged_task<_Ret(_ArgTypes...)> { // class that defines an asynchronous provider that returns the
                                           // result of a call to a function object
 public:
@@ -1438,7 +1460,7 @@ public:
     template <class _Fty2, class _Alloc, class = enable_if_t<!is_same_v<_Remove_cvref_t<_Fty2>, packaged_task>>>
     packaged_task(allocator_arg_t, const _Alloc& _Al, _Fty2&& _Fnarg)
         : _MyPromise(_Make_packaged_state<_MyStateType>(
-              _STD forward<_Fty2>(_Fnarg), _Al)) { // construct from rvalue function object and allocator
+            _STD forward<_Fty2>(_Fnarg), _Al)) { // construct from rvalue function object and allocator
     }
 #endif // _HAS_FUNCTION_ALLOCATOR_SUPPORT
 
@@ -1499,9 +1521,14 @@ private:
     _MyPromiseType _MyPromise;
 };
 
+#if _HAS_FUNCTION_ALLOCATOR_SUPPORT
+template <class _Ty, class _Alloc>
+struct uses_allocator<packaged_task<_Ty>, _Alloc> : true_type { // asserts that packaged_task<_Ty> can use an allocator
+};
+#endif // _HAS_FUNCTION_ALLOCATOR_SUPPORT
 
 template <class _Ty>
-inline void swap(packaged_task<_Ty>& _Left,
+void swap(packaged_task<_Ty>& _Left,
     packaged_task<_Ty>& _Right) noexcept { // exchange _Left and _Right
     _Left.swap(_Right);
 }
@@ -1517,7 +1544,7 @@ class _Fake_no_copy_callable_adapter { // async() is built on packaged_task inte
 public:
     explicit _Fake_no_copy_callable_adapter(_Types&&... _Vals)
         : _Storage(_STD forward<_Types>(
-              _Vals)...) { // Initializes _Fake_no_copy_callable_adapter with a decayed callable object and arguments
+            _Vals)...) { // Initializes _Fake_no_copy_callable_adapter with a decayed callable object and arguments
     }
 
     _Fake_no_copy_callable_adapter(const _Fake_no_copy_callable_adapter& _Other)
@@ -1539,7 +1566,7 @@ private:
 };
 
 template <class _Ret, class _Fty>
-inline _Associated_state<typename _P_arg_type<_Ret>::type>* _Get_associated_state(
+_Associated_state<typename _P_arg_type<_Ret>::type>* _Get_associated_state(
     launch _Psync, _Fty&& _Fnarg) { // construct associated asynchronous state object for the launch type
     switch (_Psync) { // select launch type
     case launch::deferred:
@@ -1551,7 +1578,7 @@ inline _Associated_state<typename _P_arg_type<_Ret>::type>* _Get_associated_stat
 }
 
 template <class _Fty, class... _ArgTypes>
-_NODISCARD inline future<_Invoke_result_t<decay_t<_Fty>, decay_t<_ArgTypes>...>> async(
+_NODISCARD future<_Invoke_result_t<decay_t<_Fty>, decay_t<_ArgTypes>...>> async(
     launch _Policy, _Fty&& _Fnarg, _ArgTypes&&... _Args) { // return a future object whose associated asynchronous state
                                                            // manages a callable object launched with supplied policy
     using _Ret   = _Invoke_result_t<decay_t<_Fty>, decay_t<_ArgTypes>...>;
@@ -1564,7 +1591,7 @@ _NODISCARD inline future<_Invoke_result_t<decay_t<_Fty>, decay_t<_ArgTypes>...>>
 }
 
 template <class _Fty, class... _ArgTypes>
-_NODISCARD inline future<_Invoke_result_t<decay_t<_Fty>, decay_t<_ArgTypes>...>> async(
+_NODISCARD future<_Invoke_result_t<decay_t<_Fty>, decay_t<_ArgTypes>...>> async(
     _Fty&& _Fnarg, _ArgTypes&&... _Args) { // return a future object whose associated asynchronous state
                                            // manages a callable object launched with default policy
     return _STD async(launch::async | launch::deferred, _STD forward<_Fty>(_Fnarg), _STD forward<_ArgTypes>(_Args)...);
@@ -1651,24 +1678,11 @@ auto await_resume(future<_Ty>& _Fut) {
 #endif // _RESUMABLE_FUNCTIONS_SUPPORTED
 _STD_END
 
-namespace std {
-    template <class _Ty, class _Alloc>
-    struct uses_allocator<promise<_Ty>, _Alloc> : true_type { // asserts that promise<_Ty> can use an allocator
-    };
-
-#if _HAS_FUNCTION_ALLOCATOR_SUPPORT
-    template <class _Ty, class _Alloc>
-    struct uses_allocator<packaged_task<_Ty>, _Alloc>
-        : true_type { // asserts that packaged_task<_Ty> can use an allocator
-    };
-#endif // _HAS_FUNCTION_ALLOCATOR_SUPPORT
-
-} // namespace std
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _FUTURE_
 
 /*

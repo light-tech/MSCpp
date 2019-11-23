@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _CVT_XJIS_
 #define _CVT_XJIS_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <cwchar>
 #include <locale>
 
@@ -97,16 +98,14 @@ namespace stdext {
             explicit codecvt_jis(size_t _Refs = 0) : _Mybase(_Refs) { // construct with ref count
             }
 
-            virtual ~codecvt_jis() noexcept { // destroy the object
-            }
+            virtual ~codecvt_jis() noexcept {}
 
         protected:
             virtual result do_in(_Statype& _State, const _Byte* _First1, const _Byte* _Last1, const _Byte*& _Mid1,
-                _Elem* _First2, _Elem* _Last2,
-                _Elem*& _Mid2) const { // convert bytes [_First1, _Last1) to [_First2, _Last)
-                unsigned long _Maxc = _Maxcode; // to quiet warnings
-                char* _Pstate       = (char*) &_State;
-                result _Ans         = _Mybase::partial;
+                _Elem* _First2, _Elem* _Last2, _Elem*& _Mid2) const {
+                // convert bytes [_First1, _Last1) to [_First2, _Last)
+                char* _Pstate = reinterpret_cast<char*>(&_State);
+                result _Ans   = _Mybase::partial;
 
                 _Mid1 = _First1;
                 _Mid2 = _First2;
@@ -154,15 +153,15 @@ namespace stdext {
                             return _Mybase::error; // bad second byte
                         }
 
-                        _Ch = (unsigned short) (_Ch << 8 | _By);
+                        _Ch = static_cast<unsigned short>(_Ch << 8 | _By);
                     }
 
-                    if (!_Jis_to_ucs(_Ch) || _Maxc < _Ch) {
+                    if (!_Jis_to_ucs(_Ch) || _Maxcode < _Ch) {
                         return _Mybase::error; // code too large
                     }
 
                     ++_Mid1;
-                    *_Mid2++ = (_Elem) _Ch;
+                    *_Mid2++ = static_cast<_Elem>(_Ch);
                     _Ans     = _Mybase::ok;
                 }
 
@@ -170,18 +169,17 @@ namespace stdext {
             }
 
             virtual result do_out(_Statype& _State, const _Elem* _First1, const _Elem* _Last1, const _Elem*& _Mid1,
-                _Byte* _First2, _Byte* _Last2,
-                _Byte*& _Mid2) const { // convert [_First1, _Last1) to bytes [_First2, _Last)
-                unsigned long _Maxc = _Maxcode; // to quiet warnings
-                char* _Pstate       = (char*) &_State;
+                _Byte* _First2, _Byte* _Last2, _Byte*& _Mid2) const {
+                // convert [_First1, _Last1) to bytes [_First2, _Last)
+                char* _Pstate = reinterpret_cast<char*>(&_State);
 
                 _Mid1 = _First1;
                 _Mid2 = _First2;
                 while (_Mid1 != _Last1 && _Mid2 != _Last2) { // convert and put a wide char
-                    unsigned long _Uch = (unsigned long) *_Mid1;
-                    unsigned short _Ch = (unsigned short) _Uch;
+                    unsigned long _Uch = static_cast<unsigned long>(*_Mid1);
+                    unsigned short _Ch = static_cast<unsigned short>(_Uch);
 
-                    if (_Maxc < _Ch || !_Ucs_to_jis(_Ch)) {
+                    if (_Maxcode < _Ch || !_Ucs_to_jis(_Ch)) {
                         return _Mybase::error;
                     }
 
@@ -202,7 +200,7 @@ namespace stdext {
                             *_Pstate = 0;
                         }
 
-                        *_Mid2++ = (_Byte) _Ch;
+                        *_Mid2++ = static_cast<_Byte>(_Ch);
                     } else { // put a 2-byte code
                         if (*_Pstate != 0) { // already in proper state, check room
                             if (_Last2 - _Mid2 < 2) {
@@ -217,20 +215,20 @@ namespace stdext {
                             *_Pstate = 1;
                         }
 
-                        unsigned char _By = (unsigned char) (_Ch >> 8);
+                        unsigned char _By = static_cast<unsigned char>(_Ch >> 8);
 
                         if (_By < 0x21 || 0x7e < _By) {
                             return _Mybase::error; // bad first byte
                         }
 
-                        *_Mid2++ = (_Byte) _By;
+                        *_Mid2++ = static_cast<_Byte>(_By);
 
-                        _By = (unsigned char) _Ch;
+                        _By = static_cast<unsigned char>(_Ch);
                         if (_By < 0x21 || 0x7e < _By) {
                             return _Mybase::error; // bad first byte
                         }
 
-                        *_Mid2++ = (_Byte) _By;
+                        *_Mid2++ = static_cast<_Byte>(_By);
                     }
                     ++_Mid1;
                 }
@@ -239,7 +237,7 @@ namespace stdext {
 
             virtual result do_unshift(_Statype& _State, _Byte* _First2, _Byte*,
                 _Byte*& _Mid2) const { // generate bytes to return to default shift state
-                char* _Pstate = (char*) &_State;
+                char* _Pstate = reinterpret_cast<char*>(&_State);
 
                 _Mid2 = _First2;
                 switch (*_Pstate) {
@@ -276,7 +274,7 @@ namespace stdext {
                     switch (do_in(_Mystate, _First1, _Last1, _Mid1, &_Ch, &_Ch + 1,
                         _Mid2)) { // test result of single wide-char conversion
                     case _Mybase::noconv:
-                        return (int) (_Wchars + (_Last1 - _First1));
+                        return static_cast<int>(_Wchars + (_Last1 - _First1));
 
                     case _Mybase::ok:
                         if (_Mid2 == &_Ch + 1) {
@@ -287,11 +285,11 @@ namespace stdext {
                         break;
 
                     default:
-                        return (int) _Wchars; // error or partial
+                        return static_cast<int>(_Wchars); // error or partial
                     }
                 }
 
-                return (int) _Wchars;
+                return static_cast<int>(_Wchars);
             }
 
             virtual bool do_always_noconv() const noexcept { // return true if conversions never change input
@@ -309,21 +307,12 @@ namespace stdext {
     } // namespace cvt
 } // namespace stdext
 
-#ifdef _TEST_IT
-#define NCHARS 0x10000
-#define MYWC_MAX 0xffff
-#define MYFILE "xjis"
-#define MYNAME stdext::cvt::codecvt_jis<Mywchar>
-
-#include <cvt/xtest>
-#endif // _TEST_IT
-
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_XJIS_
 
 /*

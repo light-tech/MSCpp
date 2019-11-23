@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _SHARED_MUTEX_
 #define _SHARED_MUTEX_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #ifdef _M_CEE_PURE
 #error <shared_mutex> is not supported when compiling with /clr:pure.
@@ -29,11 +30,10 @@ class shared_mutex { // class for mutual exclusion shared across threads
 public:
     using native_handle_type = _Smtx_t*;
 
-    shared_mutex() noexcept : _Myhandle(nullptr) { // default construct
-    }
+    shared_mutex() noexcept // strengthened
+        : _Myhandle(nullptr) {}
 
-    ~shared_mutex() noexcept { // destroy the object
-    }
+    ~shared_mutex() noexcept {}
 
     void lock() noexcept { // lock exclusive
         _Smtx_lock_exclusive(&_Myhandle);
@@ -77,15 +77,13 @@ private:
 class shared_timed_mutex { // class for mutual exclusion shared across threads
     using _Read_cnt_t = unsigned int;
 
-    static constexpr _Read_cnt_t _Max_readers = _Read_cnt_t(-1);
+    static constexpr _Read_cnt_t _Max_readers = static_cast<_Read_cnt_t>(-1);
 
 public:
-    shared_timed_mutex() noexcept
-        : _Mymtx(), _Read_queue(), _Write_queue(), _Readers(0), _Writing(false) { // default construct
-    }
+    shared_timed_mutex() noexcept // strengthened
+        : _Mymtx(), _Read_queue(), _Write_queue(), _Readers(0), _Writing(false) {}
 
-    ~shared_timed_mutex() noexcept { // destroy the object
-    }
+    ~shared_timed_mutex() noexcept {}
 
     void lock() { // lock exclusive
         unique_lock<mutex> _Lock(_Mymtx);
@@ -219,7 +217,8 @@ public:
 
 private:
     mutex _Mymtx;
-    condition_variable _Read_queue, _Write_queue;
+    condition_variable _Read_queue;
+    condition_variable _Write_queue;
     _Read_cnt_t _Readers;
     bool _Writing;
 };
@@ -231,8 +230,7 @@ class shared_lock { // shareable lock
 public:
     using mutex_type = _Mutex;
 
-    shared_lock() noexcept : _Pmtx(nullptr), _Owns(false) { // default construct
-    }
+    shared_lock() noexcept : _Pmtx(nullptr), _Owns(false) {}
 
     explicit shared_lock(mutex_type& _Mtx)
         : _Pmtx(_STD addressof(_Mtx)), _Owns(true) { // construct with mutex and lock shared
@@ -280,10 +278,10 @@ public:
             _Pmtx->unlock_shared();
         }
 
-        _Pmtx            = _Right._Pmtx;
-        _Owns            = _Right._Owns;
-        _Right._Pmtx     = nullptr;
-        _Right._Owns     = false;
+        _Pmtx        = _Right._Pmtx;
+        _Owns        = _Right._Owns;
+        _Right._Pmtx = nullptr;
+        _Right._Owns = false;
         return *this;
     }
 
@@ -320,7 +318,7 @@ public:
 
     void unlock() { // try to unlock the mutex
         if (!_Pmtx || !_Owns) {
-            _THROW(system_error(_STD make_error_code(errc::operation_not_permitted)));
+            _Throw_system_error(errc::operation_not_permitted);
         }
 
         _Pmtx->unlock_shared();
@@ -359,11 +357,11 @@ private:
 
     void _Validate() const { // check if the mutex can be locked
         if (!_Pmtx) {
-            _THROW(system_error(_STD make_error_code(errc::operation_not_permitted)));
+            _Throw_system_error(errc::operation_not_permitted);
         }
 
         if (_Owns) {
-            _THROW(system_error(_STD make_error_code(errc::resource_deadlock_would_occur)));
+            _Throw_system_error(errc::resource_deadlock_would_occur);
         }
     }
 };
@@ -379,7 +377,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _SHARED_MUTEX_
 
 /*

@@ -2,8 +2,8 @@
 #pragma once
 #ifndef _THR_XTIMEC_H
 #define _THR_XTIMEC_H
-#ifndef RC_INVOKED
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <time.h>
 
@@ -38,7 +38,7 @@ _END_EXTERN_C
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _THR_XTIMEC_H
 
 /*

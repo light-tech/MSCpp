@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _OSTREAM_
 #define _OSTREAM_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <ios>
 
 #pragma pack(push, _CRT_PACKING)
@@ -57,8 +58,7 @@ public:
     __CLR_OR_THIS_CALL basic_ostream(const basic_ostream&) = delete;
     basic_ostream& __CLR_OR_THIS_CALL operator=(const basic_ostream&) = delete;
 
-    virtual __CLR_OR_THIS_CALL ~basic_ostream() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~basic_ostream() noexcept {}
 
     using int_type = typename _Traits::int_type;
     using pos_type = typename _Traits::pos_type;
@@ -67,14 +67,16 @@ public:
     class _Sentry_base { // stores thread lock and reference to output stream
     public:
         __CLR_OR_THIS_CALL _Sentry_base(basic_ostream& _Ostr) : _Myostr(_Ostr) { // lock the stream buffer, if there
-            if (_Myostr.rdbuf() != nullptr) {
-                _Myostr.rdbuf()->_Lock();
+            const auto _Rdbuf = _Myostr.rdbuf();
+            if (_Rdbuf) {
+                _Rdbuf->_Lock();
             }
         }
 
         __CLR_OR_THIS_CALL ~_Sentry_base() noexcept { // destroy after unlocking
-            if (_Myostr.rdbuf() != nullptr) {
-                _Myostr.rdbuf()->_Unlock();
+            const auto _Rdbuf = _Myostr.rdbuf();
+            if (_Rdbuf) {
+                _Rdbuf->_Unlock();
             }
         }
 
@@ -87,10 +89,19 @@ public:
     public:
         explicit __CLR_OR_THIS_CALL sentry(basic_ostream& _Ostr)
             : _Sentry_base(_Ostr) { // construct locking and testing stream
-            if (_Ostr.good() && _Ostr.tie() != nullptr && _Ostr.tie() != &_Ostr) {
-                _Ostr.tie()->flush();
+            if (!_Ostr.good()) {
+                _Ok = false;
+                return;
             }
 
+            const auto _Tied = _Ostr.tie();
+            if (!_Tied || _Tied == &_Ostr) {
+                _Ok = true;
+                return;
+            }
+
+
+            _Tied->flush();
             _Ok = _Ostr.good(); // store test only after flushing tie
         }
 
@@ -101,7 +112,7 @@ public:
 #pragma warning(push)
 #pragma warning(disable : 4996) // was declared deprecated
 #endif // __clang__
-        __CLR_OR_THIS_CALL ~sentry() noexcept { // destroy the object
+        __CLR_OR_THIS_CALL ~sentry() noexcept {
 #if _HAS_EXCEPTIONS
             if (!_STD uncaught_exception()) { // TRANSITION, OS#15518458
                 this->_Myostr._Osfx();
@@ -128,10 +139,16 @@ public:
     };
 
     bool __CLR_OR_THIS_CALL opfx() { // test stream state and flush tie stream as needed (retained)
-        if (this->good() && _Myios::tie() != nullptr && _Myios::tie() != this) {
-            _Myios::tie()->flush();
+        if (!this->good()) {
+            return false;
         }
 
+        const auto _Tied = _Myios::tie();
+        if (!_Tied || _Myios::tie() == this) {
+            return true;
+        }
+
+        _Tied->flush();
         return this->good();
     }
 
@@ -153,32 +170,32 @@ public:
 #ifdef _M_CEE_PURE
     basic_ostream& __CLR_OR_THIS_CALL operator<<(
         basic_ostream&(__clrcall* _Pfn)(basic_ostream&) ) { // call basic_ostream manipulator
-        return (*_Pfn)(*this);
+        return _Pfn(*this);
     }
 
     basic_ostream& __CLR_OR_THIS_CALL operator<<(_Myios&(__clrcall* _Pfn)(_Myios&) ) { // call basic_ios manipulator
-        (*_Pfn)(*(_Myios*) this);
+        _Pfn(*this);
         return *this;
     }
 
     basic_ostream& __CLR_OR_THIS_CALL operator<<(ios_base&(__clrcall* _Pfn)(ios_base&) ) { // call ios_base manipulator
-        (*_Pfn)(*(ios_base*) this);
+        _Pfn(*this);
         return *this;
     }
 #endif // _M_CEE_PURE
 
     basic_ostream& __CLR_OR_THIS_CALL operator<<(
         basic_ostream&(__cdecl* _Pfn)(basic_ostream&) ) { // call basic_ostream manipulator
-        return (*_Pfn)(*this);
+        return _Pfn(*this);
     }
 
     basic_ostream& __CLR_OR_THIS_CALL operator<<(_Myios&(__cdecl* _Pfn)(_Myios&) ) { // call basic_ios manipulator
-        (*_Pfn)(*(_Myios*) this);
+        _Pfn(*this);
         return *this;
     }
 
     basic_ostream& __CLR_OR_THIS_CALL operator<<(ios_base&(__cdecl* _Pfn)(ios_base&) ) { // call ios_base manipulator
-        (*_Pfn)(*(ios_base*) this);
+        _Pfn(*this);
         return *this;
     }
 
@@ -207,7 +224,13 @@ public:
         if (_Ok) { // state okay, use facet to insert
             const _Nput& _Nput_fac  = _STD use_facet<_Nput>(this->getloc());
             ios_base::fmtflags _Bfl = this->flags() & ios_base::basefield;
-            long _Tmp = (_Bfl == ios_base::oct || _Bfl == ios_base::hex) ? (long) (unsigned short) _Val : (long) _Val;
+
+            long _Tmp;
+            if (_Bfl == ios_base::oct || _Bfl == ios_base::hex) {
+                _Tmp = static_cast<long>(static_cast<unsigned short>(_Val));
+            } else {
+                _Tmp = static_cast<long>(_Val);
+            }
 
             _TRY_IO_BEGIN
             if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this, _Myios::fill(), _Tmp).failed()) {
@@ -236,7 +259,8 @@ public:
             const _Nput& _Nput_fac = _STD use_facet<_Nput>(this->getloc());
 
             _TRY_IO_BEGIN
-            if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this, _Myios::fill(), (unsigned long) _Val).failed()) {
+            if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this, _Myios::fill(), static_cast<unsigned long>(_Val))
+                    .failed()) {
                 _State |= ios_base::badbit;
             }
             _CATCH_IO_END
@@ -253,7 +277,13 @@ public:
         if (_Ok) { // state okay, use facet to insert
             const _Nput& _Nput_fac  = _STD use_facet<_Nput>(this->getloc());
             ios_base::fmtflags _Bfl = this->flags() & ios_base::basefield;
-            long _Tmp = (_Bfl == ios_base::oct || _Bfl == ios_base::hex) ? (long) (unsigned int) _Val : (long) _Val;
+
+            long _Tmp;
+            if (_Bfl == ios_base::oct || _Bfl == ios_base::hex) {
+                _Tmp = static_cast<long>(static_cast<unsigned int>(_Val));
+            } else {
+                _Tmp = static_cast<long>(_Val);
+            }
 
             _TRY_IO_BEGIN
             if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this, _Myios::fill(), _Tmp).failed()) {
@@ -274,7 +304,8 @@ public:
             const _Nput& _Nput_fac = _STD use_facet<_Nput>(this->getloc());
 
             _TRY_IO_BEGIN
-            if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this, _Myios::fill(), (unsigned long) _Val).failed()) {
+            if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this, _Myios::fill(), static_cast<unsigned long>(_Val))
+                    .failed()) {
                 _State |= ios_base::badbit;
             }
             _CATCH_IO_END
@@ -364,7 +395,7 @@ public:
             const _Nput& _Nput_fac = _STD use_facet<_Nput>(this->getloc());
 
             _TRY_IO_BEGIN
-            if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this, _Myios::fill(), (double) _Val).failed()) {
+            if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this, _Myios::fill(), static_cast<double>(_Val)).failed()) {
                 _State |= ios_base::badbit;
             }
             _CATCH_IO_END
@@ -440,7 +471,7 @@ public:
         bool _Copied             = false;
         const sentry _Ok(*this);
 
-        if (_Ok && _Strbuf != nullptr) {
+        if (_Ok && _Strbuf) {
             for (int_type _Meta = _Traits::eof();; _Copied = true) { // extract another character from stream buffer
                 _TRY_BEGIN
                 _Meta = _Traits::eq_int_type(_Traits::eof(), _Meta) ? _Strbuf->sgetc() : _Strbuf->snextc();
@@ -463,7 +494,18 @@ public:
         }
 
         this->width(0);
-        _Myios::setstate(_Strbuf == nullptr ? ios_base::badbit : !_Copied ? _State | ios_base::failbit : _State);
+        int _Setstate_with;
+        if (_Strbuf) {
+            if (_Copied) {
+                _Setstate_with = _State;
+            } else {
+                _Setstate_with = _State | ios_base::failbit;
+            }
+        } else {
+            _Setstate_with = ios_base::badbit;
+        }
+
+        _Myios::setstate(_Setstate_with);
         return *this;
     }
 
@@ -505,10 +547,11 @@ public:
     }
 
     basic_ostream& __CLR_OR_THIS_CALL flush() { // flush output stream
-        if (_Myios::rdbuf() != nullptr) { // buffer exists, flush it
+        const auto _Rdbuf = _Myios::rdbuf();
+        if (_Rdbuf) { // buffer exists, flush it
             const sentry _Ok(*this);
 
-            if (_Ok && _Myios::rdbuf()->pubsync() == -1) {
+            if (_Ok && _Rdbuf->pubsync() == -1) {
                 _Myios::setstate(ios_base::badbit); // sync failed
             }
         }
@@ -518,7 +561,7 @@ public:
     basic_ostream& __CLR_OR_THIS_CALL seekp(pos_type _Pos) { // set output stream position to _Pos
         const sentry _Ok(*this);
 
-        if (!this->fail() && (off_type) _Myios::rdbuf()->pubseekpos(_Pos, ios_base::out) == -1) {
+        if (!this->fail() && static_cast<off_type>(_Myios::rdbuf()->pubseekpos(_Pos, ios_base::out)) == -1) {
             _Myios::setstate(ios_base::failbit);
         }
 
@@ -529,7 +572,7 @@ public:
         off_type _Off, ios_base::seekdir _Way) { // change output stream position by _Off, according to _Way
         const sentry _Ok(*this);
 
-        if (!this->fail() && (off_type) _Myios::rdbuf()->pubseekoff(_Off, _Way, ios_base::out) == -1) {
+        if (!this->fail() && static_cast<off_type>(_Myios::rdbuf()->pubseekoff(_Off, _Way, ios_base::out)) == -1) {
             _Myios::setstate(ios_base::failbit);
         }
 
@@ -611,10 +654,9 @@ template class _CRTIMP2_PURE_IMPORT basic_ostream<unsigned short, char_traits<un
 // INSERTERS
 
 template <class _Elem, class _Traits>
-inline basic_ostream<_Elem, _Traits>& operator<<(
-    basic_ostream<_Elem, _Traits>& _Ostr, const char* _Val) { // insert NTBS
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr, const char* _Val) { // insert NTBS
     ios_base::iostate _State = ios_base::goodbit;
-    streamsize _Count        = (streamsize) _CSTD strlen(_Val); // may overflow
+    streamsize _Count        = static_cast<streamsize>(_CSTD strlen(_Val));
     streamsize _Pad          = _Ostr.width() <= 0 || _Ostr.width() <= _Count ? 0 : _Ostr.width() - _Count;
     const typename basic_ostream<_Elem, _Traits>::sentry _Ok(_Ostr);
 
@@ -656,7 +698,7 @@ inline basic_ostream<_Elem, _Traits>& operator<<(
 }
 
 template <class _Elem, class _Traits>
-inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr, char _Ch) { // insert a character
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr, char _Ch) { // insert a character
     ios_base::iostate _State = ios_base::goodbit;
     const typename basic_ostream<_Elem, _Traits>::sentry _Ok(_Ostr);
 
@@ -692,13 +734,13 @@ inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& 
 }
 
 template <class _Traits>
-inline basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>& _Ostr,
+basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>& _Ostr,
     const char* _Val) { // insert NTBS into char stream
     using _Elem = char;
     using _Myos = basic_ostream<_Elem, _Traits>;
 
     ios_base::iostate _State = ios_base::goodbit;
-    streamsize _Count        = (streamsize) _Traits::length(_Val); // may overflow
+    streamsize _Count        = static_cast<streamsize>(_Traits::length(_Val));
     streamsize _Pad          = _Ostr.width() <= 0 || _Ostr.width() <= _Count ? 0 : _Ostr.width() - _Count;
     const typename _Myos::sentry _Ok(_Ostr);
 
@@ -737,7 +779,7 @@ inline basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>& _O
 }
 
 template <class _Traits>
-inline basic_ostream<char, _Traits>& operator<<(
+basic_ostream<char, _Traits>& operator<<(
     basic_ostream<char, _Traits>& _Ostr, char _Ch) { // insert a char into char stream
     using _Elem = char;
     using _Myos = basic_ostream<_Elem, _Traits>;
@@ -775,12 +817,11 @@ inline basic_ostream<char, _Traits>& operator<<(
 }
 
 template <class _Elem, class _Traits>
-inline basic_ostream<_Elem, _Traits>& operator<<(
-    basic_ostream<_Elem, _Traits>& _Ostr, const _Elem* _Val) { // insert NTCS
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr, const _Elem* _Val) { // insert NTCS
     using _Myos = basic_ostream<_Elem, _Traits>;
 
     ios_base::iostate _State = ios_base::goodbit;
-    streamsize _Count        = (streamsize) _Traits::length(_Val); // may overflow
+    streamsize _Count        = static_cast<streamsize>(_Traits::length(_Val));
     streamsize _Pad          = _Ostr.width() <= 0 || _Ostr.width() <= _Count ? 0 : _Ostr.width() - _Count;
     const typename _Myos::sentry _Ok(_Ostr);
 
@@ -819,8 +860,7 @@ inline basic_ostream<_Elem, _Traits>& operator<<(
 }
 
 template <class _Elem, class _Traits>
-inline basic_ostream<_Elem, _Traits>& operator<<(
-    basic_ostream<_Elem, _Traits>& _Ostr, _Elem _Ch) { // insert a character
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr, _Elem _Ch) { // insert a character
     using _Myos = basic_ostream<_Elem, _Traits>;
 
     ios_base::iostate _State = ios_base::goodbit;
@@ -856,28 +896,37 @@ inline basic_ostream<_Elem, _Traits>& operator<<(
 }
 
 template <class _Traits>
-inline basic_ostream<char, _Traits>& operator<<(
+basic_ostream<char, _Traits>& operator<<(
     basic_ostream<char, _Traits>& _Ostr, const signed char* _Val) { // insert a signed char NTBS
-    return _Ostr << (const char*) _Val;
+    return _Ostr << reinterpret_cast<const char*>(_Val);
 }
 
 template <class _Traits>
-inline basic_ostream<char, _Traits>& operator<<(
-    basic_ostream<char, _Traits>& _Ostr, signed char _Ch) { // insert a signed char
-    return _Ostr << (char) _Ch;
+basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>& _Ostr, signed char _Ch) { // insert a signed char
+    return _Ostr << static_cast<char>(_Ch);
 }
 
 template <class _Traits>
-inline basic_ostream<char, _Traits>& operator<<(
+basic_ostream<char, _Traits>& operator<<(
     basic_ostream<char, _Traits>& _Ostr, const unsigned char* _Val) { // insert an unsigned char NTBS
-    return _Ostr << (const char*) _Val;
+    return _Ostr << reinterpret_cast<const char*>(_Val);
 }
 
 template <class _Traits>
-inline basic_ostream<char, _Traits>& operator<<(
+basic_ostream<char, _Traits>& operator<<(
     basic_ostream<char, _Traits>& _Ostr, unsigned char _Ch) { // insert an unsigned char
-    return _Ostr << (char) _Ch;
+    return _Ostr << static_cast<char>(_Ch);
 }
+
+#if _HAS_CHAR8_T // These deleted overloads are specified in P1423.
+template <class _Traits>
+basic_ostream<char, _Traits>& operator<<(
+    basic_ostream<char, _Traits>&, const char8_t*) = delete; // don't insert a UTF-8 NTBS
+
+template <class _Traits>
+basic_ostream<char, _Traits>& operator<<(
+    basic_ostream<char, _Traits>&, char8_t) = delete; // don't insert a UTF-8 code unit
+#endif // _HAS_CHAR8_T
 
 template <class _Ostr, class _Ty, class = void>
 struct _Can_stream_out : false_type {};
@@ -890,14 +939,14 @@ template <class _Ostr, class _Ty,
     enable_if_t<conjunction_v< // prevent infinite recursion
                     negation<is_lvalue_reference<_Ostr>>, is_base_of<ios_base, _Ostr>, _Can_stream_out<_Ostr, _Ty>>,
         int> = 0>
-inline _Ostr&& operator<<(_Ostr&& _Os, const _Ty& _Val) { // insert to rvalue stream
+_Ostr&& operator<<(_Ostr&& _Os, const _Ty& _Val) { // insert to rvalue stream
     _Os << _Val;
     return _STD move(_Os);
 }
 
 // MANIPULATORS
 template <class _Elem, class _Traits>
-inline basic_ostream<_Elem, _Traits>& __CLRCALL_OR_CDECL endl(
+basic_ostream<_Elem, _Traits>& __CLRCALL_OR_CDECL endl(
     basic_ostream<_Elem, _Traits>& _Ostr) { // insert newline and flush stream
     _Ostr.put(_Ostr.widen('\n'));
     _Ostr.flush();
@@ -905,21 +954,20 @@ inline basic_ostream<_Elem, _Traits>& __CLRCALL_OR_CDECL endl(
 }
 
 template <class _Elem, class _Traits>
-inline basic_ostream<_Elem, _Traits>& __CLRCALL_OR_CDECL ends(
-    basic_ostream<_Elem, _Traits>& _Ostr) { // insert null character
+basic_ostream<_Elem, _Traits>& __CLRCALL_OR_CDECL ends(basic_ostream<_Elem, _Traits>& _Ostr) { // insert null character
     _Ostr.put(_Elem());
     return _Ostr;
 }
 
 template <class _Elem, class _Traits>
-inline basic_ostream<_Elem, _Traits>& __CLRCALL_OR_CDECL flush(basic_ostream<_Elem, _Traits>& _Ostr) { // flush stream
+basic_ostream<_Elem, _Traits>& __CLRCALL_OR_CDECL flush(basic_ostream<_Elem, _Traits>& _Ostr) { // flush stream
     _Ostr.flush();
     return _Ostr;
 }
 
 // INSERTER FOR error_category
 template <class _Elem, class _Traits>
-inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
     const error_code& _Errcode) { // display error code
     return _Ostr << _Errcode.category().name() << ':' << _Errcode.value();
 }
@@ -929,7 +977,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _OSTREAM_
 
 /*

@@ -28,7 +28,8 @@
 
 #ifndef _FVEC_H_INCLUDED
 #define _FVEC_H_INCLUDED
-#ifndef RC_INVOKED
+#include <vcruntime.h>
+#if _VCRT_COMPILER_PREPROCESSOR
 
 #if !defined __cplusplus
     #error ERROR: This file is only supported in C++ compilations!
@@ -40,7 +41,6 @@
 
 #include <xmmintrin.h> /* SSE Intrinsic function definition include file */
 #include <ivec.h>
-#include <vcruntime.h>
 
 #ifndef _VEC_ASSERT
 #ifdef NDEBUG
@@ -497,5 +497,5 @@ inline int F32vec1ToInt(const F32vec1 &_A)
 
 #endif  /* defined (_M_CEE_PURE) */
 
-#endif  /* RC_INVOKED */
+#endif  /* _VCRT_COMPILER_PREPROCESSOR */
 #endif  /* _FVEC_H_INCLUDED */

@@ -3,8 +3,8 @@
 #pragma once
 #ifndef _CHARCONV_
 #define _CHARCONV_
-#ifndef RC_INVOKED
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #if _HAS_CXX17
 #include <float.h>
@@ -21,6 +21,8 @@ _STL_DISABLE_CLANG_WARNINGS
 #pragma push_macro("new")
 #undef new
 
+// This implementation is dedicated to the memory of Mary and Thavatchai.
+
 _STD_BEGIN
 inline constexpr char _Charconv_digits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e',
     'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
@@ -28,7 +30,7 @@ static_assert(_STD size(_Charconv_digits) == 36);
 
 // FUNCTION to_chars (INTEGER TO STRING)
 template <class _RawTy>
-_NODISCARD inline to_chars_result _Integer_to_chars(char* _First, char* const _Last, const _RawTy _Raw_value,
+_NODISCARD to_chars_result _Integer_to_chars(char* _First, char* const _Last, const _RawTy _Raw_value,
     const int _Base) noexcept { // strengthened
     _Adl_verify_range(_First, _Last);
     _STL_ASSERT(_Base >= 2 && _Base <= 36, "invalid base in to_chars()");
@@ -61,10 +63,10 @@ _NODISCARD inline to_chars_result _Integer_to_chars(char* _First, char* const _L
 
         if constexpr (_Use_chunks) { // For 64-bit numbers on 32-bit platforms, work in chunks to avoid 64-bit
                                      // divisions.
-            while (_Value > 0xFFFF'FFFFU) {
+            while (_Value > 0xFFFF'FFFFU) { // ' TRANSITION, OS#21524983
                 // Performance note: Ryu's division workaround would be faster here.
-                unsigned long _Chunk = static_cast<unsigned long>(_Value % 1'000'000'000);
-                _Value               = static_cast<_Unsigned>(_Value / 1'000'000'000);
+                unsigned long _Chunk = static_cast<unsigned long>(_Value % 1'000'000'000); // ' TRANSITION, OS#21524983
+                _Value               = static_cast<_Unsigned>(_Value / 1'000'000'000); // ' TRANSITION, OS#21524983
 
                 for (int _Idx = 0; _Idx != 9; ++_Idx) {
                     *--_RNext = static_cast<char>('0' + _Chunk % 10);
@@ -222,7 +224,7 @@ _NODISCARD inline unsigned char _Digit_from_char(const char _Ch) noexcept { // s
 }
 
 template <class _RawTy>
-_NODISCARD inline from_chars_result _Integer_from_chars(
+_NODISCARD from_chars_result _Integer_from_chars(
     const char* const _First, const char* const _Last, _RawTy& _Raw_value, const int _Base) noexcept { // strengthened
     _Adl_verify_range(_First, _Last);
     _STL_ASSERT(_Base >= 2 && _Base <= 36, "invalid base in from_chars()");
@@ -350,7 +352,8 @@ inline from_chars_result from_chars(const char* const _First, const char* const 
 
 // We require sufficient precision to represent the reciprocal of the smallest representable value (the smallest
 // denormal, 2^-1074). During parsing, we may also consider up to 768 decimal digits. For this, we require an
-// additional log2(10^768) bits of precision. Finally, we require 32 bits of space for pre-division numerator shifting.
+// additional log2(10^768) bits of precision. Finally, we require 54 bits of space for pre-division numerator shifting,
+// because double explicitly stores 52 bits, implicitly stores 1 bit, and we need 1 more bit for rounding.
 
 // PERFORMANCE NOTE: We intentionally do not initialize the _Mydata array when a _Big_integer_flt object is constructed.
 // Profiling showed that zero-initialization caused a substantial performance hit. Initialization of the _Mydata
@@ -408,7 +411,7 @@ struct _Big_integer_flt {
 
     static constexpr uint32_t _Maximum_bits = 1074 // 1074 bits required to represent 2^1074
                                               + 2552 // ceil(log2(10^768))
-                                              + 32; // shift space
+                                              + 54; // shift space
 
     static constexpr uint32_t _Element_bits = 32;
 
@@ -511,9 +514,8 @@ _NODISCARD inline bool _Shift_left(_Big_integer_flt& _Xval, const uint32_t _Nx) 
     const uint32_t _Unit_shift = _Nx / _Big_integer_flt::_Element_bits;
     const uint32_t _Bit_shift  = _Nx % _Big_integer_flt::_Element_bits;
 
-    const bool _Unit_shift_will_overflow = _Xval._Myused + _Unit_shift > _Big_integer_flt::_Element_count;
-
-    if (_Unit_shift_will_overflow) {
+    if (_Xval._Myused + _Unit_shift > _Big_integer_flt::_Element_count) {
+        // Unit shift will overflow.
         _Xval._Myused = 0;
         return false;
     }
@@ -525,10 +527,10 @@ _NODISCARD inline bool _Shift_left(_Big_integer_flt& _Xval, const uint32_t _Nx) 
         const bool _Bit_shifts_into_next_unit =
             _Bit_shift > (_Big_integer_flt::_Element_bits - _Bit_scan_reverse(_Xval._Mydata[_Xval._Myused - 1]));
 
-        const bool _Bit_shift_will_overflow =
-            _Xval._Myused + _Unit_shift == _Big_integer_flt::_Element_count && _Bit_shifts_into_next_unit;
+        const uint32_t _New_used = _Xval._Myused + _Unit_shift + static_cast<uint32_t>(_Bit_shifts_into_next_unit);
 
-        if (_Bit_shift_will_overflow) {
+        if (_New_used > _Big_integer_flt::_Element_count) {
+            // Bit shift will overflow.
             _Xval._Myused = 0;
             return false;
         }
@@ -539,14 +541,15 @@ _NODISCARD inline bool _Shift_left(_Big_integer_flt& _Xval, const uint32_t _Nx) 
         const uint32_t _Lsb_mask = (1UL << _Lsb_bits) - 1UL;
         const uint32_t _Msb_mask = ~_Lsb_mask;
 
-        const uint32_t _Max_destination_index =
-            _Min_value(_Xval._Myused + _Unit_shift, _Big_integer_flt::_Element_count - 1);
+        // If _Unit_shift == 0, this will wraparound, which is okay.
+        for (uint32_t _Dest_index = _New_used - 1; _Dest_index != _Unit_shift - 1; --_Dest_index) {
+            // performance note: PSLLDQ and PALIGNR instructions could be more efficient here
 
-        for (uint32_t _Destination_index = _Max_destination_index;
-             _Destination_index != static_cast<uint32_t>(-1) && _Destination_index >= _Unit_shift;
-             --_Destination_index) { // performance note: PSLLDQ and PALIGNR instructions could be more efficient here
-            const uint32_t _Upper_source_index = _Destination_index - _Unit_shift;
-            const uint32_t _Lower_source_index = _Destination_index - _Unit_shift - 1;
+            // If _Bit_shifts_into_next_unit, the first iteration will trigger the bounds check below, which is okay.
+            const uint32_t _Upper_source_index = _Dest_index - _Unit_shift;
+
+            // When _Dest_index == _Unit_shift, this will wraparound, which is okay (see bounds check below).
+            const uint32_t _Lower_source_index = _Dest_index - _Unit_shift - 1;
 
             const uint32_t _Upper_source = _Upper_source_index < _Xval._Myused ? _Xval._Mydata[_Upper_source_index] : 0;
             const uint32_t _Lower_source = _Lower_source_index < _Xval._Myused ? _Xval._Mydata[_Lower_source_index] : 0;
@@ -556,10 +559,10 @@ _NODISCARD inline bool _Shift_left(_Big_integer_flt& _Xval, const uint32_t _Nx) 
 
             const uint32_t _Combined_shifted_source = _Shifted_upper_source | _Shifted_lower_source;
 
-            _Xval._Mydata[_Destination_index] = _Combined_shifted_source;
+            _Xval._Mydata[_Dest_index] = _Combined_shifted_source;
         }
 
-        _Xval._Myused = _Bit_shifts_into_next_unit ? _Max_destination_index + 1 : _Max_destination_index;
+        _Xval._Myused = _New_used;
     }
 
     _CSTD memset(_Xval._Mydata, 0, _Unit_shift * sizeof(uint32_t));
@@ -835,8 +838,8 @@ _NODISCARD inline bool _Multiply_by_power_of_ten(_Big_integer_flt& _Xval, const 
         _Large_power -= _Current_power;
     }
 
-    static constexpr uint32_t _Small_powers_of_ten[9] = {
-        10, 100, 1'000, 10'000, 100'000, 1'000'000, 10'000'000, 100'000'000, 1'000'000'000};
+    static constexpr uint32_t _Small_powers_of_ten[9] = {10, 100, 1'000, 10'000, 100'000, // ' TRANSITION, OS#21524983
+        1'000'000, 10'000'000, 100'000'000, 1'000'000'000}; // ' TRANSITION, OS#21524983
 
     const uint32_t _Small_power = _Power % 10;
 
@@ -1157,10 +1160,11 @@ struct _Floating_type_traits<double> {
 // separately. Note that the base of the mantissa digits may not be the same as B (e.g., for hexadecimal
 // floating-point, the mantissa digits are in base 16 but the exponent is a base 2 exponent).
 
-// We consider up to 768 decimal digits during conversion. In most cases, we require nowhere near this many bits
-// of precision to compute the correctly rounded binary floating-point value for the input string. 768 bits gives
-// us room to handle the exact decimal representation of the smallest denormal value, 2^-1074 (752 decimal digits
-// after trimming zeroes) with a bit of slack space.
+// We consider up to 768 decimal digits during conversion. In most cases, we require nowhere near this many digits
+// of precision to compute the correctly rounded binary floating-point value for the input string. The worst case is
+// (1 - 3 * 2^-53) * 2^-1022, which has an exact decimal representation of 768 decimal digits after trimming zeroes.
+// This value is exactly between 0x0.ffffffffffffep-1022 and 0x0.fffffffffffffp-1022. For round-to-nearest,
+// ties-to-even behavior, we also need to consider whether there are any nonzero trailing decimal digits.
 
 // NOTE: The mantissa buffer count here must be kept in sync with the precision of the _Big_integer_flt type.
 struct _Floating_point_string {
@@ -1241,11 +1245,6 @@ _NODISCARD inline uint64_t _Right_shift_with_rounding(
     return (_Value >> _Shift) + _Should_round_up(_Lsb_bit, _Round_bit, _Tail_bits);
 }
 
-// This is the result type of an attempt to parse a floating-point value from a string.
-// It's currently ignored, but retained in case the from_chars() specification
-// is changed to handle underflow and overflow in a special manner.
-enum class _Floating_point_parse_status { _Ok, _Underflow, _Overflow };
-
 // Converts the floating-point value [sign] 0.mantissa * 2^exponent into the correct form for _FloatingType and
 // stores the result into the _Result object. The caller must ensure that the mantissa and exponent are correctly
 // computed such that either [1] the most significant bit of the mantissa is in the correct position for the
@@ -1260,9 +1259,8 @@ enum class _Floating_point_parse_status { _Ok, _Underflow, _Overflow };
 // more bit of precision than is required, to ensure that the mantissa is correctly rounded.
 // (The caller should not round the mantissa before calling this function.)
 template <class _FloatingType>
-_NODISCARD _Floating_point_parse_status _Assemble_floating_point_value_t(const bool _Is_negative,
-    const int32_t _Exponent, const typename _Floating_type_traits<_FloatingType>::_Uint_type _Mantissa,
-    _FloatingType& _Result) noexcept {
+_NODISCARD errc _Assemble_floating_point_value_t(const bool _Is_negative, const int32_t _Exponent,
+    const typename _Floating_type_traits<_FloatingType>::_Uint_type _Mantissa, _FloatingType& _Result) noexcept {
     using _Floating_traits = _Floating_type_traits<_FloatingType>;
     using _Uint_type       = typename _Floating_traits::_Uint_type;
 
@@ -1274,13 +1272,12 @@ _NODISCARD _Floating_point_parse_status _Assemble_floating_point_value_t(const b
 
     _Result = _Bit_cast<_FloatingType>(_Sign_component | _Exponent_component | _Mantissa);
 
-    return _Floating_point_parse_status::_Ok;
+    return errc{};
 }
 
 template <class _FloatingType>
-_NODISCARD _Floating_point_parse_status _Assemble_floating_point_value(const uint64_t _Initial_mantissa,
-    const int32_t _Initial_exponent, const bool _Is_negative, const bool _Has_zero_tail,
-    _FloatingType& _Result) noexcept {
+_NODISCARD errc _Assemble_floating_point_value(const uint64_t _Initial_mantissa, const int32_t _Initial_exponent,
+    const bool _Is_negative, const bool _Has_zero_tail, _FloatingType& _Result) noexcept {
     using _Traits = _Floating_type_traits<_FloatingType>;
 
     // Assume that the number is representable as a normal value.
@@ -1296,7 +1293,7 @@ _NODISCARD _Floating_point_parse_status _Assemble_floating_point_value(const uin
     if (_Normal_exponent > _Traits::_Maximum_binary_exponent) {
         // The exponent is too large to be represented by the floating-point type; report the overflow condition:
         _Assemble_floating_point_infinity(_Is_negative, _Result);
-        return _Floating_point_parse_status::_Overflow;
+        return errc::result_out_of_range; // Overflow example: "1e+1000"
     }
 
     if (_Normal_exponent < _Traits::_Minimum_binary_exponent) {
@@ -1319,7 +1316,7 @@ _NODISCARD _Floating_point_parse_status _Assemble_floating_point_value(const uin
             // If the mantissa is now zero, we have underflowed:
             if (_Mantissa == 0) {
                 _Assemble_floating_point_zero(_Is_negative, _Result);
-                return _Floating_point_parse_status::_Underflow;
+                return errc::result_out_of_range; // Underflow example: "1e-1000"
             }
 
             // When we round the mantissa, the result may be so large that the number becomes a normal value.
@@ -1358,7 +1355,8 @@ _NODISCARD _Floating_point_parse_status _Assemble_floating_point_value(const uin
                 // In this case, report the overflow:
                 if (_Exponent > _Traits::_Maximum_binary_exponent) {
                     _Assemble_floating_point_infinity(_Is_negative, _Result);
-                    return _Floating_point_parse_status::_Overflow;
+                    return errc::result_out_of_range; // Overflow example: "1.ffffffp+127" for float
+                                                      // Overflow example: "1.fffffffffffff8p+1023" for double
                 }
             }
         } else if (_Normal_mantissa_shift > 0) {
@@ -1379,9 +1377,9 @@ _NODISCARD _Floating_point_parse_status _Assemble_floating_point_value(const uin
 // is not representable, +/-infinity is stored and overflow is reported (since this function deals with only integers,
 // underflow is impossible).
 template <class _FloatingType>
-_NODISCARD _Floating_point_parse_status _Assemble_floating_point_value_from_big_integer_flt(
-    const _Big_integer_flt& _Integer_value, const uint32_t _Integer_bits_of_precision, const bool _Is_negative,
-    const bool _Has_nonzero_fractional_part, _FloatingType& _Result) noexcept {
+_NODISCARD errc _Assemble_floating_point_value_from_big_integer_flt(const _Big_integer_flt& _Integer_value,
+    const uint32_t _Integer_bits_of_precision, const bool _Is_negative, const bool _Has_nonzero_fractional_part,
+    _FloatingType& _Result) noexcept {
     using _Traits = _Floating_type_traits<_FloatingType>;
 
     const int32_t _Base_exponent = _Traits::_Mantissa_bits - 1;
@@ -1436,7 +1434,7 @@ _NODISCARD _Floating_point_parse_status _Assemble_floating_point_value_from_big_
         (static_cast<uint64_t>(_Integer_value._Mydata[_Top_element_index] & _Top_element_mask) << _Top_element_shift)
         + (static_cast<uint64_t>(_Integer_value._Mydata[_Middle_element_index]) << _Middle_element_shift)
         + (static_cast<uint64_t>(_Integer_value._Mydata[_Bottom_element_index] & _Bottom_element_mask)
-              >> _Bottom_element_shift);
+            >> _Bottom_element_shift);
 
     bool _Has_zero_tail =
         !_Has_nonzero_fractional_part && (_Integer_value._Mydata[_Bottom_element_index] & _Top_element_mask) == 0;
@@ -1458,8 +1456,11 @@ inline void _Accumulate_decimal_digits_into_big_integer_flt(
     uint32_t _Accumulator_count = 0;
     for (const uint8_t* _It = _First_digit; _It != _Last_digit; ++_It) {
         if (_Accumulator_count == 9) {
-            (void) _Multiply(_Result, 1'000'000'000); // assumes no overflow
-            (void) _Add(_Result, _Accumulator); // assumes no overflow
+            [[maybe_unused]] const bool _Success1 =
+                _Multiply(_Result, 1'000'000'000); // assumes no overflow // ' TRANSITION, OS#21524983
+            _STL_INTERNAL_CHECK(_Success1);
+            [[maybe_unused]] const bool _Success2 = _Add(_Result, _Accumulator); // assumes no overflow
+            _STL_INTERNAL_CHECK(_Success2);
 
             _Accumulator       = 0;
             _Accumulator_count = 0;
@@ -1471,8 +1472,11 @@ inline void _Accumulate_decimal_digits_into_big_integer_flt(
     }
 
     if (_Accumulator_count != 0) {
-        (void) _Multiply_by_power_of_ten(_Result, _Accumulator_count); // assumes no overflow
-        (void) _Add(_Result, _Accumulator); // assumes no overflow
+        [[maybe_unused]] const bool _Success3 =
+            _Multiply_by_power_of_ten(_Result, _Accumulator_count); // assumes no overflow
+        _STL_INTERNAL_CHECK(_Success3);
+        [[maybe_unused]] const bool _Success4 = _Add(_Result, _Accumulator); // assumes no overflow
+        _STL_INTERNAL_CHECK(_Success4);
     }
 }
 
@@ -1480,8 +1484,8 @@ inline void _Accumulate_decimal_digits_into_big_integer_flt(
 // into a _Floating_point_string object, if the subject string was determined to be a decimal string,
 // the object is passed to this function. This function converts the decimal real value to floating-point.
 template <class _FloatingType>
-_NODISCARD _Floating_point_parse_status _Convert_decimal_string_to_floating_type(
-    const _Floating_point_string& _Data, _FloatingType& _Result) noexcept {
+_NODISCARD errc _Convert_decimal_string_to_floating_type(
+    const _Floating_point_string& _Data, _FloatingType& _Result, bool _Has_zero_tail) noexcept {
     using _Traits = _Floating_type_traits<_FloatingType>;
 
     // To generate an N bit mantissa we require N + 1 bits of precision. The extra bit is used to correctly round
@@ -1511,7 +1515,7 @@ _NODISCARD _Floating_point_parse_status _Convert_decimal_string_to_floating_type
     if (_Integer_digits_missing > 0) {
         if (!_Multiply_by_power_of_ten(_Integer_value, _Integer_digits_missing)) {
             _Assemble_floating_point_infinity(_Data._Myis_negative, _Result);
-            return _Floating_point_parse_status::_Overflow;
+            return errc::result_out_of_range; // Overflow example: "1e+2000"
         }
     }
 
@@ -1519,9 +1523,13 @@ _NODISCARD _Floating_point_parse_status _Convert_decimal_string_to_floating_type
     // [1] this number has more than the required number of bits of precision or
     // [2] the mantissa has no fractional part, then we can assemble the result immediately:
     const uint32_t _Integer_bits_of_precision = _Bit_scan_reverse(_Integer_value);
-    if (_Integer_bits_of_precision >= _Required_bits_of_precision || _Fractional_digits_present == 0) {
-        return _Assemble_floating_point_value_from_big_integer_flt(
-            _Integer_value, _Integer_bits_of_precision, _Data._Myis_negative, _Fractional_digits_present != 0, _Result);
+    {
+        const bool _Has_zero_fractional_part = _Fractional_digits_present == 0 && _Has_zero_tail;
+
+        if (_Integer_bits_of_precision >= _Required_bits_of_precision || _Has_zero_fractional_part) {
+            return _Assemble_floating_point_value_from_big_integer_flt(
+                _Integer_value, _Integer_bits_of_precision, _Data._Myis_negative, !_Has_zero_fractional_part, _Result);
+        }
     }
 
     // Otherwise, we did not get enough bits of precision from the integer part, and the mantissa has a fractional
@@ -1541,7 +1549,7 @@ _NODISCARD _Floating_point_parse_status _Convert_decimal_string_to_floating_type
         // If there were any digits in the integer part, it is impossible to underflow (because the exponent
         // cannot possibly be small enough), so if we underflow here it is a true underflow and we return zero.
         _Assemble_floating_point_zero(_Data._Myis_negative, _Result);
-        return _Floating_point_parse_status::_Underflow;
+        return errc::result_out_of_range; // Underflow example: "1e-2000"
     }
 
     // Because we are using only the fractional part of the mantissa here, the numerator is guaranteed to be smaller
@@ -1556,7 +1564,9 @@ _NODISCARD _Floating_point_parse_status _Convert_decimal_string_to_floating_type
                                            : 0;
 
     if (_Fractional_shift > 0) {
-        (void) _Shift_left(_Fractional_numerator, _Fractional_shift); // assumes no overflow
+        [[maybe_unused]] const bool _Shift_success1 =
+            _Shift_left(_Fractional_numerator, _Fractional_shift); // assumes no overflow
+        _STL_INTERNAL_CHECK(_Shift_success1);
     }
 
     const uint32_t _Required_fractional_bits_of_precision = _Required_bits_of_precision - _Integer_bits_of_precision;
@@ -1574,7 +1584,7 @@ _NODISCARD _Floating_point_parse_status _Convert_decimal_string_to_floating_type
         // Thus, we need to do the division to correctly round the result.
         if (_Fractional_shift > _Remaining_bits_of_precision_required) {
             return _Assemble_floating_point_value_from_big_integer_flt(_Integer_value, _Integer_bits_of_precision,
-                _Data._Myis_negative, _Fractional_digits_present != 0, _Result);
+                _Data._Myis_negative, _Fractional_digits_present != 0 || !_Has_zero_tail, _Result);
         }
 
         _Remaining_bits_of_precision_required -= _Fractional_shift;
@@ -1586,10 +1596,13 @@ _NODISCARD _Floating_point_parse_status _Convert_decimal_string_to_floating_type
     const uint32_t _Fractional_exponent =
         _Fractional_numerator < _Fractional_denominator ? _Fractional_shift + 1 : _Fractional_shift;
 
-    (void) _Shift_left(_Fractional_numerator, _Remaining_bits_of_precision_required); // assumes no overflow
+    [[maybe_unused]] const bool _Shift_success2 =
+        _Shift_left(_Fractional_numerator, _Remaining_bits_of_precision_required); // assumes no overflow
+    _STL_INTERNAL_CHECK(_Shift_success2);
+
     uint64_t _Fractional_mantissa = _Divide(_Fractional_numerator, _Fractional_denominator);
 
-    bool _Has_zero_tail = _Fractional_numerator._Myused == 0;
+    _Has_zero_tail = _Has_zero_tail && _Fractional_numerator._Myused == 0;
 
     // We may have produced more bits of precision than were required. Check, and remove any "extra" bits:
     const uint32_t _Fractional_mantissa_bits = _Bit_scan_reverse(_Fractional_mantissa);
@@ -1623,8 +1636,8 @@ _NODISCARD _Floating_point_parse_status _Convert_decimal_string_to_floating_type
 }
 
 template <class _FloatingType>
-_NODISCARD _Floating_point_parse_status _Convert_hexadecimal_string_to_floating_type(
-    const _Floating_point_string& _Data, _FloatingType& _Result) noexcept {
+_NODISCARD errc _Convert_hexadecimal_string_to_floating_type(
+    const _Floating_point_string& _Data, _FloatingType& _Result, bool _Has_zero_tail) noexcept {
     using _Traits = _Floating_type_traits<_FloatingType>;
 
     uint64_t _Mantissa = 0;
@@ -1639,7 +1652,6 @@ _NODISCARD _Floating_point_parse_status _Convert_hexadecimal_string_to_floating_
         _Exponent -= 4; // The exponent is in binary; log2(16) == 4
     }
 
-    bool _Has_zero_tail = true;
     while (_Has_zero_tail && _Mantissa_it != _Mantissa_last) {
         _Has_zero_tail = *_Mantissa_it++ == 0;
     }
@@ -1700,7 +1712,7 @@ _NODISCARD _Floating_point_parse_status _Convert_hexadecimal_string_to_floating_
 //     P sign[opt] digit-sequence
 
 template <class _Floating>
-_NODISCARD inline from_chars_result _Ordinary_floating_from_chars(const char* const _First, const char* const _Last,
+_NODISCARD from_chars_result _Ordinary_floating_from_chars(const char* const _First, const char* const _Last,
     _Floating& _Value, const chars_format _Fmt, const bool _Minus_sign,
     const char* _Next) noexcept { // strengthened
     // vvvvvvvvvv DERIVED FROM corecrt_internal_strtox.h WITH SIGNIFICANT MODIFICATIONS vvvvvvvvvv
@@ -1742,8 +1754,8 @@ _NODISCARD inline from_chars_result _Ordinary_floating_from_chars(const char* co
     const char* const _Whole_end = _Next;
 
     // Defend against _Exponent_adjustment integer overflow. (These values don't need to be strict.)
-    constexpr ptrdiff_t _Maximum_adjustment = 1'000'000;
-    constexpr ptrdiff_t _Minimum_adjustment = -1'000'000;
+    constexpr ptrdiff_t _Maximum_adjustment = 1'000'000; // ' TRANSITION, OS#21524983
+    constexpr ptrdiff_t _Minimum_adjustment = -1'000'000; // ' TRANSITION, OS#21524983
 
     // The exponent adjustment holds the number of digits in the mantissa buffer that appeared before the radix point.
     // It can be negative, and leading zeroes in the integer part are ignored. Examples:
@@ -1770,6 +1782,8 @@ _NODISCARD inline from_chars_result _Ordinary_floating_from_chars(const char* co
     }
 
     // Scan the fractional part of the mantissa:
+    bool _Has_zero_tail = true;
+
     for (; _Next != _Last; ++_Next) {
         const unsigned char _Digit_value = _Digit_from_char(*_Next);
 
@@ -1779,6 +1793,8 @@ _NODISCARD inline from_chars_result _Ordinary_floating_from_chars(const char* co
 
         if (_Mantissa_it != _Mantissa_last) {
             *_Mantissa_it++ = _Digit_value;
+        } else {
+            _Has_zero_tail = _Has_zero_tail && _Digit_value == 0;
         }
     }
     const char* const _Frac_end = _Next;
@@ -1849,20 +1865,21 @@ _NODISCARD inline from_chars_result _Ordinary_floating_from_chars(const char* co
     // We can return now. Note that we defer this check until after we scan the exponent, so that we can correctly
     // update _Next to point past the end of the exponent.
     if (_Mantissa_it == _Mantissa_first) {
+        _STL_INTERNAL_CHECK(_Has_zero_tail);
         _Assemble_floating_point_zero(_Fp_string._Myis_negative, _Value);
-        return {_Next, errc{}}; // _Floating_point_parse_status::_Ok
+        return {_Next, errc{}};
     }
 
     // Before we adjust the exponent, handle the case where we detected a wildly
     // out of range exponent during parsing and clamped the value:
     if (_Exponent > _Maximum_temporary_decimal_exponent) {
         _Assemble_floating_point_infinity(_Fp_string._Myis_negative, _Value);
-        return {_Next, errc{}}; // _Floating_point_parse_status::_Overflow
+        return {_Next, errc::result_out_of_range}; // Overflow example: "1e+9999"
     }
 
     if (_Exponent < _Minimum_temporary_decimal_exponent) {
         _Assemble_floating_point_zero(_Fp_string._Myis_negative, _Value);
-        return {_Next, errc{}}; // _Floating_point_parse_status::_Underflow
+        return {_Next, errc::result_out_of_range}; // Underflow example: "1e-9999"
     }
 
     // In hexadecimal floating constants, the exponent is a base 2 exponent. The exponent adjustment computed during
@@ -1876,24 +1893,24 @@ _NODISCARD inline from_chars_result _Ordinary_floating_from_chars(const char* co
     // in any supported floating-point format).
     if (_Exponent > _Maximum_temporary_decimal_exponent) {
         _Assemble_floating_point_infinity(_Fp_string._Myis_negative, _Value);
-        return {_Next, errc{}}; // _Floating_point_parse_status::_Overflow
+        return {_Next, errc::result_out_of_range}; // Overflow example: "10e+5199"
     }
 
     if (_Exponent < _Minimum_temporary_decimal_exponent) {
         _Assemble_floating_point_zero(_Fp_string._Myis_negative, _Value);
-        return {_Next, errc{}}; // _Floating_point_parse_status::_Underflow
+        return {_Next, errc::result_out_of_range}; // Underflow example: "0.001e-5199"
     }
 
     _Fp_string._Myexponent       = _Exponent;
     _Fp_string._Mymantissa_count = static_cast<uint32_t>(_Mantissa_it - _Mantissa_first);
 
     if (_Is_hexadecimal) {
-        (void) _Convert_hexadecimal_string_to_floating_type(_Fp_string, _Value); // discard status
+        const errc _Ec = _Convert_hexadecimal_string_to_floating_type(_Fp_string, _Value, _Has_zero_tail);
+        return {_Next, _Ec};
     } else {
-        (void) _Convert_decimal_string_to_floating_type(_Fp_string, _Value); // discard status
+        const errc _Ec = _Convert_decimal_string_to_floating_type(_Fp_string, _Value, _Has_zero_tail);
+        return {_Next, _Ec};
     }
-
-    return {_Next, errc{}};
 
     // ^^^^^^^^^^ DERIVED FROM corecrt_internal_strtox.h WITH SIGNIFICANT MODIFICATIONS ^^^^^^^^^^
 }
@@ -1911,8 +1928,8 @@ _NODISCARD inline bool _Starts_with_case_insensitive(const char* _First, const c
 }
 
 template <class _Floating>
-_NODISCARD inline from_chars_result _Infinity_from_chars(const char* const _First, const char* const _Last,
-    _Floating& _Value, const bool _Minus_sign, const char* _Next) noexcept { // strengthened
+_NODISCARD from_chars_result _Infinity_from_chars(const char* const _First, const char* const _Last, _Floating& _Value,
+    const bool _Minus_sign, const char* _Next) noexcept { // strengthened
     // pre: _Next points at 'i' (case-insensitively)
     if (!_Starts_with_case_insensitive(_Next + 1, _Last, "nf")) { // definitely invalid
         return {_First, errc::invalid_argument};
@@ -1931,8 +1948,8 @@ _NODISCARD inline from_chars_result _Infinity_from_chars(const char* const _Firs
 }
 
 template <class _Floating>
-_NODISCARD inline from_chars_result _Nan_from_chars(const char* const _First, const char* const _Last,
-    _Floating& _Value, const bool _Minus_sign, const char* _Next) noexcept { // strengthened
+_NODISCARD from_chars_result _Nan_from_chars(const char* const _First, const char* const _Last, _Floating& _Value,
+    const bool _Minus_sign, const char* _Next) noexcept { // strengthened
     // pre: _Next points at 'n' (case-insensitively)
     if (!_Starts_with_case_insensitive(_Next + 1, _Last, "an")) { // definitely invalid
         return {_First, errc::invalid_argument};
@@ -1983,8 +2000,8 @@ _NODISCARD inline from_chars_result _Nan_from_chars(const char* const _First, co
 }
 
 template <class _Floating>
-_NODISCARD inline from_chars_result _Floating_from_chars(const char* const _First, const char* const _Last,
-    _Floating& _Value, const chars_format _Fmt) noexcept { // strengthened
+_NODISCARD from_chars_result _Floating_from_chars(const char* const _First, const char* const _Last, _Floating& _Value,
+    const chars_format _Fmt) noexcept { // strengthened
     _Adl_verify_range(_First, _Last);
 
     _STL_ASSERT(_Fmt == chars_format::general || _Fmt == chars_format::scientific || _Fmt == chars_format::fixed
@@ -2054,20 +2071,12 @@ inline from_chars_result from_chars(const char* const _First, const char* const 
 
 #if _HAS_COMPLETE_CHARCONV
 template <class _Floating>
-_NODISCARD inline to_chars_result _Floating_to_chars_scientific_precision(
-    char* const _First, char* const _Last, const _Floating _Value, const int _Precision) noexcept; // strengthened
-
-template <class _Floating>
-_NODISCARD inline to_chars_result _Floating_to_chars_fixed_precision(
-    char* const _First, char* const _Last, const _Floating _Value, const int _Precision) noexcept; // strengthened
-
-template <class _Floating>
-_NODISCARD inline to_chars_result _Floating_to_chars_general_precision(
+_NODISCARD to_chars_result _Floating_to_chars_general_precision(
     char* const _First, char* const _Last, const _Floating _Value, const int _Precision) noexcept; // strengthened
 #endif // _HAS_COMPLETE_CHARCONV
 
 template <class _Floating>
-_NODISCARD inline to_chars_result _Floating_to_chars_hex_precision(
+_NODISCARD to_chars_result _Floating_to_chars_hex_precision(
     char* _First, char* const _Last, const _Floating _Value, int _Precision) noexcept { // strengthened
 
     // * Determine the effective _Precision.
@@ -2228,6 +2237,7 @@ _NODISCARD inline to_chars_result _Floating_to_chars_hex_precision(
         // selecting just the bit at index _Dropped_bits. This is the appropriately-shifted bit that we want.
         const _Uint_type _Should_round = _Round_bit & (_Has_tail_bits | _Lsb_bit) & (_Uint_type{1} << _Dropped_bits);
 
+        // This rounding technique is dedicated to the memory of Peppermint. =^..^=
         _Adjusted_mantissa += _Should_round;
     }
 
@@ -2299,7 +2309,7 @@ _NODISCARD inline to_chars_result _Floating_to_chars_hex_precision(
 }
 
 template <class _Floating>
-_NODISCARD inline to_chars_result _Floating_to_chars_hex_shortest(char* _First, char* const _Last,
+_NODISCARD to_chars_result _Floating_to_chars_hex_shortest(char* _First, char* const _Last,
     const _Floating _Value) noexcept { // strengthened
 
     // This prints "1.728p+0" instead of "2.e5p-1".
@@ -2427,7 +2437,7 @@ _NODISCARD inline to_chars_result _Floating_to_chars_hex_shortest(char* _First, 
 enum class _Floating_to_chars_overload { _Plain, _Format_only, _Format_precision };
 
 template <_Floating_to_chars_overload _Overload, class _Floating>
-_NODISCARD inline to_chars_result _Floating_to_chars(char* _First, char* const _Last, _Floating _Value,
+_NODISCARD to_chars_result _Floating_to_chars(char* _First, char* const _Last, _Floating _Value,
     const chars_format _Fmt, const int _Precision) noexcept { // strengthened
     _Adl_verify_range(_First, _Last);
 
@@ -2495,17 +2505,14 @@ _NODISCARD inline to_chars_result _Floating_to_chars(char* _First, char* const _
         return _Floating_to_chars_ryu(_First, _Last, _Value, _Fmt);
     } else if constexpr (_Overload == _Floating_to_chars_overload::_Format_precision) {
         switch (_Fmt) {
-#if _HAS_COMPLETE_CHARCONV
         case chars_format::scientific:
             return _Floating_to_chars_scientific_precision(_First, _Last, _Value, _Precision);
         case chars_format::fixed:
             return _Floating_to_chars_fixed_precision(_First, _Last, _Value, _Precision);
         case chars_format::general:
+#if _HAS_COMPLETE_CHARCONV
             return _Floating_to_chars_general_precision(_First, _Last, _Value, _Precision);
 #else // _HAS_COMPLETE_CHARCONV
-        case chars_format::scientific:
-        case chars_format::fixed:
-        case chars_format::general:
             return {_Last, errc::value_too_large}; // NOT YET IMPLEMENTED
 #endif // _HAS_COMPLETE_CHARCONV
         case chars_format::hex:
@@ -2564,5 +2571,5 @@ _STL_RESTORE_CLANG_WARNINGS
 #else // ^^^ _HAS_CXX17 / !_HAS_CXX17 vvv
 #pragma message("The contents of <charconv> are only available with C++17 or later.")
 #endif // _HAS_CXX17
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CHARCONV_

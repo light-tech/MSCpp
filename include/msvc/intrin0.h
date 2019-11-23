@@ -12,8 +12,8 @@
 
 #pragma once
 #define __INTRIN0_H_
-#ifndef RC_INVOKED
-#ifndef __midl
+#include <vcruntime.h>
+#if _VCRT_COMPILER_PREPROCESSOR && !defined(__midl)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -157,6 +157,8 @@ __MACHINEARM_ARM64(long _InterlockedCompareExchange_nf(long volatile * _Destinat
 __MACHINEARM_ARM64(long _InterlockedCompareExchange_rel(long volatile * _Destination, long _Exchange, long _Comparand))
 __MACHINE(long __MACHINECALL_CDECL_OR_DEFAULT _InterlockedDecrement(long volatile * _Addend))
 __MACHINEWVMPURE(long _InterlockedDecrement(long volatile * _Addend))
+__MACHINE(short _InterlockedDecrement16(short volatile * _Addend))
+__MACHINEARM_ARM64_X64(__int64 _InterlockedDecrement64(__int64 volatile * _Addend))
 __MACHINE(long __MACHINECALL_CDECL_OR_DEFAULT _InterlockedExchange(long volatile * _Target, long _Value))
 __MACHINEWVMPURE(long __MACHINECALL_CDECL_OR_DEFAULT _InterlockedExchange(long volatile * _Target, long _Value))
 __MACHINE(short _InterlockedExchange16(short volatile * _Target, short _Value))
@@ -192,6 +194,9 @@ __MACHINEARM_ARM64(long _InterlockedExchange_nf(long volatile * _Target, long _V
 __MACHINEARM_ARM64(long _InterlockedExchange_rel(long volatile * _Target, long _Value))
 __MACHINE(long __MACHINECALL_CDECL_OR_DEFAULT _InterlockedIncrement(long volatile * _Addend))
 __MACHINEWVMPURE(long _InterlockedIncrement(long volatile * _Addend))
+__MACHINE(short _InterlockedIncrement16(short volatile * _Addend))
+__MACHINEARM_ARM64_X64(__int64 _InterlockedIncrement64(__int64 volatile * _Addend))
+__MACHINEARM_ARM64(long _InterlockedIncrement_nf(long volatile * _Addend))
 __MACHINE(long _InterlockedOr(long volatile * _Value, long _Mask))
 __MACHINE(short _InterlockedOr16(short volatile * _Value, short _Mask))
 __MACHINEARM_ARM64(short _InterlockedOr16_acq(short volatile * _Value, short _Mask))
@@ -225,14 +230,14 @@ __MACHINEARM_ARM64(long _InterlockedXor_acq(long volatile * _Value, long _Mask))
 __MACHINEARM_ARM64(long _InterlockedXor_nf(long volatile * _Value, long _Mask))
 __MACHINEARM_ARM64(long _InterlockedXor_rel(long volatile * _Value, long _Mask))
 __MACHINE(void _ReadWriteBarrier(void))
-__MACHINEARM_ARM64(__int16 __iso_volatile_load16(const volatile __int16 *))
-__MACHINEARM_ARM64(__int32 __iso_volatile_load32(const volatile __int32 *))
-__MACHINEARM_ARM64(__int64 __iso_volatile_load64(const volatile __int64 *))
-__MACHINEARM_ARM64(__int8 __iso_volatile_load8(const volatile __int8 *))
-__MACHINEARM_ARM64(void __iso_volatile_store16(volatile __int16 *, __int16))
-__MACHINEARM_ARM64(void __iso_volatile_store32(volatile __int32 *, __int32))
-__MACHINEARM_ARM64(void __iso_volatile_store64(volatile __int64 *, __int64))
-__MACHINEARM_ARM64(void __iso_volatile_store8(volatile __int8 *, __int8))
+__MACHINE(__int16 __iso_volatile_load16(const volatile __int16 *))
+__MACHINE(__int32 __iso_volatile_load32(const volatile __int32 *))
+__MACHINE(__int64 __iso_volatile_load64(const volatile __int64 *))
+__MACHINE(__int8 __iso_volatile_load8(const volatile __int8 *))
+__MACHINE(void __iso_volatile_store16(volatile __int16 *, __int16))
+__MACHINE(void __iso_volatile_store32(volatile __int32 *, __int32))
+__MACHINE(void __iso_volatile_store64(volatile __int64 *, __int64))
+__MACHINE(void __iso_volatile_store8(volatile __int8 *, __int8))
 __MACHINEARM(__int64 __ldrexd(const volatile __int64 *))
 __MACHINEARM_ARM64(void __yield(void))
 __MACHINE(unsigned char _interlockedbittestandset(long volatile *, long))
@@ -241,6 +246,13 @@ __MACHINEARM_ARM64(unsigned char _interlockedbittestandset_nf(long volatile *, l
 __MACHINEARM_ARM64(unsigned char _interlockedbittestandset_rel(long volatile *, long))
 __MACHINEX64(unsigned __int64 __shiftright128(unsigned __int64 _LowPart, unsigned __int64 _HighPart, unsigned char _Shift))
 __MACHINEX64(unsigned __int64 _umul128(unsigned __int64 _Multiplier, unsigned __int64 _Multiplicand, unsigned __int64 * _HighProduct))
+#if defined(__cplusplus)
+#if !defined(__clang__) && !defined(__EDG__) && !defined(__CUDACC__)
+__MACHINE(constexpr void * __cdecl __builtin_assume_aligned(const void *, size_t, ...) noexcept)
+#else
+__MACHINE(void * __cdecl __builtin_assume_aligned(const void *, size_t, ...) noexcept)
+#endif // !defined(__clang__) && !defined(__EDG__) && !defined(__CUDACC__)
+#endif // defined(__cplusplus)
 
 /*******************************************************************
 * Note: New intrinsics should be added here IF AND ONLY IF they're *
@@ -251,5 +263,4 @@ __MACHINEX64(unsigned __int64 _umul128(unsigned __int64 _Multiplier, unsigned __
 #if defined(__cplusplus)
 }
 #endif
-#endif  /* __midl */
-#endif  /* RC_INVOKED */
+#endif /* _VCRT_COMPILER_PREPROCESSOR && !defined(__midl) */

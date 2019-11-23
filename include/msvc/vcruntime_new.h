@@ -45,24 +45,24 @@ namespace std
     }
 #endif
 
-_Ret_notnull_ _Post_writable_byte_size_(_Size)
-_VCRT_ALLOCATOR void* __CRTDECL operator new(
+_NODISCARD _Ret_notnull_ _Post_writable_byte_size_(_Size) _VCRT_ALLOCATOR
+void* __CRTDECL operator new(
     size_t _Size
     );
 
-_Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(_Size)
-_VCRT_ALLOCATOR void* __CRTDECL operator new(
+_NODISCARD _Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(_Size) _VCRT_ALLOCATOR
+void* __CRTDECL operator new(
     size_t _Size,
     std::nothrow_t const&
     ) noexcept;
 
-_Ret_notnull_ _Post_writable_byte_size_(_Size)
-_VCRT_ALLOCATOR void* __CRTDECL operator new[](
+_NODISCARD _Ret_notnull_ _Post_writable_byte_size_(_Size) _VCRT_ALLOCATOR
+void* __CRTDECL operator new[](
     size_t _Size
     );
 
-_Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(_Size)
-_VCRT_ALLOCATOR void* __CRTDECL operator new[](
+_NODISCARD _Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(_Size) _VCRT_ALLOCATOR
+void* __CRTDECL operator new[](
     size_t _Size,
     std::nothrow_t const&
     ) noexcept;
@@ -96,28 +96,28 @@ void __CRTDECL operator delete[](
     ) noexcept;
 
 #ifdef __cpp_aligned_new
-_Ret_notnull_ _Post_writable_byte_size_(_Size)
-_VCRT_ALLOCATOR void* __CRTDECL operator new(
+_NODISCARD _Ret_notnull_ _Post_writable_byte_size_(_Size) _VCRT_ALLOCATOR
+void* __CRTDECL operator new(
     size_t           _Size,
     std::align_val_t _Al
     );
 
-_Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(_Size)
-_VCRT_ALLOCATOR void* __CRTDECL operator new(
+_NODISCARD _Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(_Size) _VCRT_ALLOCATOR
+void* __CRTDECL operator new(
     size_t                _Size,
     std::align_val_t      _Al,
     std::nothrow_t const&
     ) noexcept;
 
 
-_Ret_notnull_ _Post_writable_byte_size_(_Size)
-_VCRT_ALLOCATOR void* __CRTDECL operator new[](
+_NODISCARD _Ret_notnull_ _Post_writable_byte_size_(_Size) _VCRT_ALLOCATOR
+void* __CRTDECL operator new[](
     size_t           _Size,
     std::align_val_t _Al
     );
 
-_Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(_Size)
-_VCRT_ALLOCATOR void* __CRTDECL operator new[](
+_NODISCARD _Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(_Size) _VCRT_ALLOCATOR
+void* __CRTDECL operator new[](
     size_t                _Size,
     std::align_val_t      _Al,
     std::nothrow_t const&
@@ -163,7 +163,7 @@ void __CRTDECL operator delete[](
 #pragma warning(disable: 4514) // 'operator new': unreferenced inline function has been removed
 #ifndef __PLACEMENT_NEW_INLINE
     #define __PLACEMENT_NEW_INLINE
-    _Ret_notnull_ _Post_writable_byte_size_(_Size) _Post_satisfies_(return == _Where)
+    _NODISCARD _Ret_notnull_ _Post_writable_byte_size_(_Size) _Post_satisfies_(return == _Where)
     inline void* __CRTDECL operator new(size_t _Size, _Writable_bytes_(_Size) void* _Where) noexcept
     {
         (void)_Size;
@@ -178,7 +178,7 @@ void __CRTDECL operator delete[](
 
 #ifndef __PLACEMENT_VEC_NEW_INLINE
     #define __PLACEMENT_VEC_NEW_INLINE
-    _Ret_notnull_ _Post_writable_byte_size_(_Size) _Post_satisfies_(return == _Where)
+    _NODISCARD _Ret_notnull_ _Post_writable_byte_size_(_Size) _Post_satisfies_(return == _Where)
     inline void* __CRTDECL operator new[](size_t _Size,
         _Writable_bytes_(_Size) void* _Where) noexcept
     {

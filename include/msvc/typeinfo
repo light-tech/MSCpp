@@ -18,7 +18,8 @@
 
 #ifndef _TYPEINFO_
 #define _TYPEINFO_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <exception>
 
 #pragma pack(push, _CRT_PACKING)
@@ -45,8 +46,7 @@ public:
     bad_cast(const char* _Message = "bad cast") noexcept : exception(_Message) { // construct from message string
     }
 
-    virtual ~bad_cast() noexcept { // destroy the object
-    }
+    virtual ~bad_cast() noexcept {}
 
 protected:
     virtual void _Doraise() const { // perform class-specific exception handling
@@ -60,8 +60,7 @@ public:
     bad_typeid(const char* _Message = "bad typeid") noexcept : exception(_Message) { // construct from message string
     }
 
-    virtual ~bad_typeid() noexcept { // destroy the object
-    }
+    virtual ~bad_typeid() noexcept {}
 
 protected:
     virtual void _Doraise() const { // perform class-specific exception handling
@@ -76,13 +75,17 @@ public:
 };
 #endif // _HAS_EXCEPTIONS
 
+[[noreturn]] inline void _Throw_bad_cast() {
+    _THROW(bad_cast{});
+}
+
 _STD_END
 
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #pragma warning(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _TYPEINFO_
 
 /*

@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _BITSET_
 #define _BITSET_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <iosfwd>
 #include <xstring>
 
@@ -21,8 +22,10 @@ _STD_BEGIN
 template <size_t _Bits>
 class bitset { // store fixed-length sequence of Boolean elements
 public:
+#pragma warning(push)
+#pragma warning(disable : 4296) // expression is always true (/Wall)
     using _Ty = conditional_t<_Bits <= sizeof(unsigned long) * CHAR_BIT, unsigned long, unsigned long long>;
-
+#pragma warning(pop)
 
     // CLASS reference
     class reference { // proxy for an element
@@ -38,7 +41,7 @@ public:
         }
 
         reference& operator=(const reference& _Bitref) noexcept { // assign reference to element
-            _Pbitset->_Set_unchecked(_Mypos, bool(_Bitref));
+            _Pbitset->_Set_unchecked(_Mypos, static_cast<bool>(_Bitref));
             return *this;
         }
 
@@ -56,8 +59,7 @@ public:
         }
 
     private:
-        reference() noexcept : _Pbitset(nullptr), _Mypos(0) { // default construct
-        }
+        reference() noexcept : _Pbitset(nullptr), _Mypos(0) {}
 
         reference(bitset<_Bits>& _Bitset, size_t _Pos)
             : _Pbitset(&_Bitset), _Mypos(_Pos) { // construct from bitset reference and position
@@ -75,11 +77,11 @@ public:
 #endif // _ITERATOR_DEBUG_LEVEL == 0
     }
 
-    constexpr bool _Subscript(size_t _Pos) const { // subscript nonmutable sequence
+    constexpr bool _Subscript(size_t _Pos) const {
         return (_Array[_Pos / _Bitsperword] & (_Ty{1} << _Pos % _Bitsperword)) != 0;
     }
 
-    _NODISCARD constexpr bool operator[](size_t _Pos) const { // subscript nonmutable sequence
+    _NODISCARD constexpr bool operator[](size_t _Pos) const {
 #if _ITERATOR_DEBUG_LEVEL == 0
         return _Subscript(_Pos);
 
@@ -88,7 +90,7 @@ public:
 #endif // _ITERATOR_DEBUG_LEVEL == 0
     }
 
-    _NODISCARD reference operator[](size_t _Pos) { // subscript mutable sequence
+    _NODISCARD reference operator[](size_t _Pos) {
         _Validate(_Pos);
         return reference(*this, _Pos);
     }
@@ -153,8 +155,8 @@ public:
     explicit bitset(const basic_string<_Elem, _Traits, _Alloc>& _Str,
         typename basic_string<_Elem, _Traits, _Alloc>::size_type _Pos   = 0,
         typename basic_string<_Elem, _Traits, _Alloc>::size_type _Count = basic_string<_Elem, _Traits, _Alloc>::npos,
-        _Elem _E0                                                       = (_Elem) '0',
-        _Elem _E1 = (_Elem) '1') { // construct from [_Pos, _Pos + _Count) elements in string
+        _Elem _E0                                                       = static_cast<_Elem>('0'),
+        _Elem _E1 = static_cast<_Elem>('1')) { // construct from [_Pos, _Pos + _Count) elements in string
         if (_Str.size() < _Pos) {
             _Xran(); // _Pos off end
         }
@@ -168,8 +170,8 @@ public:
 
     template <class _Elem>
     explicit bitset(const _Elem* _Ptr, typename basic_string<_Elem>::size_type _Count = basic_string<_Elem>::npos,
-        _Elem _E0 = (_Elem) '0',
-        _Elem _E1 = (_Elem) '1') { // initialize from NTBS
+        _Elem _E0 = static_cast<_Elem>('0'),
+        _Elem _E1 = static_cast<_Elem>('1')) { // initialize from NTBS
         if (_Count == basic_string<_Elem>::npos) {
             _Count = char_traits<_Elem>::length(_Ptr);
         }
@@ -201,13 +203,11 @@ public:
         return *this;
     }
 
-    bitset& operator<<=(size_t _Pos) noexcept { // shift left by _Pos
+    bitset& operator<<=(size_t _Pos) noexcept { // shift left by _Pos, first by words then by bits
         const auto _Wordshift = static_cast<ptrdiff_t>(_Pos / _Bitsperword);
         if (_Wordshift != 0) {
             for (ptrdiff_t _Wpos = _Words; 0 <= _Wpos; --_Wpos) {
-                _Array[_Wpos] = _Wordshift <= _Wpos // shift by words
-                                    ? _Array[_Wpos - _Wordshift]
-                                    : _Ty{};
+                _Array[_Wpos] = _Wordshift <= _Wpos ? _Array[_Wpos - _Wordshift] : 0;
             }
         }
 
@@ -337,7 +337,7 @@ public:
 
     template <class _Elem = char, class _Tr = char_traits<_Elem>, class _Alloc = allocator<_Elem>>
     _NODISCARD basic_string<_Elem, _Tr, _Alloc> to_string(
-        _Elem _E0 = (_Elem) '0', _Elem _E1 = (_Elem) '1') const { // convert bitset to string
+        _Elem _E0 = static_cast<_Elem>('0'), _Elem _E1 = static_cast<_Elem>('1')) const { // convert bitset to string
         basic_string<_Elem, _Tr, _Alloc> _Str;
         _Str.reserve(_Bits);
 
@@ -421,6 +421,10 @@ public:
         return bitset(*this) >>= _Pos;
     }
 
+    _NODISCARD _Ty _Getword(size_t _Wpos) const noexcept { // nonstandard extension; get underlying word
+        return _Array[_Wpos];
+    }
+
 private:
     friend hash<bitset<_Bits>>;
 
@@ -468,28 +472,28 @@ private:
 };
 
 template <size_t _Bits>
-_NODISCARD inline bitset<_Bits> operator&(const bitset<_Bits>& _Left,
+_NODISCARD bitset<_Bits> operator&(const bitset<_Bits>& _Left,
     const bitset<_Bits>& _Right) noexcept { // return bitset _Left AND _Right
     bitset<_Bits> _Ans = _Left;
     return _Ans &= _Right;
 }
 
 template <size_t _Bits>
-_NODISCARD inline bitset<_Bits> operator|(const bitset<_Bits>& _Left,
+_NODISCARD bitset<_Bits> operator|(const bitset<_Bits>& _Left,
     const bitset<_Bits>& _Right) noexcept { // return bitset _Left OR _Right
     bitset<_Bits> _Ans = _Left;
     return _Ans |= _Right;
 }
 
 template <size_t _Bits>
-_NODISCARD inline bitset<_Bits> operator^(const bitset<_Bits>& _Left,
+_NODISCARD bitset<_Bits> operator^(const bitset<_Bits>& _Left,
     const bitset<_Bits>& _Right) noexcept { // return bitset _Left XOR _Right
     bitset<_Bits> _Ans = _Left;
     return _Ans ^= _Right;
 }
 
 template <class _Elem, class _Tr, size_t _Bits>
-inline basic_ostream<_Elem, _Tr>& operator<<(
+basic_ostream<_Elem, _Tr>& operator<<(
     basic_ostream<_Elem, _Tr>& _Ostr, const bitset<_Bits>& _Right) { // insert bitset as a string
     using _Ctype             = typename basic_ostream<_Elem, _Tr>::_Ctype;
     const _Ctype& _Ctype_fac = _STD use_facet<_Ctype>(_Ostr.getloc());
@@ -501,7 +505,7 @@ inline basic_ostream<_Elem, _Tr>& operator<<(
 
 // TEMPLATE operator>>
 template <class _Elem, class _Tr, size_t _Bits>
-inline basic_istream<_Elem, _Tr>& operator>>(
+basic_istream<_Elem, _Tr>& operator>>(
     basic_istream<_Elem, _Tr>& _Istr, bitset<_Bits>& _Right) { // extract bitset as a string
     using _Istr_t                    = basic_istream<_Elem, _Tr>;
     using _Ctype                     = typename _Istr_t::_Ctype;
@@ -516,8 +520,8 @@ inline basic_istream<_Elem, _Tr>& operator>>(
     if (_Ok) { // valid stream, extract elements
         _TRY_IO_BEGIN
         typename _Tr::int_type _Meta = _Istr.rdbuf()->sgetc();
-        for (size_t _Count = _Right.size(); 0 < _Count;
-             _Meta         = _Istr.rdbuf()->snextc(), (void) --_Count) { // test _Meta
+        for (size_t _Count = _Right.size(); 0 < _Count; _Meta = _Istr.rdbuf()->snextc(), (void) --_Count) {
+            // test _Meta
             _Elem _Char;
             if (_Tr::eq_int_type(_Tr::eof(), _Meta)) { // end of file, quit
                 _State |= _Istr_t::eofbit;
@@ -561,7 +565,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _BITSET_
 
 /*

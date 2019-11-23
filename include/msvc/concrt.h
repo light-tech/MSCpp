@@ -194,7 +194,7 @@ _CONCRTIMP void __cdecl Free(_Pre_maybenull_ _Post_invalid_ void * _PAllocation)
 /// </summary>
 /**/
 
-#if defined(_CRT_USE_WINAPI_FAMILY_DESKTOP_APP) || defined(_KERNELX) || defined(_XBOX_ONE)
+#if defined(_CRT_USE_WINAPI_FAMILY_DESKTOP_APP) || defined(_XBOX_ONE)
 
 /// <summary>
 ///     Restricts the execution resources used by the Concurrency Runtime internal worker threads to the affinity set specified.
@@ -220,7 +220,7 @@ _CONCRTIMP void __cdecl Free(_Pre_maybenull_ _Post_invalid_ void * _PAllocation)
 /**/
 _CONCRTIMP void __cdecl set_task_execution_resources(DWORD_PTR _ProcessAffinityMask);
 
-#endif /* defined(_CRT_USE_WINAPI_FAMILY_DESKTOP_APP) || defined(_KERNELX) || defined(_XBOX_ONE) */
+#endif /* defined(_CRT_USE_WINAPI_FAMILY_DESKTOP_APP) || defined(_XBOX_ONE) */
 
 #ifdef _CRT_USE_WINAPI_FAMILY_DESKTOP_APP
 
@@ -2671,7 +2671,7 @@ private:
     ///     Stringify policy keys.
     /// </summary>
     /**/
-    static char * __cdecl _StringFromPolicyKey(unsigned int _Index);
+    static const char * __cdecl _StringFromPolicyKey(unsigned int _Index);
 };
 
 /// <summary>

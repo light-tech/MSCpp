@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _ARRAY_
 #define _ARRAY_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <algorithm>
 #include <iterator>
 #include <tuple>
@@ -16,8 +17,7 @@ _STL_DISABLE_CLANG_WARNINGS
 
 _STD_BEGIN
 // CLASS TEMPLATE array
-template <class _Ty,
-    size_t _Size>
+template <class _Ty, size_t _Size>
 class array { // fixed size array of values
 public:
     using value_type      = _Ty;
@@ -35,105 +35,96 @@ public:
     using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
 
 #if _HAS_TR1_NAMESPACE
-    _DEPRECATE_TR1_NAMESPACE void assign(const _Ty& _Value) { // assign value to all elements
+    _DEPRECATE_TR1_NAMESPACE void assign(const _Ty& _Value) {
         _STD fill_n(_Elems, _Size, _Value);
     }
 #endif // _HAS_TR1_NAMESPACE
 
-    void fill(const _Ty& _Value) { // assign value to all elements
+    void fill(const _Ty& _Value) {
         _STD fill_n(_Elems, _Size, _Value);
     }
 
-    void swap(array& _Other) _NOEXCEPT_COND(_Is_nothrow_swappable<_Ty>::value) { // swap contents with _Other
+    void swap(array& _Other) _NOEXCEPT_COND(_Is_nothrow_swappable<_Ty>::value) {
         _Swap_ranges_unchecked(_Elems, _Elems + _Size, _Other._Elems);
     }
 
-    _NODISCARD _CONSTEXPR17 iterator begin() noexcept { // return iterator for beginning of mutable sequence
+    _NODISCARD _CONSTEXPR17 iterator begin() noexcept {
         return iterator(_Elems, 0);
     }
 
-    _NODISCARD _CONSTEXPR17 const_iterator begin() const
-        noexcept { // return iterator for beginning of nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_iterator begin() const noexcept {
         return const_iterator(_Elems, 0);
     }
 
-    _NODISCARD _CONSTEXPR17 iterator end() noexcept { // return iterator for end of mutable sequence
+    _NODISCARD _CONSTEXPR17 iterator end() noexcept {
         return iterator(_Elems, _Size);
     }
 
-    _NODISCARD _CONSTEXPR17 const_iterator end() const
-        noexcept { // return iterator for beginning of nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_iterator end() const noexcept {
         return const_iterator(_Elems, _Size);
     }
 
-    _NODISCARD _CONSTEXPR17 reverse_iterator
-        rbegin() noexcept { // return iterator for beginning of reversed mutable sequence
+    _NODISCARD _CONSTEXPR17 reverse_iterator rbegin() noexcept {
         return reverse_iterator(end());
     }
 
-    _NODISCARD _CONSTEXPR17 const_reverse_iterator rbegin() const
-        noexcept { // return iterator for beginning of reversed nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_reverse_iterator rbegin() const noexcept {
         return const_reverse_iterator(end());
     }
 
-    _NODISCARD _CONSTEXPR17 reverse_iterator rend() noexcept { // return iterator for end of reversed mutable sequence
+    _NODISCARD _CONSTEXPR17 reverse_iterator rend() noexcept {
         return reverse_iterator(begin());
     }
 
-    _NODISCARD _CONSTEXPR17 const_reverse_iterator rend() const
-        noexcept { // return iterator for end of reversed nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_reverse_iterator rend() const noexcept {
         return const_reverse_iterator(begin());
     }
 
-    _NODISCARD _CONSTEXPR17 const_iterator cbegin() const
-        noexcept { // return iterator for beginning of nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_iterator cbegin() const noexcept {
         return begin();
     }
 
-    _NODISCARD _CONSTEXPR17 const_iterator cend() const noexcept { // return iterator for end of nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_iterator cend() const noexcept {
         return end();
     }
 
-    _NODISCARD _CONSTEXPR17 const_reverse_iterator crbegin() const
-        noexcept { // return iterator for beginning of reversed nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_reverse_iterator crbegin() const noexcept {
         return rbegin();
     }
 
-    _NODISCARD _CONSTEXPR17 const_reverse_iterator crend() const
-        noexcept { // return iterator for end of reversed nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_reverse_iterator crend() const noexcept {
         return rend();
     }
 
-    _CONSTEXPR17 _Ty* _Unchecked_begin() noexcept { // return plain pointer to beginning of mutable sequence
+    _CONSTEXPR17 _Ty* _Unchecked_begin() noexcept {
         return _Elems;
     }
 
-    _CONSTEXPR17 const _Ty* _Unchecked_begin() const
-        noexcept { // return plain pointer to beginning of nonmutable sequence
+    _CONSTEXPR17 const _Ty* _Unchecked_begin() const noexcept {
         return _Elems;
     }
 
-    _CONSTEXPR17 _Ty* _Unchecked_end() noexcept { // return plain pointer to end of mutable sequence
+    _CONSTEXPR17 _Ty* _Unchecked_end() noexcept {
         return _Elems + _Size;
     }
 
-    _CONSTEXPR17 const _Ty* _Unchecked_end() const noexcept { // return plain pointer to end of nonmutable sequence
+    _CONSTEXPR17 const _Ty* _Unchecked_end() const noexcept {
         return _Elems + _Size;
     }
 
-    _NODISCARD constexpr size_type size() const noexcept { // return length of sequence
+    _NODISCARD constexpr size_type size() const noexcept {
         return _Size;
     }
 
-    _NODISCARD constexpr size_type max_size() const noexcept { // return maximum possible length of sequence
+    _NODISCARD constexpr size_type max_size() const noexcept {
         return _Size;
     }
 
-    _NODISCARD constexpr bool empty() const noexcept { // test if sequence is empty
+    _NODISCARD constexpr bool empty() const noexcept {
         return false;
     }
 
-    _NODISCARD _CONSTEXPR17 reference at(size_type _Pos) { // subscript mutable sequence with checking
+    _NODISCARD _CONSTEXPR17 reference at(size_type _Pos) {
         if (_Size <= _Pos) {
             _Xran();
         }
@@ -141,7 +132,7 @@ public:
         return _Elems[_Pos];
     }
 
-    _NODISCARD constexpr const_reference at(size_type _Pos) const { // subscript nonmutable sequence with checking
+    _NODISCARD constexpr const_reference at(size_type _Pos) const {
         if (_Size <= _Pos) {
             _Xran();
         }
@@ -150,53 +141,49 @@ public:
     }
 
     _NODISCARD _CONSTEXPR17 reference operator[](_In_range_(0, _Size - 1) size_type _Pos) noexcept { // strengthened
-        // subscript mutable sequence
-#if _ITERATOR_DEBUG_LEVEL != 0
+#if _CONTAINER_DEBUG_LEVEL > 0
         _STL_VERIFY(_Pos < _Size, "array subscript out of range");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _CONTAINER_DEBUG_LEVEL > 0
 
         return _Elems[_Pos];
     }
 
     _NODISCARD constexpr const_reference operator[](_In_range_(0, _Size - 1) size_type _Pos) const
         noexcept { // strengthened
-        // subscript nonmutable sequence
-#if _ITERATOR_DEBUG_LEVEL != 0
+#if _CONTAINER_DEBUG_LEVEL > 0
         _STL_VERIFY(_Pos < _Size, "array subscript out of range");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _CONTAINER_DEBUG_LEVEL > 0
 
         return _Elems[_Pos];
     }
 
     _NODISCARD _CONSTEXPR17 reference front() noexcept { // strengthened
-        // return first element of mutable sequence
+
         return _Elems[0];
     }
 
     _NODISCARD constexpr const_reference front() const noexcept { // strengthened
-        // return first element of nonmutable sequence
+
         return _Elems[0];
     }
 
     _NODISCARD _CONSTEXPR17 reference back() noexcept { // strengthened
-        // return last element of mutable sequence
         return _Elems[_Size - 1];
     }
 
     _NODISCARD constexpr const_reference back() const noexcept { // strengthened
-        // return last element of nonmutable sequence
         return _Elems[_Size - 1];
     }
 
-    _NODISCARD _CONSTEXPR17 _Ty* data() noexcept { // return pointer to mutable data array
+    _NODISCARD _CONSTEXPR17 _Ty* data() noexcept {
         return _Elems;
     }
 
-    _NODISCARD _CONSTEXPR17 const _Ty* data() const noexcept { // return pointer to nonmutable data array
+    _NODISCARD _CONSTEXPR17 const _Ty* data() const noexcept {
         return _Elems;
     }
 
-    [[noreturn]] void _Xran() const { // report an out_of_range error
+    [[noreturn]] void _Xran() const {
         _Xout_of_range("invalid array<T, N> subscript");
     }
 
@@ -217,7 +204,7 @@ array(_First, _Rest...)->array<typename _Enforce_same<_First, _Rest...>::type, 1
 #endif // _HAS_CXX17
 
 template <class _Ty>
-class array<_Ty, 0> { // zero size array of values
+class array<_Ty, 0> {
 public:
     using value_type      = _Ty;
     using size_type       = size_t;
@@ -233,172 +220,154 @@ public:
     using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
 
 #if _HAS_TR1_NAMESPACE
-    _DEPRECATE_TR1_NAMESPACE void assign(const _Ty&) { // assign value to all elements
-    }
+    _DEPRECATE_TR1_NAMESPACE void assign(const _Ty&) {}
 #endif // _HAS_TR1_NAMESPACE
 
-    void fill(const _Ty&) { // assign value to all elements
-    }
+    void fill(const _Ty&) {}
 
-    void swap(array&) noexcept { // swap contents with _Other
-    }
+    void swap(array&) noexcept {}
 
-    _NODISCARD _CONSTEXPR17 iterator begin() noexcept { // return iterator for beginning of mutable sequence
+    _NODISCARD _CONSTEXPR17 iterator begin() noexcept {
         return iterator{};
     }
 
-    _NODISCARD _CONSTEXPR17 const_iterator begin() const
-        noexcept { // return iterator for beginning of nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_iterator begin() const noexcept {
         return const_iterator{};
     }
 
-    _NODISCARD _CONSTEXPR17 iterator end() noexcept { // return iterator for end of mutable sequence
+    _NODISCARD _CONSTEXPR17 iterator end() noexcept {
         return iterator{};
     }
 
-    _NODISCARD _CONSTEXPR17 const_iterator end() const
-        noexcept { // return iterator for beginning of nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_iterator end() const noexcept {
         return const_iterator{};
     }
 
-    _NODISCARD _CONSTEXPR17 reverse_iterator
-        rbegin() noexcept { // return iterator for beginning of reversed mutable sequence
+    _NODISCARD _CONSTEXPR17 reverse_iterator rbegin() noexcept {
         return reverse_iterator(end());
     }
 
-    _NODISCARD _CONSTEXPR17 const_reverse_iterator rbegin() const
-        noexcept { // return iterator for beginning of reversed nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_reverse_iterator rbegin() const noexcept {
         return const_reverse_iterator(end());
     }
 
-    _NODISCARD _CONSTEXPR17 reverse_iterator rend() noexcept { // return iterator for end of reversed mutable sequence
+    _NODISCARD _CONSTEXPR17 reverse_iterator rend() noexcept {
         return reverse_iterator(begin());
     }
 
-    _NODISCARD _CONSTEXPR17 const_reverse_iterator rend() const
-        noexcept { // return iterator for end of reversed nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_reverse_iterator rend() const noexcept {
         return const_reverse_iterator(begin());
     }
 
-    _NODISCARD _CONSTEXPR17 const_iterator cbegin() const
-        noexcept { // return iterator for beginning of nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_iterator cbegin() const noexcept {
         return begin();
     }
 
-    _NODISCARD _CONSTEXPR17 const_iterator cend() const noexcept { // return iterator for end of nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_iterator cend() const noexcept {
         return end();
     }
 
-    _NODISCARD _CONSTEXPR17 const_reverse_iterator crbegin() const
-        noexcept { // return iterator for beginning of reversed nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_reverse_iterator crbegin() const noexcept {
         return rbegin();
     }
 
-    _NODISCARD _CONSTEXPR17 const_reverse_iterator crend() const
-        noexcept { // return iterator for end of reversed nonmutable sequence
+    _NODISCARD _CONSTEXPR17 const_reverse_iterator crend() const noexcept {
         return rend();
     }
 
-    _CONSTEXPR17 _Ty* _Unchecked_begin() noexcept { // return plain pointer to beginning of mutable sequence
+    _CONSTEXPR17 _Ty* _Unchecked_begin() noexcept {
         return nullptr;
     }
 
-    _CONSTEXPR17 const _Ty* _Unchecked_begin() const
-        noexcept { // return plain pointer to beginning of nonmutable sequence
+    _CONSTEXPR17 const _Ty* _Unchecked_begin() const noexcept {
         return nullptr;
     }
 
-    _CONSTEXPR17 _Ty* _Unchecked_end() noexcept { // return plain pointer to end of mutable sequence
+    _CONSTEXPR17 _Ty* _Unchecked_end() noexcept {
         return nullptr;
     }
 
-    _CONSTEXPR17 const _Ty* _Unchecked_end() const noexcept { // return plain pointer to end of nonmutable sequence
+    _CONSTEXPR17 const _Ty* _Unchecked_end() const noexcept {
         return nullptr;
     }
 
-    _NODISCARD constexpr size_type size() const noexcept { // return length of sequence
+    _NODISCARD constexpr size_type size() const noexcept {
         return 0;
     }
 
-    _NODISCARD constexpr size_type max_size() const noexcept { // return maximum possible length of sequence
+    _NODISCARD constexpr size_type max_size() const noexcept {
         return 0;
     }
 
-    _NODISCARD constexpr bool empty() const noexcept { // test if sequence is empty
+    _NODISCARD constexpr bool empty() const noexcept {
         return true;
     }
 
-    [[noreturn]] reference at(size_type) { // subscript mutable sequence with checking
+    [[noreturn]] reference at(size_type) {
         _Xran();
     }
 
-    [[noreturn]] const_reference at(size_type) const { // subscript nonmutable sequence with checking
+    [[noreturn]] const_reference at(size_type) const {
         _Xran();
     }
 
     _NODISCARD reference operator[](size_type) noexcept { // strengthened
-        // subscript mutable sequence
-#if _ITERATOR_DEBUG_LEVEL != 0
+#if _CONTAINER_DEBUG_LEVEL > 0
         _STL_REPORT_ERROR("array subscript out of range");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _CONTAINER_DEBUG_LEVEL > 0
 
         return _Elems[0];
     }
 
     _NODISCARD const_reference operator[](size_type) const noexcept { // strengthened
-        // subscript nonmutable sequence
-#if _ITERATOR_DEBUG_LEVEL != 0
+#if _CONTAINER_DEBUG_LEVEL > 0
         _STL_REPORT_ERROR("array subscript out of range");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _CONTAINER_DEBUG_LEVEL > 0
 
         return _Elems[0];
     }
 
     _NODISCARD reference front() noexcept { // strengthened
-        // return first element of mutable sequence
-#if _ITERATOR_DEBUG_LEVEL != 0
+#if _CONTAINER_DEBUG_LEVEL > 0
         _STL_REPORT_ERROR("array<T, 0>::front() invalid");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _CONTAINER_DEBUG_LEVEL > 0
 
         return _Elems[0];
     }
 
     _NODISCARD const_reference front() const noexcept { // strengthened
-        // return first element of nonmutable sequence
-#if _ITERATOR_DEBUG_LEVEL != 0
+#if _CONTAINER_DEBUG_LEVEL > 0
         _STL_REPORT_ERROR("array<T, 0>::front() invalid");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _CONTAINER_DEBUG_LEVEL > 0
 
         return _Elems[0];
     }
 
     _NODISCARD reference back() noexcept { // strengthened
-        // return last element of mutable sequence
-#if _ITERATOR_DEBUG_LEVEL != 0
+#if _CONTAINER_DEBUG_LEVEL > 0
         _STL_REPORT_ERROR("array<T, 0>::back() invalid");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _CONTAINER_DEBUG_LEVEL > 0
 
         return _Elems[0];
     }
 
     _NODISCARD const_reference back() const noexcept { // strengthened
-        // return last element of nonmutable sequence
-#if _ITERATOR_DEBUG_LEVEL != 0
+#if _CONTAINER_DEBUG_LEVEL > 0
         _STL_REPORT_ERROR("array<T, 0>::back() invalid");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _CONTAINER_DEBUG_LEVEL > 0
 
         return _Elems[0];
     }
 
-    _NODISCARD _CONSTEXPR17 _Ty* data() noexcept { // return pointer to mutable data array
+    _NODISCARD _CONSTEXPR17 _Ty* data() noexcept {
         return nullptr;
     }
 
-    _NODISCARD _CONSTEXPR17 const _Ty* data() const noexcept { // return pointer to nonmutable data array
+    _NODISCARD _CONSTEXPR17 const _Ty* data() const noexcept {
         return nullptr;
     }
 
-    [[noreturn]] void _Xran() const { // report an out_of_range error
+    [[noreturn]] void _Xran() const {
         _Xout_of_range("invalid array<T, 0> subscript");
     }
 
@@ -412,61 +381,56 @@ void swap(array<_Ty, _Size>& _Left, array<_Ty, _Size>& _Right)
 }
 
 template <class _Ty, size_t _Size>
-_NODISCARD bool operator==(const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) { // test for array equality
+_NODISCARD bool operator==(const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) {
     return _STD equal(_Left.begin(), _Left.end(), _Right.begin());
 }
 
 template <class _Ty, size_t _Size>
-_NODISCARD bool operator!=(
-    const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) { // test for array inequality
+_NODISCARD bool operator!=(const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) {
     return !(_Left == _Right);
 }
 
 template <class _Ty, size_t _Size>
-_NODISCARD bool operator<(
-    const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) { // test if _Left < _Right for arrays
+_NODISCARD bool operator<(const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) {
     return _STD lexicographical_compare(_Left.begin(), _Left.end(), _Right.begin(), _Right.end());
 }
 
 template <class _Ty, size_t _Size>
-_NODISCARD bool operator>(
-    const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) { // test if _Left > _Right for arrays
+_NODISCARD bool operator>(const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) {
     return _Right < _Left;
 }
 
 template <class _Ty, size_t _Size>
-_NODISCARD bool operator<=(
-    const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) { // test if _Left <= _Right for arrays
+_NODISCARD bool operator<=(const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) {
     return !(_Right < _Left);
 }
 
 template <class _Ty, size_t _Size>
-_NODISCARD bool operator>=(
-    const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) { // test if _Left >= _Right for arrays
+_NODISCARD bool operator>=(const array<_Ty, _Size>& _Left, const array<_Ty, _Size>& _Right) {
     return !(_Left < _Right);
 }
 
 // TUPLE INTERFACE TO array
 template <size_t _Idx, class _Ty, size_t _Size>
-_NODISCARD constexpr _Ty& get(array<_Ty, _Size>& _Arr) noexcept { // return element at _Idx in array _Arr
+_NODISCARD constexpr _Ty& get(array<_Ty, _Size>& _Arr) noexcept {
     static_assert(_Idx < _Size, "array index out of bounds");
     return _Arr._Elems[_Idx];
 }
 
 template <size_t _Idx, class _Ty, size_t _Size>
-_NODISCARD constexpr const _Ty& get(const array<_Ty, _Size>& _Arr) noexcept { // return element at _Idx in array _Arr
+_NODISCARD constexpr const _Ty& get(const array<_Ty, _Size>& _Arr) noexcept {
     static_assert(_Idx < _Size, "array index out of bounds");
     return _Arr._Elems[_Idx];
 }
 
 template <size_t _Idx, class _Ty, size_t _Size>
-_NODISCARD constexpr _Ty&& get(array<_Ty, _Size>&& _Arr) noexcept { // return element at _Idx in array _Arr
+_NODISCARD constexpr _Ty&& get(array<_Ty, _Size>&& _Arr) noexcept {
     static_assert(_Idx < _Size, "array index out of bounds");
     return _STD move(_Arr._Elems[_Idx]);
 }
 
 template <size_t _Idx, class _Ty, size_t _Size>
-_NODISCARD constexpr const _Ty&& get(const array<_Ty, _Size>&& _Arr) noexcept { // return element at _Idx in array _Arr
+_NODISCARD constexpr const _Ty&& get(const array<_Ty, _Size>&& _Arr) noexcept {
     static_assert(_Idx < _Size, "array index out of bounds");
     return _STD move(_Arr._Elems[_Idx]);
 }
@@ -483,7 +447,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _ARRAY_
 
 /*

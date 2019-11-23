@@ -2,12 +2,12 @@
 #pragma once
 #ifndef _CERRNO_
 #define _CERRNO_
-#ifndef RC_INVOKED
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <errno.h>
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CERRNO_
 
 /*

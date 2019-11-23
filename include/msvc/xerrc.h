@@ -2,9 +2,8 @@
 #pragma once
 #ifndef _XERRC_H
 #define _XERRC_H
-#ifndef RC_INVOKED
-
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #pragma pack(push, _CRT_PACKING)
 #pragma warning(push, _STL_WARNING_LEVEL)
@@ -103,7 +102,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XERRC_H
 
 /*

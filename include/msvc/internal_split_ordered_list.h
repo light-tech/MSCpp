@@ -219,7 +219,7 @@ public:
         using _Alproxy_traits = typename _Al_traits::template rebind_traits<std::_Container_proxy>;
         typename _Alproxy_traits::allocator_type _Alproxy(_M_node_allocator);
         _Myproxy = _Alproxy.allocate(1);
-        _Alproxy_traits::construct(_Alproxy, _Myproxy, std::_Container_proxy());
+        std::_Construct_in_place(*_Myproxy);
         _Myproxy->_Mycont = this;
     }
 
@@ -228,7 +228,7 @@ public:
         using _Alproxy_traits = typename _Al_traits::template rebind_traits<std::_Container_proxy>;
         typename _Alproxy_traits::allocator_type _Alproxy(_M_node_allocator);
         _Orphan_all();
-        _Alproxy_traits::destroy(_Alproxy, _Myproxy);
+        std::_Destroy_in_place(*_Myproxy);
         _Alproxy.deallocate(_Myproxy, 1);
         _Myproxy = 0;
     }
@@ -709,21 +709,20 @@ private:
 #if _ITERATOR_DEBUG_LEVEL == 2
     void _Orphan_ptr(_Mytype& _Cont, _Nodeptr _Ptr) const
     {
+        const auto _BHead = this->_Before_head();
         std::_Lockit _Lock(_LOCK_DEBUG);
-        const_iterator **_Pnext = (const_iterator **)_Cont._Getpfirst();
-        if (_Pnext != 0)
+        std::_Iterator_base12** _Pnext = &_Cont._Myproxy->_Myfirstiter;
+        while (*_Pnext)
         {
-            while (*_Pnext != 0)
+            const auto _Pnextptr = static_cast<const_iterator&>(**_Pnext)._Ptr;
+            if (_Pnextptr == _BHead || (_Ptr && _Pnextptr != _Ptr))
             {
-                if ((*_Pnext)->_Ptr == (_Nodeptr)&this->_Myhead || _Ptr != 0 && (*_Pnext)->_Ptr != _Ptr)
-                {
-                    _Pnext = (const_iterator **)(*_Pnext)->_Getpnext();
-                }
-                else
-                {
-                    (*_Pnext)->_Clrcont();
-                    *_Pnext = *(const_iterator **)(*_Pnext)->_Getpnext();
-                }
+                _Pnext = &(*_Pnext)->_Mynextiter;
+            }
+            else
+            {
+                (*_Pnext)->_Myproxy = nullptr;
+                *_Pnext = (*_Pnext)->_Mynextiter;
             }
         }
     }

@@ -1,3 +1,70 @@
+// Defines the on-disk data format and higher-level logical classes to interact with __CxxFrameHandler4 metadata.
+// Valid EH state values are -1, 0 ... MAX_INT. States are always encoded as compressed integers which assumes positive values. Thus, all
+// state values are encoded as EHstate + 1 to avoid encoding a negative (a state of -1 is encoded as a compressed 0, 0 as a compressed 1 etc.)
+//
+// The on-disk format is as follows; fields are listed in order as they would appear on the disk. When reading, fields that are not used
+// means the next field that exists will be stored next:
+//
+// FuncInfo4: Top-level metadata structure for a function
+//   header:           1 byte, bitfield fully defined in FuncInfoHeader structure
+//   bbtFlags:         compressed int, only exists when header.BBT == 1
+//   dispUnwindMap:    4 bytes, RVA to UnwindMap which only exists when header.UnwindMap == 1
+//   dispTryBlockMap:  4 bytes, RVA to TryBlockMap which only exists when header.TryBlockMap == 1
+//   dispIPtoStateMap: 4 bytes, RVA to IPtoStateMap OR SepIPtoStateMap that is always assumed to exist.
+//                     Is RVA to IPtoStateMap if header.isSeparated == 0, otherwise RVA to SepIPtoStateMap.
+//   dispFrame:        compressed int, only exists when header.isCatch == 1
+//
+// UWMap4: Describes what unwind actions to take
+//   NumEntries: compressed int, number of entries in the map
+//   UnwindMapEntry4[NumEntries]:
+//     nextOffset << 2 | UnwindEntryType: compressed int, nextOffset represents the byte offset from the start of this entry to the previous entry.
+//                                        Note that the entry for state -1 doesn't explicitly exist in the table as there's never any unwind actions associated with it. Instead
+//                                        entries that go to state -1 encode an offset that points to before the start of the UnwindMapEntry4 buffer. See 'enum Type' in UnwindMapEntry4
+//                                        for a description of what the different UnwindEntryType represent.
+//     action:                            4 bytes, RVA to the destructor action.
+//     object:                            compressed int, offset to object directly or to stack location containing its pointer depending on UnwindEntryType.
+//
+// TryBlockMap4: Describes what Try structures exist in the program
+//   NumEntries: compressed int, number of entries in the map
+//   TryBlockMapEntry4[numEntries]:
+//     tryLow:               compressed int, starting state of the try
+//     tryHigh:              compressed int, final state of the try--the range of try states is [tryLow, tryHigh]
+//     catchHigh:            compressed int, final state of all catches--the range of catch states is (tryHigh, catchHigh]
+//     RVA to Handler Array: 4 bytes, RVA to metadata about the various catch handlers for this try
+//
+// HandlerMap4: Describes Catch(es) associated with a specific Try
+//   NumEntries: compressed int, number of entries in the map
+//   HandlerType4[numEntries]:
+//     header:              1 byte, bitfield fully defined in HandlerTypeHeader structure
+//     adjectives:          compressed int, only present if header.adjectives == 1
+//     dispType:            4 bytes, RVA to type descriptor only present if header.dispType == 1
+//     dispCatchObj:        compressed int, displacement from establisher from to catch object only present if header.dispCatchObj == 1
+//     dispOfHandler:       4 bytes, RVA to 'catch' code
+//     continuationAddress: between 0 (no continuation) and up to 2 compressed ints (up to 2 continuation addresses),
+//                          used by the runtime to figure out the next normal flow instruction to execute after the catch
+//
+// IPtoStateMap4: Mapping between IP to EH state
+//   NumEntries: compressed int, number of entries in map
+//   IPtoStateMapEntry4[NumEntries]:
+//     Ip:    compressed int, function-relative AND delta-encoded from the previous entry.
+//            For example, entries of 0,5,15 map to 0,5,20 bytes from the start of the function
+//     State: compressed int, stored as the EHstate+1 to avoid encoding a negative
+//
+// SepIPtoStateMap4: Used when code is separated out (e.g. POGO) and contains RVAs to IP2StateMap(s) for each function contribution
+//  NumEntries: compressed int, number of entries in map
+//  SepIPtoStateMapEntry4[NumEntries]:
+//    addrStartRVA: 4 bytes, RVA to start address of function contribution, used to differentiate between segments
+//    dispOfIPMap:  4 bytes, RVA to IP2StateMap structure corresponding to the function contribution with this addrStartRVA
+//
+// Header Usage:
+// Reading in data:
+//   DecompFuncInfo:                 entry-point that provides a FuncInfo4 used to build other structures.
+//   UWMap4/TryBlockMap4:            build up high-level representation of UnwindMap/TryBlockMap from FuncInfo4.
+//   IPtoStateMap4/SepIPtoStateMap4: build up high-level representation of IPtoStateMap/SepIPtoStateMap from FuncInfo4.
+//                                   Note that SepIPtoStateMap4 has support for non-separated IptoStateMap and can be used
+//                                   for both cases.
+//   HandlerMap4:                    build up high-level representation of HandlerMap from a TryBlockMapEntry4 in a TryBlockMap4.
+
 #pragma once
 
 #include <utility>
@@ -12,26 +79,28 @@ namespace FH4
 
 typedef int32_t __ehstate_t;
 
-// Higher-level abstraction of compressed cxxFrameHandler4 data structures
+// Higher-level abstraction of compressed __CxxFrameHandler4 data structures
 
 struct UnwindMapEntry4 {
+    // To save space, we encode common dtor patterns that used to require a compiler-generated stub to execute into an offset + RVA to the destructor method itself.
     enum Type
     {
-        NoUW = 0b00,
-        DtorWithObj = 0b01,
-        DtorWithPtrToObj = 0b10,
-        RVA = 0b11
+        NoUW = 0b00,              // No unwind action associated with this state
+        DtorWithObj = 0b01,       // Dtor with an object offset
+        DtorWithPtrToObj = 0b10,  // Dtor with an offset that contains a pointer to the object to be destroyed
+        RVA = 0b11                // Dtor that has a direct function that is called that knows where the object is and can perform more exotic destruction
     };
-    uint32_t        nextOffset;         // State this action takes us to (now in offset form!)
-    Type            type;               // Type of entry
-    int32_t         action;             // Image relative offset of funclet
-    int32_t         object;             // Frame offset of object pointer to be destructed
+    uint32_t        nextOffset;   // State this action takes us to (in offset form, unlike FH3!)
+    Type            type;         // Type of entry
+    int32_t         action;       // Image-relative offset of action, exists for all NoUW entry types
+    uint32_t        object;       // Frame offset of object pointer to be destroyed, exists for DtorWithObj and DtorWithPtrToObj types
 };
 
 inline constexpr uint32_t MAX_CONT_ADDRESSES = 2;
 
 struct HandlerTypeHeader
 {
+    // See contAddr for description of these values
     enum contType
     {
         NONE = 0b00,
@@ -43,25 +112,27 @@ struct HandlerTypeHeader
     {
         struct
         {
-            bool adjectives    : 1; // Existence of Handler Type adjectives (bitfield)
-            bool dispType      : 1; // Existence of Image relative offset of the corresponding type descriptor
-            bool dispCatchObj  : 1; // Existence of Displacement of catch object from base
-            bool contIsRVA     : 1; // Continuation addresses are RVAs rather than function relative, used for separated code
-            uint8_t contAddr   : 2; // 1.   00: no continuation address in metadata, use what the catch funclet returns
-                                    // 2.   01: one function-relative continuation address
-                                    // 3.   10: two function-relative continuation addresses
-                                    // 4.   11: reserved
-            uint8_t unused     : 2;
+            uint8_t adjectives   : 1; // Existence of Handler Type adjectives (bitfield)
+            uint8_t dispType     : 1; // Existence of Image relative offset of the corresponding type descriptor
+            uint8_t dispCatchObj : 1; // Existence of Displacement of catch object from base
+            uint8_t contIsRVA    : 1; // Continuation addresses are RVAs rather than function relative, used for separated code
+            uint8_t contAddr     : 2; // 1.   00: no continuation address in metadata, use what the catch funclet returns
+                                      // 2.   01: one function-relative continuation address
+                                      // 3.   10: two function-relative continuation addresses
+                                      // 4.   11: reserved
+            uint8_t unused       : 2;
         };
         uint8_t value;
     };
 };
 
+static_assert(sizeof(HandlerTypeHeader) == sizeof(uint8_t), "Size of HandlerTypeHeader not 1 Byte");
+
 struct HandlerType4 {
     HandlerTypeHeader header;
     uint32_t          adjectives;                              // Handler Type adjectives (bitfield)
     int32_t           dispType;                                // Image relative offset of the corresponding type descriptor
-    int32_t           dispCatchObj;                            // Displacement of catch object from base
+    uint32_t          dispCatchObj;                            // Displacement of catch object from base
     int32_t           dispOfHandler;                           // Image relative offset of 'catch' code
     uintptr_t         continuationAddress[MAX_CONT_ADDRESSES]; // Continuation address(es) of catch funclet
 
@@ -105,14 +176,14 @@ struct FuncInfoHeader
     {
         struct
         {
-            bool isCatch        : 1;  // 1 if this represents a catch funclet, 0 otherwise
-            bool isSeparated    : 1;  // 1 if this function has separated code segments, 0 otherwise
-            bool BBT            : 1;  // Flags set by Basic Block Transformations
-            bool UnwindMap      : 1;  // Existence of Unwind Map RVA
-            bool TryBlockMap    : 1;  // Existence of Try Block Map RVA
-            bool EHs            : 1;  // EHs flag set
-            bool NoExcept       : 1;  // NoExcept flag set
-            uint8_t reserved    : 1;
+            uint8_t isCatch        : 1;  // 1 if this represents a catch funclet, 0 otherwise
+            uint8_t isSeparated    : 1;  // 1 if this function has separated code segments, 0 otherwise
+            uint8_t BBT            : 1;  // Flags set by Basic Block Transformations
+            uint8_t UnwindMap      : 1;  // Existence of Unwind Map RVA
+            uint8_t TryBlockMap    : 1;  // Existence of Try Block Map RVA
+            uint8_t EHs            : 1;  // EHs flag set
+            uint8_t NoExcept       : 1;  // NoExcept flag set
+            uint8_t reserved       : 1;
         };
         uint8_t value;
     };
@@ -123,6 +194,8 @@ struct FuncInfoHeader
     }
 };
 
+static_assert(sizeof(FuncInfoHeader) == sizeof(uint8_t), "Size of FuncInfoHeader not 1 Byte");
+
 struct FuncInfo4
 {
     FuncInfoHeader      header;
@@ -131,7 +204,7 @@ struct FuncInfo4
     int32_t             dispUnwindMap;       // Image relative offset of the unwind map
     int32_t             dispTryBlockMap;     // Image relative offset of the handler map
     int32_t             dispIPtoStateMap;    // Image relative offset of the IP to state map
-    int32_t             dispFrame;           // displacement of address of function frame wrt establisher frame, only used for catch funclets
+    uint32_t            dispFrame;           // displacement of address of function frame wrt establisher frame, only used for catch funclets
 
     FuncInfo4()
     {

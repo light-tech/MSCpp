@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _IOS_
 #define _IOS_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <xlocnum>
 
 #pragma pack(push, _CRT_PACKING)
@@ -14,8 +15,7 @@ _STL_DISABLE_CLANG_WARNINGS
 
 _STD_BEGIN
 // CLASS TEMPLATE basic_ios
-template <class _Elem,
-    class _Traits>
+template <class _Elem, class _Traits>
 class basic_ios : public ios_base { // base class for basic_istream/basic_ostream
 public:
     using _Myos       = basic_ostream<_Elem, _Traits>;
@@ -31,17 +31,16 @@ public:
         init(_Strbuf);
     }
 
-    virtual __CLR_OR_THIS_CALL ~basic_ios() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~basic_ios() noexcept {}
 
-    void __CLR_OR_THIS_CALL clear(
-        iostate _State = goodbit, bool _Reraise = false) { // set state, possibly reraise exception
-        ios_base::clear(_Mystrbuf == nullptr ? (_State | ios_base::badbit) : _State, _Reraise);
+    void __CLR_OR_THIS_CALL clear(iostate _State = goodbit, bool _Reraise = false) {
+        // set state, possibly reraise exception
+        ios_base::clear(_State | (_Mystrbuf ? ios_base::_Iostate{} : ios_base::badbit), _Reraise);
     }
 
 #if _HAS_OLD_IOSTREAMS_MEMBERS
     void __CLR_OR_THIS_CALL clear(io_state _State) { // set state to _State
-        clear((iostate) _State);
+        clear(static_cast<iostate>(_State));
     }
 #endif // _HAS_OLD_IOSTREAMS_MEMBERS
 
@@ -52,7 +51,7 @@ public:
 
 #if _HAS_OLD_IOSTREAMS_MEMBERS
     void __CLR_OR_THIS_CALL setstate(io_state _State) { // merge _State into state
-        setstate((iostate) _State);
+        setstate(static_cast<iostate>(_State));
     }
 #endif // _HAS_OLD_IOSTREAMS_MEMBERS
 
@@ -86,8 +85,9 @@ public:
 
     locale __CLR_OR_THIS_CALL imbue(const locale& _Loc) { // set locale to argument
         locale _Oldlocale = ios_base::imbue(_Loc);
-        if (rdbuf() != nullptr) {
-            rdbuf()->pubimbue(_Loc);
+        const auto _Rdbuf = rdbuf();
+        if (_Rdbuf) {
+            _Rdbuf->pubimbue(_Loc);
         }
 
         return _Oldlocale;
@@ -145,7 +145,7 @@ protected:
         _Tiestr   = nullptr;
         _Fillch   = widen(' ');
 
-        if (_Mystrbuf == nullptr) {
+        if (!_Mystrbuf) {
             setstate(badbit);
         }
 
@@ -154,8 +154,7 @@ protected:
         }
     }
 
-    __CLR_OR_THIS_CALL basic_ios() { // default constructor, do nothing
-    }
+    __CLR_OR_THIS_CALL basic_ios() {}
 
 private:
     _Mysb* _Mystrbuf; // pointer to stream buffer
@@ -312,7 +311,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _IOS_
 
 /*

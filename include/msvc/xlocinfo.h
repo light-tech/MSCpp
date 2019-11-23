@@ -2,8 +2,8 @@
 #pragma once
 #ifndef _XLOCINFO
 #define _XLOCINFO
-#ifndef RC_INVOKED
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <ctype.h>
 #include <locale.h>
@@ -159,7 +159,7 @@ _MRTIMP2 _locale_t __cdecl _GetLocaleForCP(unsigned int);
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XLOCINFO
 
 /*

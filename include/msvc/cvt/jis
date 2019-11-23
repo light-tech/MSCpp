@@ -3,7 +3,8 @@
 
 #ifndef _CVT_JIS_
 #define _CVT_JIS_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 //
 // NOTE:
 //  The conversion data in this header has been derived by Dinkumware
@@ -2253,7 +2254,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_JIS_
 
 /*

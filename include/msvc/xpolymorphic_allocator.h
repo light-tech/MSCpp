@@ -3,11 +3,12 @@
 #pragma once
 #ifndef _XPOLYMORPHIC_ALLOCATOR_H
 #define _XPOLYMORPHIC_ALLOCATOR_H
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <xmemory0>
+#include <xmemory>
 
 #pragma pack(push, _CRT_PACKING)
 #pragma warning(push, _STL_WARNING_LEVEL)
@@ -20,16 +21,16 @@ _STD_BEGIN
 
 // FUNCTION TEMPLATE _Uses_allocator_construct
 template <class _Ty, class _Outer_alloc, class _Inner_alloc, class... _Types>
-inline void _Uses_allocator_construct2(true_type, _Ty* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
-    _Types&&... _Args) { // uses-allocator construction of *_Ptr by alloc _Outer propagating alloc _Inner,
-                         // allocator_arg_t case
+void _Uses_allocator_construct2(
+    true_type, _Ty* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner, _Types&&... _Args) {
+    // uses-allocator construction of *_Ptr by alloc _Outer propagating alloc _Inner, allocator_arg_t case
     allocator_traits<_Outer_alloc>::construct(_Outer, _Ptr, allocator_arg, _Inner, _STD forward<_Types>(_Args)...);
 }
 
 template <class _Ty, class _Outer_alloc, class _Inner_alloc, class... _Types>
-inline void _Uses_allocator_construct2(false_type, _Ty* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
-    _Types&&... _Args) { // uses-allocator construction of *_Ptr by alloc _Outer propagating alloc _Inner,
-                         // non-allocator_arg_t case
+void _Uses_allocator_construct2(
+    false_type, _Ty* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner, _Types&&... _Args) {
+    // uses-allocator construction of *_Ptr by alloc _Outer propagating alloc _Inner, non-allocator_arg_t case
     static_assert(is_constructible_v<_Ty, _Types..., _Inner_alloc&>,
         "N4700 23.10.7.2 [allocator.uses.construction]/1 requires "
         "is_constructible_v<T, Args..., Alloc&> when uses_allocator_v<T, Alloc> is true and "
@@ -38,17 +39,17 @@ inline void _Uses_allocator_construct2(false_type, _Ty* const _Ptr, _Outer_alloc
 }
 
 template <class _Ty, class _Outer_alloc, class _Inner_alloc, class... _Types>
-inline void _Uses_allocator_construct1(true_type, _Ty* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
-    _Types&&... _Args) { // uses-allocator construction of *_Ptr by alloc _Outer propagating alloc _Inner,
-                         //   uses_allocator_v<_Ty, _Inner_alloc> case
+void _Uses_allocator_construct1(
+    true_type, _Ty* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner, _Types&&... _Args) {
+    // uses-allocator construction of *_Ptr by alloc _Outer propagating alloc _Inner,
+    // uses_allocator_v<_Ty, _Inner_alloc> case
     using _IsConstructible = typename is_constructible<_Ty, allocator_arg_t, _Inner_alloc&, _Types...>::type;
     _Uses_allocator_construct2(_IsConstructible{}, _Ptr, _Outer, _Inner, _STD forward<_Types>(_Args)...);
 }
 
 template <class _Ty, class _Outer_alloc, class _Inner_alloc, class... _Types>
-inline void _Uses_allocator_construct1(false_type, _Ty* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc&,
-    _Types&&... _Args) { // uses-allocator construction of *_Ptr by alloc _Outer,
-                         //   !uses_allocator_v<_Ty, _Inner_alloc> case
+void _Uses_allocator_construct1(false_type, _Ty* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc&, _Types&&... _Args) {
+    // uses-allocator construction of *_Ptr by alloc _Outer, !uses_allocator_v<_Ty, _Inner_alloc> case
     static_assert(is_constructible_v<_Ty, _Types...>,
         "N4700 23.10.7.2 [allocator.uses.construction]/1 requires "
         "is_constructible_v<T, Args...> when uses_allocator_v<T, Alloc> is false");
@@ -57,78 +58,75 @@ inline void _Uses_allocator_construct1(false_type, _Ty* const _Ptr, _Outer_alloc
 
 template <class _Ty, class _Outer_alloc, class _Inner_alloc, class... _Types,
     enable_if_t<!_Is_specialization_v<_Ty, pair>, int> = 0>
-inline void _Uses_allocator_construct(_Ty* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
-    _Types&&... _Args) { // uses-allocator construction of *_Ptr by alloc _Outer propagating alloc _Inner, non-pair case
+void _Uses_allocator_construct(_Ty* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner, _Types&&... _Args) {
+    // uses-allocator construction of *_Ptr by alloc _Outer propagating alloc _Inner, non-pair case
     _Uses_allocator_construct1(uses_allocator<_Ty, _Inner_alloc>(), _Ptr, _Outer, _Inner,
         _STD forward<_Types>(_Args)...); // TRANSITION, if constexpr
 }
 
 template <class _Alloc, class... _Types>
-inline auto _Uses_allocator_piecewise2(true_type, _Alloc& _Al, tuple<_Types...>&& _Tuple) {
+auto _Uses_allocator_piecewise2(true_type, _Alloc& _Al, tuple<_Types...>&& _Tuple) {
     return _STD tuple_cat(tuple<allocator_arg_t, _Alloc&>(allocator_arg, _Al), _STD move(_Tuple));
 }
 
 template <class _Alloc, class... _Types>
-inline auto _Uses_allocator_piecewise2(false_type, _Alloc& _Al, tuple<_Types...>&& _Tuple) {
+auto _Uses_allocator_piecewise2(false_type, _Alloc& _Al, tuple<_Types...>&& _Tuple) {
     return _STD tuple_cat(_STD move(_Tuple), tuple<_Alloc&>(_Al));
 }
 
 template <class _Ty, class _Alloc, class... _Types>
-inline auto _Uses_allocator_piecewise(true_type, _Alloc& _Al, tuple<_Types...>&& _Tuple) {
+auto _Uses_allocator_piecewise(true_type, _Alloc& _Al, tuple<_Types...>&& _Tuple) {
     return _Uses_allocator_piecewise2(
         is_constructible<_Ty, allocator_arg_t, _Alloc&, _Types...>(), _Al, _STD move(_Tuple));
 }
 
 template <class, class _Alloc, class... _Types>
-inline tuple<_Types...>&& _Uses_allocator_piecewise(false_type, _Alloc&, tuple<_Types...>&& _Tuple) {
+tuple<_Types...>&& _Uses_allocator_piecewise(false_type, _Alloc&, tuple<_Types...>&& _Tuple) {
     return _STD move(_Tuple);
 }
 
 template <class _Ty1, class _Ty2, class _Outer_alloc, class _Inner_alloc, class... _Types1, class... _Types2>
-inline void _Uses_allocator_construct_pair(pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
-    tuple<_Types1...>&& _Val1,
-    tuple<_Types2...>&&
-        _Val2) { // uses-allocator construction of pair from _Val1 and _Val2 by alloc _Outer propagating alloc _Inner
+void _Uses_allocator_construct_pair(pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
+    tuple<_Types1...>&& _Val1, tuple<_Types2...>&& _Val2) {
+    // uses-allocator construction of pair from _Val1 and _Val2 by alloc _Outer propagating alloc _Inner
     allocator_traits<_Outer_alloc>::construct(_Outer, _Ptr, piecewise_construct,
         _Uses_allocator_piecewise<_Ty1>(uses_allocator<_Ty1, _Inner_alloc>(), _Inner, _STD move(_Val1)),
         _Uses_allocator_piecewise<_Ty2>(uses_allocator<_Ty2, _Inner_alloc>(), _Inner, _STD move(_Val2)));
 }
 
 template <class _Ty1, class _Ty2, class _Outer_alloc, class _Inner_alloc, class... _Types1, class... _Types2>
-inline void _Uses_allocator_construct(pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
-    piecewise_construct_t, tuple<_Types1...> _Val1,
-    tuple<_Types2...>
-        _Val2) { // uses-allocator construction of pair by alloc _Outer propagating alloc _Inner, piecewise case
+void _Uses_allocator_construct(pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
+    piecewise_construct_t, tuple<_Types1...> _Val1, tuple<_Types2...> _Val2) {
+    // uses-allocator construction of pair by alloc _Outer propagating alloc _Inner, piecewise case
     _Uses_allocator_construct_pair(_Ptr, _Outer, _Inner, _STD move(_Val1), _STD move(_Val2));
 }
 
 template <class _Ty1, class _Ty2, class _Outer_alloc, class _Inner_alloc>
-inline void _Uses_allocator_construct(pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer,
-    _Inner_alloc&
-        _Inner) { // uses-allocator construction of pair by alloc _Outer propagating alloc _Inner, zero-argument case
+void _Uses_allocator_construct(pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner) {
+    // uses-allocator construction of pair by alloc _Outer propagating alloc _Inner, zero-argument case
     _Uses_allocator_construct_pair(_Ptr, _Outer, _Inner, tuple<>{}, tuple<>{});
 }
 
 template <class _Ty1, class _Ty2, class _Outer_alloc, class _Inner_alloc, class _Uty, class _Vty>
-inline void _Uses_allocator_construct(pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
-    _Uty&& _Arg1,
-    _Vty&& _Arg2) { // uses-allocator construction of pair by alloc _Outer propagating alloc _Inner, two-argument case
+void _Uses_allocator_construct(
+    pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner, _Uty&& _Arg1, _Vty&& _Arg2) {
+    // uses-allocator construction of pair by alloc _Outer propagating alloc _Inner, two-argument case
     _Uses_allocator_construct_pair(_Ptr, _Outer, _Inner, _STD forward_as_tuple(_STD forward<_Uty>(_Arg1)),
         _STD forward_as_tuple(_STD forward<_Vty>(_Arg2)));
 }
 
 template <class _Ty1, class _Ty2, class _Outer_alloc, class _Inner_alloc, class _Uty, class _Vty>
-inline void _Uses_allocator_construct(pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
-    const pair<_Uty, _Vty>&
-        _Pair) { // uses-allocator construction of pair by alloc _Outer propagating alloc _Inner, lvalue pair argument
+void _Uses_allocator_construct(
+    pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner, const pair<_Uty, _Vty>& _Pair) {
+    // uses-allocator construction of pair by alloc _Outer propagating alloc _Inner, lvalue pair argument
     _Uses_allocator_construct_pair(
         _Ptr, _Outer, _Inner, _STD forward_as_tuple(_Pair.first), _STD forward_as_tuple(_Pair.second));
 }
 
 template <class _Ty1, class _Ty2, class _Outer_alloc, class _Inner_alloc, class _Uty, class _Vty>
-inline void _Uses_allocator_construct(pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner,
-    pair<_Uty, _Vty>&&
-        _Pair) { // uses-allocator construction of pair by alloc _Outer propagating alloc _Inner, rvalue pair argument
+void _Uses_allocator_construct(
+    pair<_Ty1, _Ty2>* const _Ptr, _Outer_alloc& _Outer, _Inner_alloc& _Inner, pair<_Uty, _Vty>&& _Pair) {
+    // uses-allocator construction of pair by alloc _Outer propagating alloc _Inner, rvalue pair argument
     _Uses_allocator_construct_pair(_Ptr, _Outer, _Inner, _STD forward_as_tuple(_STD forward<_Uty>(_Pair.first)),
         _STD forward_as_tuple(_STD forward<_Vty>(_Pair.second)));
 }
@@ -147,15 +145,14 @@ namespace pmr {
             return do_allocate(_Bytes, _Align);
         }
 
-        void deallocate(void* const _Ptr, const size_t _Bytes,
-            const size_t _Align = alignof(
-                max_align_t)) { // deallocate _Ptr, which was returned from allocate(_Bytes, _Align)
+        void deallocate(void* const _Ptr, const size_t _Bytes, const size_t _Align = alignof(max_align_t)) {
+            // deallocate _Ptr, which was returned from allocate(_Bytes, _Align)
             _STL_ASSERT(_Is_pow_2(_Align), "memory_resource::deallocate(): Alignment must be a power of two.");
             return do_deallocate(_Ptr, _Bytes, _Align);
         }
 
-        _NODISCARD bool is_equal(const memory_resource& _That) const
-            noexcept { // determine if *this and _That can both deallocate memory allocated by either
+        _NODISCARD bool is_equal(const memory_resource& _That) const noexcept {
+            // determine if *this and _That can both deallocate memory allocated by either
             return do_is_equal(_That);
         }
 
@@ -174,8 +171,8 @@ namespace pmr {
     }
 
     // FUNCTION get_default_resource
-    extern "C" _CRTIMP3 memory_resource* __cdecl _Aligned_get_default_resource() noexcept;
-    extern "C" _CRTIMP3 memory_resource* __cdecl _Unaligned_get_default_resource() noexcept;
+    extern "C" _CRT_SATELLITE_1 memory_resource* __cdecl _Aligned_get_default_resource() noexcept;
+    extern "C" _CRT_SATELLITE_1 memory_resource* __cdecl _Unaligned_get_default_resource() noexcept;
 
     _NODISCARD inline memory_resource* get_default_resource() noexcept {
 #ifdef __cpp_aligned_new
@@ -198,8 +195,8 @@ namespace pmr {
 
         /* implicit */ polymorphic_allocator(memory_resource* const _Resource_) noexcept // strengthened
             : _Resource{_Resource_} { // initialize with _Resource_
-            _STL_ASSERT(_Resource != nullptr, "Cannot initialize polymorphic_allocator with null resource "
-                                              "(N4700 23.12.3.1 [mem.poly.allocator.ctor]/2)");
+            _STL_ASSERT(_Resource, "Cannot initialize polymorphic_allocator with null resource (N4810 20.12.3.1 "
+                                   "[mem.poly.allocator.ctor]/2)");
         }
 
         polymorphic_allocator(const polymorphic_allocator&) = default;
@@ -211,20 +208,21 @@ namespace pmr {
 
         polymorphic_allocator& operator=(const polymorphic_allocator&) = delete;
 
-        _NODISCARD _DECLSPEC_ALLOCATOR _Ty* allocate(
-            _CRT_GUARDOVERFLOW const size_t _Count) { // get space for _Count objects of type _Ty from _Resource
+        _NODISCARD _DECLSPEC_ALLOCATOR _Ty* allocate(_CRT_GUARDOVERFLOW const size_t _Count) {
+            // get space for _Count objects of type _Ty from _Resource
             void* const _Vp = _Resource->allocate(_Get_size_of_n<sizeof(_Ty)>(_Count), alignof(_Ty));
             return static_cast<_Ty*>(_Vp);
         }
 
         void deallocate(_Ty* const _Ptr, const size_t _Count) noexcept { // strengthened
             // return space for _Count objects of type _Ty to _Resource
-            _Resource->deallocate(_Ptr, _Get_size_of_n<sizeof(_Ty)>(_Count), alignof(_Ty));
+            // No need to verify that size_t can represent the size of _Ty[_Count].
+            _Resource->deallocate(_Ptr, _Count * sizeof(_Ty), alignof(_Ty));
         }
 
         template <class _Uty, class... _Types>
-        void construct(_Uty* const _Ptr,
-            _Types&&... _Args) { // propagate allocator *this if uses_allocator_v<_Uty, polymorphic_allocator>
+        void construct(_Uty* const _Ptr, _Types&&... _Args) {
+            // propagate allocator *this if uses_allocator_v<_Uty, polymorphic_allocator>
             allocator<char> _Al{};
             _Uses_allocator_construct(_Ptr, _Al, *this, _STD forward<_Types>(_Args)...);
         }
@@ -244,14 +242,14 @@ namespace pmr {
     };
 
     template <class _Ty1, class _Ty2>
-    _NODISCARD inline bool operator==(const polymorphic_allocator<_Ty1>& _Left,
-        const polymorphic_allocator<_Ty2>&
-            _Right) noexcept { // polymorphic_allocators with the same resource are compatible
+    _NODISCARD bool operator==(
+        const polymorphic_allocator<_Ty1>& _Left, const polymorphic_allocator<_Ty2>& _Right) noexcept {
+        // polymorphic_allocators with the same resource are compatible
         return *_Left.resource() == *_Right.resource();
     }
 
     template <class _Ty1, class _Ty2>
-    _NODISCARD inline bool operator!=(
+    _NODISCARD bool operator!=(
         const polymorphic_allocator<_Ty1>& _Left, const polymorphic_allocator<_Ty2>& _Right) noexcept {
         return !(_Left == _Right);
     }
@@ -266,5 +264,5 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XPOLYMORPHIC_ALLOCATOR_H

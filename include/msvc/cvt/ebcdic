@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _CVT_EBCDIC_
 #define _CVT_EBCDIC_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <cwchar>
 #include <locale>
 
@@ -38,45 +39,40 @@ namespace stdext {
             explicit codecvt_ebcdic(size_t _Refs = 0) : _Mybase(_Refs) { // construct with ref count
             }
 
-            virtual ~codecvt_ebcdic() noexcept { // destroy the object
-            }
+            virtual ~codecvt_ebcdic() noexcept {}
 
         protected:
             virtual result do_in(_Statype&, const _Byte* _First1, const _Byte* _Last1, const _Byte*& _Mid1,
-                _Elem* _First2, _Elem* _Last2,
-                _Elem*& _Mid2) const { // convert bytes [_First1, _Last1) to [_First2, _Last)
-                unsigned long _Maxc = _Maxcode; // to quiet warnings
-
+                _Elem* _First2, _Elem* _Last2, _Elem*& _Mid2) const {
+                // convert bytes [_First1, _Last1) to [_First2, _Last)
                 _Mid1 = _First1;
                 _Mid2 = _First2;
                 while (_Mid1 != _Last1 && _Mid2 != _Last2) { // convert a multibyte sequence
-                    unsigned char _Ch = _Etoa[(unsigned char) *_Mid1++];
+                    unsigned char _Ch = _Etoa[static_cast<unsigned char>(*_Mid1++)];
 
-                    if (_Maxc < _Ch) {
+                    if (_Maxcode < _Ch) {
                         return _Mybase::error; // code too large
                     }
 
-                    *_Mid2++ = (_Elem) _Ch;
+                    *_Mid2++ = static_cast<_Elem>(_Ch);
                 }
 
                 return _First1 == _Mid1 ? _Mybase::partial : _Mybase::ok;
             }
 
             virtual result do_out(_Statype&, const _Elem* _First1, const _Elem* _Last1, const _Elem*& _Mid1,
-                _Byte* _First2, _Byte* _Last2,
-                _Byte*& _Mid2) const { // convert [_First1, _Last1) to bytes [_First2, _Last)
-                unsigned long _Maxc = _Maxcode; // to quiet warnings
-
+                _Byte* _First2, _Byte* _Last2, _Byte*& _Mid2) const {
+                // convert [_First1, _Last1) to bytes [_First2, _Last)
                 _Mid1 = _First1;
                 _Mid2 = _First2;
                 while (_Mid1 != _Last1 && _Mid2 != _Last2) { // convert and put a wide char
-                    unsigned char _Ch = (unsigned char) *_Mid1++;
+                    unsigned char _Ch = static_cast<unsigned char>(*_Mid1++);
 
-                    if (_Maxc < _Ch) {
+                    if (_Maxcode < _Ch) {
                         return _Mybase::error;
                     }
 
-                    *_Mid2++ = (_Byte) _Atoe[_Ch];
+                    *_Mid2++ = static_cast<_Byte>(_Atoe[_Ch]);
                 }
 
                 return _First1 == _Mid1 ? _Mybase::partial : _Mybase::ok;
@@ -184,21 +180,12 @@ namespace stdext {
     } // namespace cvt
 } // namespace stdext
 
-#ifdef _TEST_IT
-#define NCHARS 0x100
-#define MYWC_MAX 0xff
-#define MYFILE "ebcdic"
-#define MYNAME stdext::cvt::codecvt_ebcdic<Mywchar>
-
-#include <cvt/xtest>
-#endif // _TEST_IT
-
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_EBCDIC_
 
 /*

@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _CVT_WSTRING_
 #define _CVT_WSTRING_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <cstring>
 #include <locale>
 #include <stdexcept>
@@ -19,8 +20,7 @@ namespace stdext {
     namespace cvt {
 
         // CLASS TEMPLATE wstring_convert
-        template <class _Codecvt,
-            class _Elem = wchar_t>
+        template <class _Codecvt, class _Elem = wchar_t>
         class wstring_convert { // converts between _Elem (wide) and char (byte) strings
             enum { _BUF_INC = 8, _BUF_MAX = 16 };
 
@@ -65,8 +65,7 @@ namespace stdext {
                 _Init();
             }
 
-            virtual ~wstring_convert() noexcept { // destroy the object
-            }
+            virtual ~wstring_convert() noexcept {}
 
             wstring_convert(const wstring_convert&) = delete;
             wstring_convert& operator=(const wstring_convert&) = delete;
@@ -95,16 +94,17 @@ namespace stdext {
             _NODISCARD wide_string from_bytes(
                 const char* _First, const char* _Last) { // convert byte sequence [_First, _Last) to a wide string
                 static state_type _State0;
-                wide_string _Wbuf, _Wstr;
+                wide_string _Wbuf;
+                wide_string _Wstr;
                 const char* _First_sav = _First;
 
                 if (!_Has_state) {
                     _State = _State0; // reset state if not remembered
                 }
 
-                _Wbuf.append((_CSTD size_t) _BUF_INC, (_Elem) '\0');
+                _Wbuf.append(_BUF_INC, _Elem{});
                 for (_Nconv = 0; _First != _Last; _Nconv = _First - _First_sav) { // convert one or more bytes
-                    _Elem* _Dest = &*_Wbuf.begin();
+                    _Elem* _Dest = &_Wbuf[0];
                     _Elem* _Dnext;
 
                     switch (_Pcvt->in(_State, _First, _Last, _First, _Dest, _Dest + _Wbuf.size(),
@@ -112,20 +112,20 @@ namespace stdext {
                     case _Codecvt::partial:
                     case _Codecvt::ok:
                         if (_Dest < _Dnext) {
-                            _Wstr.append(_Dest, (_CSTD size_t)(_Dnext - _Dest));
+                            _Wstr.append(_Dest, static_cast<size_t>(_Dnext - _Dest));
                         } else if (_Wbuf.size() < _BUF_MAX) {
-                            _Wbuf.append((_CSTD size_t) _BUF_INC, '\0');
+                            _Wbuf.append(_BUF_INC, _Elem{});
                         } else if (_Has_werr) {
                             return _Werr;
                         } else {
-                            _THROW(_STD range_error("bad conversion"));
+                            _STD _Throw_range_error("bad conversion");
                         }
 
                         break;
 
                     case _Codecvt::noconv:
                         for (; _First != _Last; ++_First) {
-                            _Wstr.push_back((_Elem)(unsigned char) *_First);
+                            _Wstr.push_back(static_cast<_Elem>(static_cast<unsigned char>(*_First)));
                         }
 
                         break; // no conversion, just copy code values
@@ -134,7 +134,7 @@ namespace stdext {
                         if (_Has_werr) {
                             return _Werr;
                         } else {
-                            _THROW(_STD range_error("bad conversion"));
+                            _STD _Throw_range_error("bad conversion");
                         }
                     }
                 }
@@ -147,7 +147,7 @@ namespace stdext {
 
             _NODISCARD byte_string to_bytes(const _Elem* _Wptr) { // convert a NTWCS to a byte string
                 const _Elem* _Next = _Wptr;
-                while ((int_type) *_Next != 0) {
+                while (*_Next != 0) {
                     ++_Next;
                 }
 
@@ -162,16 +162,17 @@ namespace stdext {
             _NODISCARD byte_string to_bytes(
                 const _Elem* _First, const _Elem* _Last) { // convert wide sequence [_First, _Last) to a byte string
                 static state_type _State0;
-                byte_string _Bbuf, _Bstr;
+                byte_string _Bbuf;
+                byte_string _Bstr;
                 const _Elem* _First_sav = _First;
 
                 if (!_Has_state) {
                     _State = _State0; // reset state if not remembered
                 }
 
-                _Bbuf.append((_CSTD size_t) _BUF_INC, '\0');
+                _Bbuf.append(_BUF_INC, '\0');
                 for (_Nconv = 0; _First != _Last; _Nconv = _First - _First_sav) { // convert one or more wide chars
-                    char* _Dest = &*_Bbuf.begin();
+                    char* _Dest = &_Bbuf[0];
                     char* _Dnext;
 
                     switch (_Pcvt->out(_State, _First, _Last, _First, _Dest, _Dest + _Bbuf.size(),
@@ -179,20 +180,20 @@ namespace stdext {
                     case _Codecvt::partial:
                     case _Codecvt::ok:
                         if (_Dest < _Dnext) {
-                            _Bstr.append(_Dest, (_CSTD size_t)(_Dnext - _Dest));
+                            _Bstr.append(_Dest, static_cast<size_t>(_Dnext - _Dest));
                         } else if (_Bbuf.size() < _BUF_MAX) {
-                            _Bbuf.append((_CSTD size_t) _BUF_INC, '\0');
+                            _Bbuf.append(_BUF_INC, '\0');
                         } else if (_Has_berr) {
                             return _Berr;
                         } else {
-                            _THROW(_STD range_error("bad conversion"));
+                            _STD _Throw_range_error("bad conversion");
                         }
 
                         break;
 
                     case _Codecvt::noconv:
                         for (; _First != _Last; ++_First) {
-                            _Bstr.push_back((char) (int_type) *_First);
+                            _Bstr.push_back(static_cast<char>(static_cast<int_type>(*_First)));
                         }
 
                         break; // no conversion, just copy code values
@@ -201,7 +202,7 @@ namespace stdext {
                         if (_Has_berr) {
                             return _Berr;
                         } else {
-                            _THROW(_STD range_error("bad conversion"));
+                            _STD _Throw_range_error("bad conversion");
                         }
                     }
                 }
@@ -226,7 +227,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_WSTRING_
 
 /*

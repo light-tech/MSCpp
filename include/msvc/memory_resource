@@ -3,8 +3,8 @@
 #pragma once
 #ifndef _MEMORY_RESOURCE_
 #define _MEMORY_RESOURCE_
-#ifndef RC_INVOKED
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #if _HAS_CXX17
 #include <vector>
@@ -28,8 +28,8 @@ _STD_BEGIN
 namespace pmr {
 
     // FUNCTION set_default_resource
-    extern "C" _CRTIMP3 memory_resource* __cdecl _Aligned_set_default_resource(memory_resource*) noexcept;
-    extern "C" _CRTIMP3 memory_resource* __cdecl _Unaligned_set_default_resource(memory_resource*) noexcept;
+    extern "C" _CRT_SATELLITE_1 memory_resource* __cdecl _Aligned_set_default_resource(memory_resource*) noexcept;
+    extern "C" _CRT_SATELLITE_1 memory_resource* __cdecl _Unaligned_set_default_resource(memory_resource*) noexcept;
 
     inline memory_resource* set_default_resource(memory_resource* const _Resource) noexcept {
 #ifdef __cpp_aligned_new
@@ -39,7 +39,7 @@ namespace pmr {
 #endif // __cpp_aligned_new
     }
 
-    extern "C" _CRTIMP3 _NODISCARD memory_resource* __cdecl null_memory_resource() noexcept;
+    extern "C" _CRT_SATELLITE_1 _NODISCARD memory_resource* __cdecl null_memory_resource() noexcept;
 
     // FUNCTION new_delete_resource
     class _Identity_equal_resource : public memory_resource {
@@ -64,7 +64,7 @@ namespace pmr {
         }
     };
 
-    extern "C" _CRTIMP3 _Unaligned_new_delete_resource_impl* __cdecl _Unaligned_new_delete_resource() noexcept;
+    extern "C" _CRT_SATELLITE_1 _Unaligned_new_delete_resource_impl* __cdecl _Unaligned_new_delete_resource() noexcept;
 
 #ifdef __cpp_aligned_new
     class _Aligned_new_delete_resource_impl final
@@ -87,7 +87,7 @@ namespace pmr {
         }
     };
 
-    extern "C" _CRTIMP3 _Aligned_new_delete_resource_impl* __cdecl _Aligned_new_delete_resource() noexcept;
+    extern "C" _CRT_SATELLITE_1 _Aligned_new_delete_resource_impl* __cdecl _Aligned_new_delete_resource() noexcept;
 
     _NODISCARD inline memory_resource* new_delete_resource() noexcept {
         return _Aligned_new_delete_resource();
@@ -107,8 +107,7 @@ namespace pmr {
         _Double_link* _Prev;
     };
 
-    template <class _Ty,
-        class _Tag = void>
+    template <class _Ty, class _Tag = void>
     struct _Intrusive_list { // intrusive circular list of _Ty (which must derive from _Double_link<_Tag>)
         using _Link_type = _Double_link<_Tag>;
 
@@ -119,8 +118,8 @@ namespace pmr {
         _Intrusive_list(const _Intrusive_list&) = delete;
         _Intrusive_list& operator=(const _Intrusive_list&) = delete;
 
-        static constexpr _Link_type* _As_link(
-            _Ty* const _Ptr) noexcept { // extract the link from the item denoted by _Ptr
+        static constexpr _Link_type* _As_link(_Ty* const _Ptr) noexcept {
+            // extract the link from the item denoted by _Ptr
             static_assert(is_base_of_v<_Link_type, _Ty>);
             return static_cast<_Link_type*>(_Ptr);
         }
@@ -159,8 +158,7 @@ namespace pmr {
         _Single_link* _Next;
     };
 
-    template <class _Ty,
-        class _Tag = void>
+    template <class _Ty, class _Tag = void>
     struct _Intrusive_stack { // intrusive stack of _Ty, which must derive from _Single_link<_Tag>
         using _Link_type = _Single_link<_Tag>;
 
@@ -206,7 +204,7 @@ namespace pmr {
 
         constexpr void _Remove(_Ty* const _Item) noexcept {
             const auto _Ptr = _As_link(_Item);
-            for (_Link_type** _Foo = _STD addressof(_Head); *_Foo != nullptr; _Foo = _STD addressof((*_Foo)->_Next)) {
+            for (_Link_type** _Foo = _STD addressof(_Head); *_Foo; _Foo = _STD addressof((*_Foo)->_Next)) {
                 if (*_Foo == _Ptr) {
                     *_Foo = _Ptr->_Next;
                     break;
@@ -235,14 +233,14 @@ namespace pmr {
         }
         unsynchronized_pool_resource(const pool_options& _Opts, memory_resource* const _Resource) noexcept
             : _Options(_Opts), _Pools{_Resource} { // initialize pool with options _Opts and upstream _Resource
-            _STL_ASSERT(_Resource != nullptr, "Upstream memory resource must be a valid resource "
-                                              "(N4700 23.12.5.3 [mem.res.pool.ctor]/1)");
+            _STL_ASSERT(
+                _Resource, "Upstream memory resource must be a valid resource (N4810 20.12.5.3 [mem.res.pool.ctor]/1)");
             _Setup_options();
         }
         explicit unsynchronized_pool_resource(memory_resource* const _Resource) noexcept
             : _Pools{_Resource} { // initialize pool with default options and upstream _Resource
-            _STL_ASSERT(_Resource != nullptr, "Upstream memory resource must be a valid resource "
-                                              "(N4700 23.12.5.3 [mem.res.pool.ctor]/1)");
+            _STL_ASSERT(
+                _Resource, "Upstream memory resource must be a valid resource (N4810 20.12.5.3 [mem.res.pool.ctor]/1)");
             _Setup_options();
         }
         explicit unsynchronized_pool_resource(const pool_options& _Opts) noexcept
@@ -253,8 +251,8 @@ namespace pmr {
         unsynchronized_pool_resource(const unsynchronized_pool_resource&) = delete;
         unsynchronized_pool_resource& operator=(const unsynchronized_pool_resource&) = delete;
 
-        virtual ~unsynchronized_pool_resource() noexcept override { // destroy this pool resource, releasing all
-                                                                    // allocations back upstream
+        virtual ~unsynchronized_pool_resource() noexcept override {
+            // destroy this pool resource, releasing all allocations back upstream
             release();
         }
 
@@ -287,8 +285,8 @@ namespace pmr {
         }
 
     protected:
-        virtual void* do_allocate(size_t _Bytes, const size_t _Align)
-            override { // allocate a block from the appropriate pool, or directly from upstream if too large
+        virtual void* do_allocate(size_t _Bytes, const size_t _Align) override {
+            // allocate a block from the appropriate pool, or directly from upstream if too large
             if (_Bytes <= _Options.largest_required_pool_block) {
                 auto _Result = _Find_pool(_Bytes, _Align);
                 if (_Result.first == _Pools.end() || _Result.first->_Log_of_size != _Result.second) {
@@ -301,8 +299,8 @@ namespace pmr {
             return _Allocate_oversized(_Bytes, _Align);
         }
 
-        virtual void do_deallocate(void* const _Ptr, const size_t _Bytes, const size_t _Align)
-            override { // deallocate a block from the appropriate pool, or directly from upstream if too large
+        virtual void do_deallocate(void* const _Ptr, const size_t _Bytes, const size_t _Align) override {
+            // deallocate a block from the appropriate pool, or directly from upstream if too large
             if (_Bytes <= _Options.largest_required_pool_block) {
                 const auto _Result = _Find_pool(_Bytes, _Align);
                 if (_Result.first != _Pools.end() && _Result.first->_Log_of_size == _Result.second) {
@@ -327,12 +325,12 @@ namespace pmr {
         static_assert(alignof(_Oversized_header) == alignof(void*));
         static_assert(sizeof(_Oversized_header) == 4 * sizeof(void*));
 
-        static constexpr bool _Prepare_oversized(
-            size_t& _Bytes, size_t& _Align) noexcept { // adjust size and alignment to allow for an _Oversized_header
+        static constexpr bool _Prepare_oversized(size_t& _Bytes, size_t& _Align) noexcept {
+            // adjust size and alignment to allow for an _Oversized_header
             _Align = _Max_value(_Align, alignof(_Oversized_header));
 
-            if (_Bytes > SIZE_MAX - sizeof(_Oversized_header) - alignof(_Oversized_header)
-                             + 1) { // no room for header + alignment padding
+            if (_Bytes > SIZE_MAX - sizeof(_Oversized_header) - alignof(_Oversized_header) + 1) {
+                // no room for header + alignment padding
                 return false;
             }
 
@@ -345,8 +343,8 @@ namespace pmr {
             return true;
         }
 
-        void* _Allocate_oversized(
-            size_t _Bytes, size_t _Align) { // allocate a block directly from the upstream resource
+        void* _Allocate_oversized(size_t _Bytes, size_t _Align) {
+            // allocate a block directly from the upstream resource
             if (!_Prepare_oversized(_Bytes, _Align)) { // no room for header + alignment padding
                 _Xbad_alloc();
             }
@@ -365,10 +363,10 @@ namespace pmr {
             return _Ptr;
         }
 
-        void _Deallocate_oversized(void* _Ptr, size_t _Bytes,
-            size_t _Align) noexcept { // deallocate a block directly from the upstream resource
-            if (!_Prepare_oversized(_Bytes, _Align)) { // no room for header + alignment padding; this memory WAS NOT
-                                                       // allocated by this pool resource
+        void _Deallocate_oversized(void* _Ptr, size_t _Bytes, size_t _Align) noexcept {
+            // deallocate a block directly from the upstream resource
+            if (!_Prepare_oversized(_Bytes, _Align)) {
+                // no room for header + alignment padding; this memory WAS NOT allocated by this pool resource
 #ifdef _DEBUG
                 _STL_REPORT_ERROR("Cannot deallocate memory not allocated by this memory pool.");
 #endif // _DEBUG
@@ -394,10 +392,8 @@ namespace pmr {
 
                 _Chunk(_Pool& _Al, void* const _Base_, const size_t _Capacity_) noexcept
                     : _Free_count{_Capacity_}, _Capacity{_Capacity_}, _Base{static_cast<char*>(_Base_)},
-                      _Id{_Al._All_chunks._Empty()
-                              ? 0
-                              : _Al._All_chunks._Top()->_Id
-                                    + 1} { // initialize a chunk of _Capacity blocks, all initially free
+                      _Id{_Al._All_chunks._Empty() ? 0 : _Al._All_chunks._Top()->_Id + 1} {
+                    // initialize a chunk of _Capacity blocks, all initially free
                 }
 
                 _Chunk(const _Chunk&) = delete;
@@ -436,8 +432,8 @@ namespace pmr {
                 return *this;
             }
 
-            void _Clear(
-                unsynchronized_pool_resource& _Pool_resource) noexcept { // release all chunks in the pool back upstream
+            void _Clear(unsynchronized_pool_resource& _Pool_resource) noexcept {
+                // release all chunks in the pool back upstream
                 _Intrusive_stack<_Chunk> _Tmp{};
                 _STD swap(_Tmp, _All_chunks);
                 memory_resource* const _Resource = _Pool_resource.upstream_resource();
@@ -476,8 +472,8 @@ namespace pmr {
                 }
             }
 
-            void _Deallocate(unsynchronized_pool_resource& _Pool_resource,
-                void* const _Ptr) noexcept { // return a block to this pool
+            void _Deallocate(unsynchronized_pool_resource& _Pool_resource, void* const _Ptr) noexcept {
+                // return a block to this pool
                 _Chunk* _Current = *(reinterpret_cast<_Chunk**>(static_cast<char*>(_Ptr) + _Block_size) - 1);
 
                 _Current->_Free_blocks._Push(::new (_Ptr) _Single_link<>);
@@ -495,7 +491,7 @@ namespace pmr {
                     return;
                 }
 
-                if (_Empty_chunk == nullptr) {
+                if (!_Empty_chunk) {
                     _Empty_chunk = _Current;
                     return;
                 }
@@ -510,13 +506,13 @@ namespace pmr {
                     _Current->_Base, _Size_for_capacity(_Current->_Capacity), _Block_size);
             }
 
-            size_t _Size_for_capacity(const size_t _Capacity) const
-                noexcept { // return the size of a chunk that holds _Capacity blocks
+            size_t _Size_for_capacity(const size_t _Capacity) const noexcept {
+                // return the size of a chunk that holds _Capacity blocks
                 return (_Capacity << _Log_of_size) + sizeof(_Chunk);
             }
 
-            void _Increase_capacity(unsynchronized_pool_resource&
-                    _Pool_resource) { // this pool has no free blocks; get a new chunk from upstream
+            void _Increase_capacity(unsynchronized_pool_resource& _Pool_resource) {
+                // this pool has no free blocks; get a new chunk from upstream
                 const size_t _Size               = _Size_for_capacity(_Next_capacity);
                 memory_resource* const _Resource = _Pool_resource.upstream_resource();
                 void* const _Ptr                 = _Resource->allocate(_Size, _Block_size);
@@ -554,9 +550,9 @@ namespace pmr {
             }
         }
 
-        pair<pmr::vector<_Pool>::iterator, unsigned char> _Find_pool(const size_t _Bytes,
-            const size_t
-                _Align) noexcept { // find the pool from which to allocate a block with size _Bytes and alignment _Align
+        pair<pmr::vector<_Pool>::iterator, unsigned char> _Find_pool(
+            const size_t _Bytes, const size_t _Align) noexcept {
+            // find the pool from which to allocate a block with size _Bytes and alignment _Align
             const size_t _Size      = _Max_value(_Bytes + sizeof(void*), _Align);
             const auto _Log_of_size = static_cast<unsigned char>(_Ceiling_of_log_2(_Size));
             return {_STD lower_bound(_Pools.begin(), _Pools.end(), _Log_of_size,
@@ -634,10 +630,22 @@ namespace pmr {
         monotonic_buffer_resource& operator=(const monotonic_buffer_resource&) = delete;
 
         void release() noexcept { // strengthened
-            // return allocated memory back upstream
+            if (_Chunks._Empty()) {
+                // nothing to release; potentially continues to use an initial block provided at construction
+                return;
+            }
+
+            _Current_buffer  = nullptr;
+            _Space_available = 0;
+
+            // unscale _Next_buffer_size so the next allocation will be the same size as the most recent allocation
+            // (keep synchronized with monotonic_buffer_resource::_Scale)
+            const size_t _Unscaled = (_Next_buffer_size / 3 * 2 + alignof(_Header) - 1) & _Max_allocation;
+            _Next_buffer_size      = _Max_value(_Unscaled, _Min_allocation);
+
             _Intrusive_stack<_Header> _Tmp{};
             _STD swap(_Tmp, _Chunks);
-            while (_Tmp._Top()) {
+            while (!_Tmp._Empty()) {
                 const auto _Ptr = _Tmp._Pop();
                 _Resource->deallocate(_Ptr->_Base_address(), _Ptr->_Size, _Ptr->_Align);
             }
@@ -649,8 +657,8 @@ namespace pmr {
         }
 
     protected:
-        virtual void* do_allocate(const size_t _Bytes,
-            const size_t _Align) override { // allocate from the current buffer or a new larger buffer from upstream
+        virtual void* do_allocate(const size_t _Bytes, const size_t _Align) override {
+            // allocate from the current buffer or a new larger buffer from upstream
             if (!_STD align(_Align, _Bytes, _Current_buffer, _Space_available)) {
                 _Increase_capacity(_Bytes, _Align);
             }
@@ -679,9 +687,9 @@ namespace pmr {
         static constexpr size_t _Min_allocation = 2 * sizeof(_Header);
         static constexpr size_t _Max_allocation = 0 - alignof(_Header);
 
-        static constexpr size_t _Round(
-            const size_t _Size) noexcept { // return the smallest multiple of alignof(_Header) greater than _Size,
-                                           // clamped to the range [_Min_allocation, _Max_allocation]
+        static constexpr size_t _Round(const size_t _Size) noexcept {
+            // return the smallest multiple of alignof(_Header) greater than _Size,
+            // clamped to the range [_Min_allocation, _Max_allocation]
             if (_Size < _Min_allocation) {
                 return _Min_allocation;
             }
@@ -695,9 +703,9 @@ namespace pmr {
             return (_Size + alignof(_Header) - 1) & _Max_allocation;
         }
 
-        static constexpr size_t _Scale(
-            const size_t _Size) noexcept { // scale _Size by 1.5, rounding up to a multiple of alignof(_Header),
-                                           // saturating to _Max_allocation
+        static constexpr size_t _Scale(const size_t _Size) noexcept {
+            // scale _Size by 1.5, rounding up to a multiple of alignof(_Header), saturating to _Max_allocation
+            // (keep synchronized with monotonic_buffer_resource::release)
             constexpr auto _Max_size = (_Max_allocation - alignof(_Header) + 1) / 3 * 2;
             if (_Size >= _Max_size) {
                 return _Max_allocation;
@@ -746,5 +754,5 @@ _STL_RESTORE_CLANG_WARNINGS
 #else // ^^^ _HAS_CXX17 / !_HAS_CXX17 vvv
 #pragma message("The contents of <memory_resource> are only available with C++17 or later.")
 #endif // _HAS_CXX17
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _MEMORY_RESOURCE_

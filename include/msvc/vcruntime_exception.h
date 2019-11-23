@@ -13,8 +13,9 @@
     #include <vcruntime_new.h>
 #endif
 
+#if _VCRT_COMPILER_PREPROCESSOR && _HAS_EXCEPTIONS
+
 #pragma pack(push, _CRT_PACKING)
-#if !defined RC_INVOKED && _HAS_EXCEPTIONS
 
 _CRT_BEGIN_C_HEADER
 
@@ -86,7 +87,7 @@ public:
         __std_exception_destroy(&_Data);
     }
 
-    virtual char const* what() const
+    _NODISCARD virtual char const* what() const
     {
         return _Data._What ? _Data._What : "Unknown exception";
     }
@@ -142,8 +143,9 @@ public:
 
 } // namespace std
 
-#endif // !RC_INVOKED && _HAS_EXCEPTIONS
 #pragma pack(pop)
+
+#endif // _VCRT_COMPILER_PREPROCESSOR && _HAS_EXCEPTIONS
 
 /*
  * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.

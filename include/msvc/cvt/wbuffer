@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _CVT_WBUFFER_
 #define _CVT_WBUFFER_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <streambuf>
 #include <xstring>
 
@@ -16,7 +17,7 @@ _STL_DISABLE_CLANG_WARNINGS
 // Example: to convert from UCS to UTF-8 and write to cout
 // wbuffer_convert<codecvt_utf8<wchar_t>> mybuf(cout.rdbuf()); // construct wide stream buffer object
 // wostream mywcout(&mybuf); // construct wide ostream object
-// mywcout << (wchar_t)0x80; // writes 0xc2 0x80
+// mywcout << static_cast<wchar_t>(0x80); // writes 0xc2 0x80
 
 
 namespace stdext {
@@ -63,16 +64,14 @@ namespace stdext {
                 _Loc   = _STD locale(_Loc, _Pcvt);
             }
 
-            virtual ~wbuffer_convert() noexcept { // destroy the object
-                char* _Buf = (char*) _Str.c_str();
-
+            virtual ~wbuffer_convert() noexcept {
                 while (_Status == _Wrote) { // put any trailing homing shift
-                    char* _Dest;
-
                     if (_Str.size() < _STRING_INC) {
                         _Str.assign(_STRING_INC, '\0');
                     }
 
+                    char* _Buf = &_Str[0];
+                    char* _Dest;
                     switch (
                         _Pcvt->unshift(_State, _Buf, _Buf + _Str.size(), _Dest)) { // test result of homing conversion
                     case _Codecvt::ok:
@@ -83,7 +82,7 @@ namespace stdext {
                         ptrdiff_t _Count = _Dest - _Buf;
                         if (0 < _Count
                             && _Byte_traits::eq_int_type(_Byte_traits::eof(),
-                                   (typename _Traits::int_type) _Mystrbuf->sputn(_Buf, (_STD streamsize) _Count))) {
+                                static_cast<int_type>(_Mystrbuf->sputn(_Buf, static_cast<_STD streamsize>(_Count))))) {
                             return; // write failed
                         }
 
@@ -124,19 +123,19 @@ namespace stdext {
             virtual int_type overflow(int_type _Meta = _Traits::eof()) { // put an element to stream
                 if (_Traits::eq_int_type(_Traits::eof(), _Meta)) {
                     return _Traits::not_eof(_Meta); // EOF, return success code
-                } else if (_Mystrbuf == nullptr || 0 < _Nback || (_Status != _Unused && _Status != _Wrote)) {
+                } else if (!_Mystrbuf || 0 < _Nback || (_Status != _Unused && _Status != _Wrote)) {
                     return _Traits::eof(); // no buffer or reading, fail
                 } else { // put using codecvt facet
-                    char* _Buf      = (char*) _Str.c_str();
                     const _Elem _Ch = _Traits::to_char_type(_Meta);
-                    const _Elem* _Src;
-                    char* _Dest;
 
                     if (_Str.size() < _STRING_INC) {
                         _Str.assign(_STRING_INC, '\0');
                     }
 
                     for (_Status = _Wrote;;) {
+                        char* _Buf = &_Str[0];
+                        const _Elem* _Src;
+                        char* _Dest;
                         switch (_Pcvt->out(_State, &_Ch, &_Ch + 1, _Src, _Buf, _Buf + _Str.size(),
                             _Dest)) { // test result of converting one element
                         case _Codecvt::partial:
@@ -144,7 +143,8 @@ namespace stdext {
                             ptrdiff_t _Count = _Dest - _Buf;
                             if (0 < _Count
                                 && _Byte_traits::eq_int_type(_Byte_traits::eof(),
-                                       (typename _Traits::int_type) _Mystrbuf->sputn(_Buf, (_STD streamsize) _Count))) {
+                                    static_cast<int_type>(
+                                        _Mystrbuf->sputn(_Buf, static_cast<_STD streamsize>(_Count))))) {
                                 return _Traits::eof(); // write failed
                             }
 
@@ -163,9 +163,9 @@ namespace stdext {
                         }
 
                         case _Codecvt::noconv:
-                            if (_Traits::eq_int_type(
-                                    _Traits::eof(), (typename _Traits::int_type) _Mystrbuf->sputn(
-                                                        (char*) &_Ch, (_STD streamsize) sizeof(_Elem)))) {
+                            if (_Traits::eq_int_type(_Traits::eof(),
+                                    static_cast<int_type>(_Mystrbuf->sputn(reinterpret_cast<const char*>(&_Ch),
+                                        static_cast<_STD streamsize>(sizeof(_Elem)))))) {
                                 return _Traits::eof();
                             } else {
                                 return _Meta; // put native byte order
@@ -228,21 +228,21 @@ namespace stdext {
 #pragma warning(pop)
 
             virtual pos_type seekoff(off_type, _STD ios_base::seekdir,
-                _STD ios_base::openmode = (_STD ios_base::openmode)(
+                _STD ios_base::openmode = static_cast<_STD ios_base::openmode>(
                     _STD ios_base::in | _STD ios_base::out)) { // change position by _Off
                 return pos_type(-1); // always fail
             }
 
             virtual pos_type seekpos(pos_type,
-                _STD ios_base::openmode = (_STD ios_base::openmode)(
+                _STD ios_base::openmode = static_cast<_STD ios_base::openmode>(
                     _STD ios_base::in | _STD ios_base::out)) { // change position to _Pos
                 return pos_type(-1); // always fail
             }
 
         private:
             int_type _Get_elem() { // compose an element from byte stream buffer
-                if (_Mystrbuf != nullptr
-                    && _Status != _Wrote) { // got buffer, haven't written, try to compose an element
+                if (_Mystrbuf && _Status != _Wrote) {
+                    // got buffer, haven't written, try to compose an element
                     if (_Status != _Eof) {
                         if (_Str.size() == 0) {
                             _Status = _Need;
@@ -252,7 +252,7 @@ namespace stdext {
                     }
 
                     while (_Status != _Eof) { // get using codecvt facet
-                        char* _Buf = (char*) _Str.c_str();
+                        char* _Buf = &_Str[0];
                         _Elem _Ch, *_Dest;
                         const char* _Src;
                         int _Meta;
@@ -269,8 +269,7 @@ namespace stdext {
                             _Dest)) { // test result of converting one element
                         case _Codecvt::partial:
                         case _Codecvt::ok:
-                            _Str.erase((size_t) 0, // discard any used input
-                                (size_t)(_Src - _Buf));
+                            _Str.erase(0, static_cast<size_t>(_Src - _Buf)); // discard any used input
                             if (_Dest != &_Ch) {
                                 return _Traits::to_int_type(_Ch);
                             }
@@ -282,9 +281,8 @@ namespace stdext {
                                 break; // no conversion, but need more chars
                             }
 
-                            _CSTD memcpy(&_Ch, _Buf,
-                                sizeof(_Elem)); // copy raw bytes to element
-                            _Str.erase((size_t) 0, sizeof(_Elem));
+                            _CSTD memcpy(&_Ch, _Buf, sizeof(_Elem)); // copy raw bytes to element
+                            _Str.erase(0, sizeof(_Elem));
                             return _Traits::to_int_type(_Ch); // return result
 
                         default:
@@ -312,7 +310,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_WBUFFER_
 
 /*

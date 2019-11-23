@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _XTREE_
 #define _XTREE_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <xmemory>
 
 #if _HAS_CXX17
@@ -19,7 +20,7 @@ _STL_DISABLE_CLANG_WARNINGS
 _STD_BEGIN
 // CLASS TEMPLATE _Tree_unchecked_const_iterator
 template <class _Mytree, class _Base = _Iterator_base0>
-class _Tree_unchecked_const_iterator : public _Base { // unchecked iterator for nonmutable tree
+class _Tree_unchecked_const_iterator : public _Base {
 public:
     using iterator_category = bidirectional_iterator_tag;
 
@@ -29,23 +30,21 @@ public:
     using pointer         = typename _Mytree::const_pointer;
     using reference       = const value_type&;
 
-    _Tree_unchecked_const_iterator() : _Ptr() { // construct with null node pointer
-    }
+    _Tree_unchecked_const_iterator() : _Ptr() {}
 
-    _Tree_unchecked_const_iterator(_Nodeptr _Pnode, const _Mytree* _Plist)
-        : _Ptr(_Pnode) { // construct with node pointer _Pnode
+    _Tree_unchecked_const_iterator(_Nodeptr _Pnode, const _Mytree* _Plist) : _Ptr(_Pnode) {
         this->_Adopt(_Plist);
     }
 
-    _NODISCARD reference operator*() const { // return designated value
+    _NODISCARD reference operator*() const {
         return _Ptr->_Myval;
     }
 
-    _NODISCARD pointer operator->() const { // return pointer to class object
+    _NODISCARD pointer operator->() const {
         return pointer_traits<pointer>::pointer_to(**this);
     }
 
-    _Tree_unchecked_const_iterator& operator++() { // preincrement
+    _Tree_unchecked_const_iterator& operator++() {
         if (_Ptr->_Right->_Isnil) { // climb looking for right subtree
             _Nodeptr _Pnode;
             while (!(_Pnode = _Ptr->_Parent)->_Isnil && _Ptr == _Pnode->_Right) {
@@ -60,13 +59,13 @@ public:
         return *this;
     }
 
-    _Tree_unchecked_const_iterator operator++(int) { // postincrement
+    _Tree_unchecked_const_iterator operator++(int) {
         _Tree_unchecked_const_iterator _Tmp = *this;
         ++*this;
         return _Tmp;
     }
 
-    _Tree_unchecked_const_iterator& operator--() { // predecrement
+    _Tree_unchecked_const_iterator& operator--() {
         if (_Ptr->_Isnil) {
             _Ptr = _Ptr->_Right; // end() ==> rightmost
         } else if (_Ptr->_Left->_Isnil) { // climb looking for left subtree
@@ -85,18 +84,27 @@ public:
         return *this;
     }
 
-    _Tree_unchecked_const_iterator operator--(int) { // postdecrement
+    _Tree_unchecked_const_iterator operator--(int) {
         _Tree_unchecked_const_iterator _Tmp = *this;
         --*this;
         return _Tmp;
     }
 
-    _NODISCARD bool operator==(const _Tree_unchecked_const_iterator& _Right) const { // test for iterator equality
+    _NODISCARD bool operator==(const _Tree_unchecked_const_iterator& _Right) const {
         return _Ptr == _Right._Ptr;
     }
 
-    _NODISCARD bool operator!=(const _Tree_unchecked_const_iterator& _Right) const { // test for iterator inequality
+    _NODISCARD bool operator!=(const _Tree_unchecked_const_iterator& _Right) const {
         return !(*this == _Right);
+    }
+
+    _NODISCARD bool operator==(_Default_sentinel) const noexcept {
+        return !!_Ptr->_Isnil; // TRANSITION, avoid warning C4800:
+                               // "Implicit conversion from 'char' to bool. Possible information loss" (/Wall)
+    }
+
+    _NODISCARD bool operator!=(_Default_sentinel) const noexcept {
+        return !_Ptr->_Isnil;
     }
 
     _Nodeptr _Ptr; // pointer to node
@@ -104,7 +112,7 @@ public:
 
 // CLASS TEMPLATE _Tree_unchecked_iterator
 template <class _Mytree>
-class _Tree_unchecked_iterator : public _Tree_unchecked_const_iterator<_Mytree> { // unchecked iterator for mutable tree
+class _Tree_unchecked_iterator : public _Tree_unchecked_const_iterator<_Mytree> {
 public:
     using _Mybase           = _Tree_unchecked_const_iterator<_Mytree>;
     using iterator_category = bidirectional_iterator_tag;
@@ -115,48 +123,44 @@ public:
     using pointer         = typename _Mytree::pointer;
     using reference       = value_type&;
 
-    _Tree_unchecked_iterator() { // construct with null node
+    _Tree_unchecked_iterator() {}
+
+    _Tree_unchecked_iterator(_Nodeptr _Pnode, const _Mytree* _Plist) : _Mybase(_Pnode, _Plist) {}
+
+    _NODISCARD reference operator*() const {
+        return const_cast<reference>(_Mybase::operator*());
     }
 
-    _Tree_unchecked_iterator(_Nodeptr _Pnode, const _Mytree* _Plist)
-        : _Mybase(_Pnode, _Plist) { // construct with node pointer _Pnode
-    }
-
-    _NODISCARD reference operator*() const { // return designated value
-        return (reference) * *(_Mybase*) this;
-    }
-
-    _NODISCARD pointer operator->() const { // return pointer to class object
+    _NODISCARD pointer operator->() const {
         return pointer_traits<pointer>::pointer_to(**this);
     }
 
-    _Tree_unchecked_iterator& operator++() { // preincrement
-        ++static_cast<_Mybase&>(*this);
+    _Tree_unchecked_iterator& operator++() {
+        _Mybase::operator++();
         return *this;
     }
 
-    _Tree_unchecked_iterator operator++(int) { // postincrement
+    _Tree_unchecked_iterator operator++(int) {
         _Tree_unchecked_iterator _Tmp = *this;
-        ++*this;
+        _Mybase::operator++();
         return _Tmp;
     }
 
-    _Tree_unchecked_iterator& operator--() { // predecrement
-        --static_cast<_Mybase&>(*this);
+    _Tree_unchecked_iterator& operator--() {
+        _Mybase::operator--();
         return *this;
     }
 
-    _Tree_unchecked_iterator operator--(int) { // postdecrement
+    _Tree_unchecked_iterator operator--(int) {
         _Tree_unchecked_iterator _Tmp = *this;
-        --*this;
+        _Mybase::operator--();
         return _Tmp;
     }
 };
 
 // CLASS TEMPLATE _Tree_const_iterator
 template <class _Mytree>
-class _Tree_const_iterator
-    : public _Tree_unchecked_const_iterator<_Mytree, _Iterator_base> { // iterator for nonmutable tree
+class _Tree_const_iterator : public _Tree_unchecked_const_iterator<_Mytree, _Iterator_base> {
 public:
     using _Mybase           = _Tree_unchecked_const_iterator<_Mytree, _Iterator_base>;
     using iterator_category = bidirectional_iterator_tag;
@@ -167,79 +171,76 @@ public:
     using pointer         = typename _Mytree::const_pointer;
     using reference       = const value_type&;
 
-    _Tree_const_iterator() : _Mybase() { // construct with null node pointer
-    }
+    _Tree_const_iterator() : _Mybase() {}
 
-    _Tree_const_iterator(_Nodeptr _Pnode, const _Mytree* _Plist)
-        : _Mybase(_Pnode, _Plist) { // construct with node pointer _Pnode
-    }
+    _Tree_const_iterator(_Nodeptr _Pnode, const _Mytree* _Plist) : _Mybase(_Pnode, _Plist) {}
 
-    _NODISCARD reference operator*() const { // return designated value
-#if _ITERATOR_DEBUG_LEVEL != 0
+    _NODISCARD reference operator*() const {
+#if _ITERATOR_DEBUG_LEVEL == 2
         const auto _Mycont = static_cast<const _Mytree*>(this->_Getcont());
         _STL_ASSERT(_Mycont, "cannot dereference value-initialized map/set iterator");
         _STL_VERIFY(this->_Ptr != _Mycont->_Myhead, "cannot dereference end map/set iterator");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _ITERATOR_DEBUG_LEVEL == 2
 
         return this->_Ptr->_Myval;
     }
 
-    _NODISCARD pointer operator->() const { // return pointer to class object
+    _NODISCARD pointer operator->() const {
         return pointer_traits<pointer>::pointer_to(**this);
     }
 
-    _Tree_const_iterator& operator++() { // preincrement
-#if _ITERATOR_DEBUG_LEVEL != 0
+    _Tree_const_iterator& operator++() {
+#if _ITERATOR_DEBUG_LEVEL == 2
         _STL_VERIFY(this->_Getcont(), "cannot increment value-initialized map/set iterator");
         _STL_VERIFY(!this->_Ptr->_Isnil, "cannot increment end map/set iterator");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _ITERATOR_DEBUG_LEVEL == 2
 
-        ++static_cast<_Mybase&>(*this);
+        _Mybase::operator++();
         return *this;
     }
 
-    _Tree_const_iterator operator++(int) { // postincrement
+    _Tree_const_iterator operator++(int) {
         _Tree_const_iterator _Tmp = *this;
         ++*this;
         return _Tmp;
     }
 
-    _Tree_const_iterator& operator--() { // predecrement
-#if _ITERATOR_DEBUG_LEVEL == 0
-        --static_cast<_Mybase&>(*this);
-#else // ^^^ _ITERATOR_DEBUG_LEVEL == 0 ^^^ // vvv _ITERATOR_DEBUG_LEVEL != 0 vvv
+    _Tree_const_iterator& operator--() {
+#if _ITERATOR_DEBUG_LEVEL == 2
         _STL_ASSERT(this->_Getcont(), "cannot decrement value-initialized map/set iterator");
         _Nodeptr _Ptrsav = this->_Ptr;
-        --static_cast<_Mybase&>(*this);
+        _Mybase::operator--();
         _STL_VERIFY(_Ptrsav != this->_Ptr, "cannot decrement begin map/set iterator");
-#endif // _ITERATOR_DEBUG_LEVEL == 0
+#else // ^^^ _ITERATOR_DEBUG_LEVEL == 2 ^^^ // vvv _ITERATOR_DEBUG_LEVEL != 2 vvv
+        _Mybase::operator--();
+#endif // _ITERATOR_DEBUG_LEVEL == 2
 
         return *this;
     }
 
-    _Tree_const_iterator operator--(int) { // postdecrement
+    _Tree_const_iterator operator--(int) {
         _Tree_const_iterator _Tmp = *this;
         --*this;
         return _Tmp;
     }
 
-    _NODISCARD bool operator==(const _Tree_const_iterator& _Right) const { // test for iterator equality
-#if _ITERATOR_DEBUG_LEVEL != 0
+    _NODISCARD bool operator==(const _Tree_const_iterator& _Right) const {
+#if _ITERATOR_DEBUG_LEVEL == 2
         _STL_VERIFY(this->_Getcont() == _Right._Getcont(), "map/set iterators incompatible");
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _ITERATOR_DEBUG_LEVEL == 2
 
         return this->_Ptr == _Right._Ptr;
     }
 
-    _NODISCARD bool operator!=(const _Tree_const_iterator& _Right) const { // test for iterator inequality
+    _NODISCARD bool operator!=(const _Tree_const_iterator& _Right) const {
         return !(*this == _Right);
     }
 
-#if _ITERATOR_DEBUG_LEVEL != 0
+#if _ITERATOR_DEBUG_LEVEL == 2
     friend void _Verify_range(const _Tree_const_iterator& _First, const _Tree_const_iterator& _Last) {
         _STL_VERIFY(_First._Getcont() == _Last._Getcont(), "map/set iterators in range are from different containers");
     }
-#endif // _ITERATOR_DEBUG_LEVEL != 0
+#endif // _ITERATOR_DEBUG_LEVEL == 2
 
     using _Prevent_inheriting_unwrap = _Tree_const_iterator;
 
@@ -254,7 +255,7 @@ public:
 
 // CLASS TEMPLATE _Tree_iterator
 template <class _Mytree>
-class _Tree_iterator : public _Tree_const_iterator<_Mytree> { // iterator for mutable tree
+class _Tree_iterator : public _Tree_const_iterator<_Mytree> {
 public:
     using _Mybase           = _Tree_const_iterator<_Mytree>;
     using iterator_category = bidirectional_iterator_tag;
@@ -266,40 +267,37 @@ public:
     using pointer   = typename _Mytree::pointer;
     using reference = value_type&;
 
-    _Tree_iterator() { // construct with null node
+    _Tree_iterator() {}
+
+    _Tree_iterator(_Nodeptr _Pnode, const _Mytree* _Plist) : _Mybase(_Pnode, _Plist) {}
+
+    _NODISCARD reference operator*() const {
+        return const_cast<reference>(_Mybase::operator*());
     }
 
-    _Tree_iterator(_Nodeptr _Pnode, const _Mytree* _Plist)
-        : _Mybase(_Pnode, _Plist) { // construct with node pointer _Pnode
-    }
-
-    _NODISCARD reference operator*() const { // return designated value
-        return (reference) * *(_Mybase*) this;
-    }
-
-    _NODISCARD pointer operator->() const { // return pointer to class object
+    _NODISCARD pointer operator->() const {
         return pointer_traits<pointer>::pointer_to(**this);
     }
 
-    _Tree_iterator& operator++() { // preincrement
-        ++static_cast<_Mybase&>(*this);
+    _Tree_iterator& operator++() {
+        _Mybase::operator++();
         return *this;
     }
 
-    _Tree_iterator operator++(int) { // postincrement
+    _Tree_iterator operator++(int) {
         _Tree_iterator _Tmp = *this;
-        ++*this;
+        _Mybase::operator++();
         return _Tmp;
     }
 
-    _Tree_iterator& operator--() { // predecrement
-        --static_cast<_Mybase&>(*this);
+    _Tree_iterator& operator--() {
+        _Mybase::operator--();
         return *this;
     }
 
-    _Tree_iterator operator--(int) { // postdecrement
+    _Tree_iterator operator--(int) {
         _Tree_iterator _Tmp = *this;
-        --*this;
+        _Mybase::operator--();
         return _Tmp;
     }
 
@@ -313,7 +311,7 @@ public:
 // tree TYPE WRAPPERS
 template <class _Value_type, class _Size_type, class _Difference_type, class _Pointer, class _Const_pointer,
     class _Reference, class _Const_reference, class _Nodeptr_type>
-struct _Tree_iter_types { // wraps types needed by iterators
+struct _Tree_iter_types {
     using value_type      = _Value_type;
     using size_type       = _Size_type;
     using difference_type = _Difference_type;
@@ -323,14 +321,15 @@ struct _Tree_iter_types { // wraps types needed by iterators
 };
 
 template <class _Value_type, class _Voidptr>
-struct _Tree_node { // tree node
-    using _Nodeptr = _Rebind_pointer_t<_Voidptr, _Tree_node>;
+struct _Tree_node {
+    using _Nodeptr   = _Rebind_pointer_t<_Voidptr, _Tree_node>;
+    using value_type = _Value_type;
     _Nodeptr _Left; // left subtree, or smallest element if head
     _Nodeptr _Parent; // parent, or root of tree if head
     _Nodeptr _Right; // right subtree, or largest element if head
     char _Color; // _Red or _Black, _Black if head
-    char _Isnil; // true only if head (also nil) node
-    _Value_type _Myval; // the stored value, unused if head
+    char _Isnil; // true only if head (also nil) node; TRANSITION, should be bool
+    value_type _Myval; // the stored value, unused if head
 
     enum _Redbl { // colors for link to parent
         _Red,
@@ -342,13 +341,11 @@ struct _Tree_node { // tree node
 
     template <class _Alloc>
     static _Nodeptr _Buyheadnode(_Alloc& _Al) {
-        // allocate a head node, assumes construction of pointer does not throw
         static_assert(is_same_v<typename _Alloc::value_type, _Tree_node>, "Bad _Buyheadnode call");
-        using _Alnode_traits = allocator_traits<_Alloc>;
-        auto _Pnode          = _Al.allocate(1);
-        _Alnode_traits::construct(_Al, _STD addressof(_Pnode->_Left), _Pnode);
-        _Alnode_traits::construct(_Al, _STD addressof(_Pnode->_Parent), _Pnode);
-        _Alnode_traits::construct(_Al, _STD addressof(_Pnode->_Right), _Pnode);
+        const auto _Pnode = _Al.allocate(1);
+        _Construct_in_place(_Pnode->_Left, _Pnode);
+        _Construct_in_place(_Pnode->_Parent, _Pnode);
+        _Construct_in_place(_Pnode->_Right, _Pnode);
         _Pnode->_Color = _Black;
         _Pnode->_Isnil = true;
         return _Pnode;
@@ -358,14 +355,12 @@ struct _Tree_node { // tree node
     static _Nodeptr _Buynode(_Alloc& _Al, _Nodeptr _Myhead, _Valty&&... _Val) {
         // allocate a node with defaults and set links and value
         static_assert(is_same_v<typename _Alloc::value_type, _Tree_node>, "Bad _Buynode call");
-        using _Alnode_traits = allocator_traits<_Alloc>;
         _Alloc_construct_ptr<_Alloc> _Newnode(_Al);
         _Newnode._Allocate();
-        _Alnode_traits::construct(_Al, _STD addressof(_Newnode._Ptr->_Myval), _STD forward<_Valty>(_Val)...);
-        // we assume construction of pointers does not throw
-        _Alnode_traits::construct(_Newnode._Al, _STD addressof(_Newnode._Ptr->_Left), _Myhead);
-        _Alnode_traits::construct(_Newnode._Al, _STD addressof(_Newnode._Ptr->_Parent), _Myhead);
-        _Alnode_traits::construct(_Newnode._Al, _STD addressof(_Newnode._Ptr->_Right), _Myhead);
+        allocator_traits<_Alloc>::construct(_Al, _STD addressof(_Newnode._Ptr->_Myval), _STD forward<_Valty>(_Val)...);
+        _Construct_in_place(_Newnode._Ptr->_Left, _Myhead);
+        _Construct_in_place(_Newnode._Ptr->_Parent, _Myhead);
+        _Construct_in_place(_Newnode._Ptr->_Right, _Myhead);
         _Newnode._Ptr->_Color = _Red;
         _Newnode._Ptr->_Isnil = false;
         return _Newnode._Release();
@@ -374,31 +369,57 @@ struct _Tree_node { // tree node
     template <class _Alloc>
     static void _Freenode0(_Alloc& _Al, _Nodeptr _Ptr) noexcept {
         static_assert(is_same_v<typename _Alloc::value_type, _Tree_node>, "Bad _Freenode0 call");
-        using _Alnode_traits = allocator_traits<_Alloc>;
-        _Alnode_traits::destroy(_Al, _STD addressof(_Ptr->_Left));
-        _Alnode_traits::destroy(_Al, _STD addressof(_Ptr->_Parent));
-        _Alnode_traits::destroy(_Al, _STD addressof(_Ptr->_Right));
-        _Alnode_traits::deallocate(_Al, _Ptr, 1);
+        _Destroy_in_place(_Ptr->_Left);
+        _Destroy_in_place(_Ptr->_Parent);
+        _Destroy_in_place(_Ptr->_Right);
+        allocator_traits<_Alloc>::deallocate(_Al, _Ptr, 1);
     }
 
     template <class _Alloc>
     static void _Freenode(_Alloc& _Al, _Nodeptr _Ptr) noexcept {
         static_assert(is_same_v<typename _Alloc::value_type, _Tree_node>, "Bad _Freenode call");
-        using _Alnode_traits = allocator_traits<_Alloc>;
-        _Alnode_traits::destroy(_Al, _STD addressof(_Ptr->_Myval));
+        allocator_traits<_Alloc>::destroy(_Al, _STD addressof(_Ptr->_Myval));
         _Freenode0(_Al, _Ptr);
     }
 };
 
 template <class _Ty>
-struct _Tree_simple_types : public _Simple_types<_Ty> { // wraps types needed by iterators
+struct _Tree_simple_types : public _Simple_types<_Ty> {
     using _Node    = _Tree_node<_Ty, void*>;
     using _Nodeptr = _Node*;
 };
 
+enum class _Tree_child {
+    _Right, // perf note: compare with _Right rather than _Left where possible for comparison with zero
+    _Left,
+    _Unused // indicates that tree child should never be used for insertion
+};
+
+template <class _Nodeptr>
+struct _Tree_id {
+    _Nodeptr _Parent; // the leaf node under which a new node should be inserted
+    _Tree_child _Child;
+};
+
+template <class _Nodeptr>
+struct _Tree_find_result {
+    _Tree_id<_Nodeptr> _Location;
+    _Nodeptr _Bound;
+};
+
+template <class _Nodeptr>
+struct _Tree_find_hint_result {
+    _Tree_id<_Nodeptr> _Location;
+    bool _Duplicate;
+};
+
+[[noreturn]] inline void _Throw_tree_length_error() {
+    _Xlength_error("map/set too long");
+}
+
 // CLASS TEMPLATE _Tree_val
 template <class _Val_types>
-class _Tree_val : public _Container_base { // base class for tree to hold data
+class _Tree_val : public _Container_base {
 public:
     using _Nodeptr = typename _Val_types::_Nodeptr;
 
@@ -410,10 +431,10 @@ public:
     using reference       = value_type&;
     using const_reference = const value_type&;
 
-    using const_iterator = _Tree_const_iterator<_Tree_val>;
+    using _Unchecked_const_iterator = _Tree_unchecked_const_iterator<_Tree_val>;
+    using const_iterator            = _Tree_const_iterator<_Tree_val>;
 
-    _Tree_val() : _Myhead(), _Mysize(0) { // initialize data
-    }
+    _Tree_val() : _Myhead(), _Mysize(0) {}
 
     enum _Redbl { // colors for link to parent
         _Red,
@@ -434,18 +455,6 @@ public:
         }
 
         return _Pnode;
-    }
-
-    _Nodeptr& _Root() const { // return root of nonmutable tree
-        return _Myhead->_Parent;
-    }
-
-    _Nodeptr& _Lmost() const { // return leftmost node in nonmutable tree
-        return _Myhead->_Left;
-    }
-
-    _Nodeptr& _Rmost() const { // return rightmost node in nonmutable tree
-        return _Myhead->_Right;
     }
 
     void _Lrotate(_Nodeptr _Wherenode) { // promote right node to root of subtree
@@ -492,11 +501,7 @@ public:
         _Wherenode->_Parent = _Pnode;
     }
 
-    _Nodeptr _Extract(const_iterator _Where) { // extract node at _Where
-#if _ITERATOR_DEBUG_LEVEL == 2
-        _STL_VERIFY(_Where._Getcont() == this && !_Where._Ptr->_Isnil, "map/set erase iterator outside range");
-#endif // _ITERATOR_DEBUG_LEVEL == 2
-
+    _Nodeptr _Extract(_Unchecked_const_iterator _Where) {
         _Nodeptr _Erasednode = _Where._Ptr; // node to erase
         ++_Where; // save successor iterator for return
 
@@ -519,22 +524,22 @@ public:
                 _Fixnode->_Parent = _Fixnodeparent; // link up
             }
 
-            if (_Root() == _Erasednode) {
-                _Root() = _Fixnode; // link down from root
+            if (_Myhead->_Parent == _Erasednode) {
+                _Myhead->_Parent = _Fixnode; // link down from root
             } else if (_Fixnodeparent->_Left == _Erasednode) {
                 _Fixnodeparent->_Left = _Fixnode; // link down to left
             } else {
                 _Fixnodeparent->_Right = _Fixnode; // link down to right
             }
 
-            if (_Lmost() == _Erasednode) {
-                _Lmost() = _Fixnode->_Isnil ? _Fixnodeparent // smallest is parent of erased node
-                                            : _Min(_Fixnode); // smallest in relinked subtree
+            if (_Myhead->_Left == _Erasednode) {
+                _Myhead->_Left = _Fixnode->_Isnil ? _Fixnodeparent // smallest is parent of erased node
+                                                  : _Min(_Fixnode); // smallest in relinked subtree
             }
 
-            if (_Rmost() == _Erasednode) {
-                _Rmost() = _Fixnode->_Isnil ? _Fixnodeparent // largest is parent of erased node
-                                            : _Max(_Fixnode); // largest in relinked subtree
+            if (_Myhead->_Right == _Erasednode) {
+                _Myhead->_Right = _Fixnode->_Isnil ? _Fixnodeparent // largest is parent of erased node
+                                                   : _Max(_Fixnode); // largest in relinked subtree
             }
         } else { // erased has two subtrees, _Pnode is successor to erased
             _Erasednode->_Left->_Parent = _Pnode; // link left up
@@ -553,8 +558,8 @@ public:
                 _Erasednode->_Right->_Parent = _Pnode; // right up
             }
 
-            if (_Root() == _Erasednode) {
-                _Root() = _Pnode; // link down from root
+            if (_Myhead->_Parent == _Erasednode) {
+                _Myhead->_Parent = _Pnode; // link down from root
             } else if (_Erasednode->_Parent->_Left == _Erasednode) {
                 _Erasednode->_Parent->_Left = _Pnode; // link down to left
             } else {
@@ -566,7 +571,7 @@ public:
         }
 
         if (_Erasednode->_Color == _Black) { // erasing black link, must recolor/rebalance tree
-            for (; _Fixnode != _Root() && _Fixnode->_Color == _Black; _Fixnodeparent = _Fixnode->_Parent) {
+            for (; _Fixnode != _Myhead->_Parent && _Fixnode->_Color == _Black; _Fixnodeparent = _Fixnode->_Parent) {
                 if (_Fixnode == _Fixnodeparent->_Left) { // fixup left subtree
                     _Pnode = _Fixnodeparent->_Right;
                     if (_Pnode->_Color == _Red) { // rotate red up from right subtree
@@ -638,18 +643,86 @@ public:
         return _Erasednode;
     }
 
-    void _Orphan_ptr(const _Nodeptr _Ptr) { // orphan iterators with specified node pointers
+    _Nodeptr _Insert_node(const _Tree_id<_Nodeptr> _Loc, const _Nodeptr _Newnode) noexcept {
+        ++_Mysize;
+        const auto _Head  = _Myhead;
+        _Newnode->_Parent = _Loc._Parent;
+        if (_Loc._Parent == _Head) { // first node in tree, just set head values
+            _Head->_Left     = _Newnode;
+            _Head->_Parent   = _Newnode;
+            _Head->_Right    = _Newnode;
+            _Newnode->_Color = _Black; // the root is black
+            return _Newnode;
+        }
+
+        _STL_INTERNAL_CHECK(_Loc._Child != _Tree_child::_Unused);
+        if (_Loc._Child == _Tree_child::_Right) { // add to right of _Loc._Parent
+            _STL_INTERNAL_CHECK(_Loc._Parent->_Right->_Isnil);
+            _Loc._Parent->_Right = _Newnode;
+            if (_Loc._Parent == _Head->_Right) { // remember rightmost node
+                _Head->_Right = _Newnode;
+            }
+        } else { // add to left of _Loc._Parent
+            _STL_INTERNAL_CHECK(_Loc._Parent->_Left->_Isnil);
+            _Loc._Parent->_Left = _Newnode;
+            if (_Loc._Parent == _Head->_Left) { // remember leftmost node
+                _Head->_Left = _Newnode;
+            }
+        }
+
+        for (_Nodeptr _Pnode = _Newnode; _Pnode->_Parent->_Color == _Red;) {
+            if (_Pnode->_Parent == _Pnode->_Parent->_Parent->_Left) { // fixup red-red in left subtree
+                const auto _Parent_sibling = _Pnode->_Parent->_Parent->_Right;
+                if (_Parent_sibling->_Color == _Red) { // parent's sibling has two red children, blacken both
+                    _Pnode->_Parent->_Color          = _Black;
+                    _Parent_sibling->_Color          = _Black;
+                    _Pnode->_Parent->_Parent->_Color = _Red;
+                    _Pnode                           = _Pnode->_Parent->_Parent;
+                } else { // parent's sibling has red and black children
+                    if (_Pnode == _Pnode->_Parent->_Right) { // rotate right child to left
+                        _Pnode = _Pnode->_Parent;
+                        _Lrotate(_Pnode);
+                    }
+
+                    _Pnode->_Parent->_Color          = _Black; // propagate red up
+                    _Pnode->_Parent->_Parent->_Color = _Red;
+                    _Rrotate(_Pnode->_Parent->_Parent);
+                }
+            } else { // fixup red-red in right subtree
+                const auto _Parent_sibling = _Pnode->_Parent->_Parent->_Left;
+                if (_Parent_sibling->_Color == _Red) { // parent's sibling has two red children, blacken both
+                    _Pnode->_Parent->_Color          = _Black;
+                    _Parent_sibling->_Color          = _Black;
+                    _Pnode->_Parent->_Parent->_Color = _Red;
+                    _Pnode                           = _Pnode->_Parent->_Parent;
+                } else { // parent's sibling has red and black children
+                    if (_Pnode == _Pnode->_Parent->_Left) { // rotate left child to right
+                        _Pnode = _Pnode->_Parent;
+                        _Rrotate(_Pnode);
+                    }
+
+                    _Pnode->_Parent->_Color          = _Black; // propagate red up
+                    _Pnode->_Parent->_Parent->_Color = _Red;
+                    _Lrotate(_Pnode->_Parent->_Parent);
+                }
+            }
+        }
+
+        _Head->_Parent->_Color = _Black; // root is always black
+        return _Newnode;
+    }
+
+    void _Orphan_ptr(const _Nodeptr _Ptr) {
 #if _ITERATOR_DEBUG_LEVEL == 2
         _Lockit _Lock(_LOCK_DEBUG);
-        const_iterator** _Pnext = (const_iterator**) this->_Getpfirst();
-        if (_Pnext != nullptr) {
-            while (*_Pnext != nullptr) {
-                if ((*_Pnext)->_Ptr == _Myhead || (_Ptr != nullptr && (*_Pnext)->_Ptr != _Ptr)) {
-                    _Pnext = (const_iterator**) (*_Pnext)->_Getpnext();
-                } else { // orphan the iterator
-                    (*_Pnext)->_Clrcont();
-                    *_Pnext = *(const_iterator**) (*_Pnext)->_Getpnext();
-                }
+        _Iterator_base12** _Pnext = &this->_Myproxy->_Myfirstiter;
+        while (*_Pnext) {
+            const auto _Pnextptr = static_cast<const_iterator&>(**_Pnext)._Ptr;
+            if (_Pnextptr == _Myhead || (_Ptr != nullptr && _Pnextptr != _Ptr)) {
+                _Pnext = &(*_Pnext)->_Mynextiter;
+            } else { // orphan the iterator
+                (*_Pnext)->_Myproxy = nullptr;
+                *_Pnext             = (*_Pnext)->_Mynextiter;
             }
         }
 #else // ^^^ _ITERATOR_DEBUG_LEVEL == 2 ^^^ // vvv _ITERATOR_DEBUG_LEVEL != 2 vvv
@@ -659,7 +732,6 @@ public:
 
     template <class _Alnode>
     void _Erase_tree_and_orphan(_Alnode& _Al, _Nodeptr _Rootnode) noexcept {
-        // delete a _Tree subtree and orphan nodes
         while (!_Rootnode->_Isnil) { // free subtrees, then node
             _Erase_tree_and_orphan(_Al, _Rootnode->_Right);
             auto _To_delete = _STD exchange(_Rootnode, _Rootnode->_Left);
@@ -670,7 +742,6 @@ public:
 
     template <class _Alnode>
     void _Erase_tree(_Alnode& _Al, _Nodeptr _Rootnode) noexcept {
-        // delete a _Tree subtree
         while (!_Rootnode->_Isnil) { // free subtrees, then node
             _Erase_tree(_Al, _Rootnode->_Right);
             _Alnode::value_type::_Freenode(_Al, _STD exchange(_Rootnode, _Rootnode->_Left));
@@ -678,7 +749,7 @@ public:
     }
 
     template <class _Alnode>
-    void _Erase_head(_Alnode& _Al) noexcept { // delete a _Tree head node and subtree
+    void _Erase_head(_Alnode& _Al) noexcept {
         this->_Orphan_all();
         _Erase_tree(_Al, _Myhead->_Parent);
         _Alnode::value_type::_Freenode0(_Al, _Myhead);
@@ -688,13 +759,13 @@ public:
     size_type _Mysize; // number of elements
 };
 
-// STRUCT TEMPLATE _Tree_node_scoped_ptr
+// STRUCT TEMPLATE _Tree_head_scoped_ptr
 template <class _Alnode, class _Scary_val>
-struct _Tree_node_scoped_ptr { // temporary storage for allocated node pointers to ensure exception safety
+struct _Tree_head_scoped_ptr { // temporary storage for allocated node pointers to ensure exception safety
     _Alnode& _Al;
     _Scary_val* _Mycont;
 
-    _Tree_node_scoped_ptr(_Alnode& _Al_, _Scary_val& _Mycont_) : _Al(_Al_), _Mycont(_STD addressof(_Mycont_)) {
+    _Tree_head_scoped_ptr(_Alnode& _Al_, _Scary_val& _Mycont_) : _Al(_Al_), _Mycont(_STD addressof(_Mycont_)) {
         _Mycont->_Myhead = _Alnode::value_type::_Buyheadnode(_Al);
     }
 
@@ -702,9 +773,55 @@ struct _Tree_node_scoped_ptr { // temporary storage for allocated node pointers 
         _Mycont = nullptr;
     }
 
-    ~_Tree_node_scoped_ptr() {
+    ~_Tree_head_scoped_ptr() {
         if (_Mycont) {
             _Mycont->_Erase_head(_Al);
+        }
+    }
+};
+
+template <class _Alnode>
+struct _Tree_temp_node_alloc : _Alloc_construct_ptr<_Alnode> {
+    // EH helper for _Tree_temp_node
+    explicit _Tree_temp_node_alloc(_Alnode& _Al_) : _Alloc_construct_ptr<_Alnode>(_Al_) {
+        _Alloc_construct_ptr<_Alnode>::_Allocate();
+    }
+
+    _Tree_temp_node_alloc(const _Tree_temp_node_alloc&) = delete;
+    _Tree_temp_node_alloc& operator=(const _Tree_temp_node_alloc&) = delete;
+};
+
+template <class _Alnode>
+struct _Tree_temp_node : _Tree_temp_node_alloc<_Alnode> {
+    // temporarily stores a constructed tree node
+    using _Alnode_traits = allocator_traits<_Alnode>;
+    using _Nodeptr       = typename _Alnode_traits::pointer;
+
+    enum _Redbl { // colors for link to parent
+        _Red,
+        _Black
+    };
+
+    template <class... _Valtys>
+    explicit _Tree_temp_node(_Alnode& _Al_, _Nodeptr _Myhead, _Valtys&&... _Vals)
+        : _Tree_temp_node_alloc<_Alnode>(_Al_) {
+        _Alnode_traits::construct(this->_Al, _STD addressof(this->_Ptr->_Myval), _STD forward<_Valtys>(_Vals)...);
+        _Construct_in_place(this->_Ptr->_Left, _Myhead);
+        _Construct_in_place(this->_Ptr->_Parent, _Myhead);
+        _Construct_in_place(this->_Ptr->_Right, _Myhead);
+        this->_Ptr->_Color = _Red;
+        this->_Ptr->_Isnil = false;
+    }
+
+    _Tree_temp_node(const _Tree_temp_node&) = delete;
+    _Tree_temp_node& operator=(const _Tree_temp_node&) = delete;
+
+    ~_Tree_temp_node() {
+        if (this->_Ptr) {
+            _Destroy_in_place(this->_Ptr->_Left);
+            _Destroy_in_place(this->_Ptr->_Parent);
+            _Destroy_in_place(this->_Ptr->_Right);
+            _Alnode_traits::destroy(this->_Al, _STD addressof(this->_Ptr->_Myval));
         }
     }
 };
@@ -759,34 +876,26 @@ public:
     using reverse_iterator       = _STD reverse_iterator<iterator>;
     using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
 
-    using _Pairib = pair<iterator, bool>;
-    using _Pairii = pair<iterator, iterator>;
-    using _Paircc = pair<const_iterator, const_iterator>;
-
-    struct _Copy_tag { // signals copying
-    };
-    struct _Move_tag { // signals moving
-    };
+    struct _Copy_tag {};
+    struct _Move_tag {};
 
     _Tree(const key_compare& _Parg) : _Mypair(_One_then_variadic_args_t(), _Parg, _Zero_then_variadic_args_t()) {
-        // construct empty tree from comparator
         _Alloc_sentinel_and_proxy();
     }
 
     _Tree(const key_compare& _Parg, const allocator_type& _Al)
         : _Mypair(_One_then_variadic_args_t(), _Parg, _One_then_variadic_args_t(), _Al) {
-        // construct empty tree from comparator, allocator
         _Alloc_sentinel_and_proxy();
     }
 
     template <class _Any_alloc>
     _Tree(const _Tree& _Right, _Any_alloc&& _Al)
         : _Mypair(_One_then_variadic_args_t(), _Right.key_comp(), _One_then_variadic_args_t(),
-              _STD forward<_Any_alloc>(_Al)) {
-        // construct tree by copying _Right, allocator
-        auto&& _Alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
-        _Container_proxy_ptr<_Alty> _Proxy(_Alproxy, _Get_data());
-        _Tree_node_scoped_ptr<_Alnode, _Scary_val> _Sentinel(_Getal(), _Get_data());
+            _STD forward<_Any_alloc>(_Al)) {
+        auto&& _Alproxy   = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
+        const auto _Scary = _Get_scary();
+        _Container_proxy_ptr<_Alty> _Proxy(_Alproxy, *_Scary);
+        _Tree_head_scoped_ptr<_Alnode, _Scary_val> _Sentinel(_Getal(), *_Scary);
         _Copy(_Right, _Copy_tag());
         _Sentinel._Release();
         _Proxy._Release();
@@ -794,8 +903,7 @@ public:
 
     _Tree(_Tree&& _Right)
         : _Mypair(
-              _One_then_variadic_args_t(), _Right.key_comp(), _One_then_variadic_args_t(), _STD move(_Right._Getal())) {
-        // construct tree by moving _Right
+            _One_then_variadic_args_t(), _Right.key_comp(), _One_then_variadic_args_t(), _STD move(_Right._Getal())) {
         _Alloc_sentinel_and_proxy();
         _Swap_val(_Right);
     }
@@ -803,9 +911,10 @@ public:
 private:
     void _Different_allocator_move_construct(_Tree&& _Right) {
         // TRANSITION, VSO#675959 (inline into only caller when that is fixed)
-        auto&& _Alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
-        _Container_proxy_ptr<_Alty> _Proxy(_Alproxy, _Get_data());
-        _Tree_node_scoped_ptr<_Alnode, _Scary_val> _Sentinel(_Getal(), _Get_data());
+        auto&& _Alproxy   = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
+        const auto _Scary = _Get_scary();
+        _Container_proxy_ptr<_Alty> _Proxy(_Alproxy, *_Scary);
+        _Tree_head_scoped_ptr<_Alnode, _Scary_val> _Sentinel(_Getal(), *_Scary);
         _Copy(_Right, _Move_tag());
         _Sentinel._Release();
         _Proxy._Release();
@@ -814,7 +923,6 @@ private:
 public:
     _Tree(_Tree&& _Right, const allocator_type& _Al)
         : _Mypair(_One_then_variadic_args_t(), _Right.key_comp(), _One_then_variadic_args_t(), _Al) {
-        // construct tree by moving _Right, allocator
         if
             _CONSTEXPR_IF(!_Alnode_traits::is_always_equal::value) {
                 if (_Getal() != _Right._Getal()) {
@@ -842,18 +950,18 @@ private:
             clear();
             _Getcomp()            = _Right._Getcomp();
             auto&& _Alproxy       = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
-            auto&& _Alproxy_right = _GET_PROXY_ALLOCATOR(_Alnode, _Right._Getal());
-            _Container_proxy_ptr<_Alty> _Proxy(_Alproxy_right, _Leave_proxy_unbound{});
-            auto& _My_data      = _Get_data();
-            auto& _Right_data   = _Right._Get_data();
-            const auto _Newhead = _STD exchange(_Right_data._Myhead, _Node::_Buyheadnode(_Right._Getal()));
-            const auto _Newsize = _STD exchange(_Right_data._Mysize, size_type{0});
-            _My_data._Erase_head(_Getal());
+            auto&& _Right_alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Right._Getal());
+            _Container_proxy_ptr<_Alty> _Proxy(_Right_alproxy, _Leave_proxy_unbound{});
+            const auto _Scary   = _Get_scary();
+            auto _Right_scary   = _Right._Get_scary();
+            const auto _Newhead = _STD exchange(_Right_scary->_Myhead, _Node::_Buyheadnode(_Right._Getal()));
+            const auto _Newsize = _STD exchange(_Right_scary->_Mysize, size_type{0});
+            _Scary->_Erase_head(_Getal());
             _Pocma(_Getal(), _Right._Getal());
-            _My_data._Myhead = _Newhead;
-            _My_data._Mysize = _Newsize;
-            _Proxy._Bind(_Alproxy, _STD addressof(_My_data));
-            _My_data._Swap_proxy_and_iterators(_Right_data);
+            _Scary->_Myhead = _Newhead;
+            _Scary->_Mysize = _Newsize;
+            _Proxy._Bind(_Alproxy, _Scary);
+            _Scary->_Swap_proxy_and_iterators(*_Right_scary);
         }
     }
 
@@ -878,32 +986,212 @@ public:
 
 private:
     void _Swap_val(_Tree& _Right) { // swap contents with _Right, equal allocators
-        auto& _My_data    = _Get_data();
-        auto& _Right_data = _Right._Get_data();
-        _My_data._Swap_proxy_and_iterators(_Right_data);
+        const auto _Scary = _Get_scary();
+        auto _Right_scary = _Right._Get_scary();
+        _Scary->_Swap_proxy_and_iterators(*_Right_scary);
         _Swap_adl(_Getcomp(), _Right._Getcomp());
-        _Swap_adl(_My_data._Myhead, _Right_data._Myhead);
-        _STD swap(_My_data._Mysize, _Right_data._Mysize);
+        _Swap_adl(_Scary->_Myhead, _Right_scary->_Myhead);
+        _STD swap(_Scary->_Mysize, _Right_scary->_Mysize);
     }
+
+protected:
+#if _HAS_IF_CONSTEXPR
+    template <class... _Valtys>
+    pair<_Nodeptr, bool> _Emplace(_Valtys&&... _Vals) {
+        using _In_place_key_extractor = typename _Traits::template _In_place_key_extractor<_Remove_cvref_t<_Valtys>...>;
+        const auto _Scary             = _Get_scary();
+        _Tree_find_result<_Nodeptr> _Loc;
+        _Nodeptr _Inserted;
+        if constexpr (!_Multi && _In_place_key_extractor::_Extractable) {
+            const auto& _Keyval = _In_place_key_extractor::_Extract(_Vals...);
+            _Loc                = _Find_lower_bound(_Keyval);
+            if (_Lower_bound_duplicate(_Loc._Bound, _Keyval)) {
+                return {_Loc._Bound, false};
+            }
+
+            _Check_grow_by_1();
+            _Inserted = _Tree_temp_node<_Alnode>(_Getal(), _Scary->_Myhead, _STD forward<_Valtys>(_Vals)...)._Release();
+            // nothrow hereafter
+        } else {
+            _Tree_temp_node<_Alnode> _Newnode(_Getal(), _Scary->_Myhead, _STD forward<_Valtys>(_Vals)...);
+            const auto& _Keyval = _Traits::_Kfn(_Newnode._Ptr->_Myval);
+            if constexpr (_Multi) { // duplicate check if unique
+                _Loc = _Find_upper_bound(_Keyval);
+            } else {
+                _Loc = _Find_lower_bound(_Keyval);
+                if (_Lower_bound_duplicate(_Loc._Bound, _Keyval)) {
+                    return {_Loc._Bound, false};
+                }
+            }
+
+            _Check_grow_by_1();
+            // nothrow hereafter
+            _Inserted = _Newnode._Release();
+        }
+
+        return {_Scary->_Insert_node(_Loc._Location, _Inserted), true};
+    }
+#else // ^^^ _HAS_IF_CONSTEXPR // !_HAS_IF_CONSTEXPR vvv
+
+    template <class... _Valtys>
+    pair<_Nodeptr, bool> _Emplace1(true_type, _Valtys&&... _Vals) { // _Emplace for extractable
+        using _In_place_key_extractor = typename _Traits::template _In_place_key_extractor<_Remove_cvref_t<_Valtys>...>;
+        const auto _Scary = _Get_scary();
+        _Tree_find_result<_Nodeptr> _Loc;
+        _Nodeptr _Inserted;
+        const auto& _Keyval = _In_place_key_extractor::_Extract(_Vals...);
+        _Loc = _Find_lower_bound(_Keyval);
+        if (_Lower_bound_duplicate(_Loc._Bound, _Keyval)) {
+            return {_Loc._Bound, false};
+        }
+
+        _Check_grow_by_1();
+        _Inserted = _Tree_temp_node<_Alnode>(_Getal(), _Scary->_Myhead, _STD forward<_Valtys>(_Vals)...)._Release();
+
+        // nothrow hereafter
+        return {_Scary->_Insert_node(_Loc._Location, _Inserted), true};
+    }
+
+    template <class... _Valtys>
+    pair<_Nodeptr, bool> _Emplace1(false_type, _Valtys&&... _Vals) { // _Emplace for unextractable
+        const auto _Scary = _Get_scary();
+        _Tree_find_result<_Nodeptr> _Loc;
+        _Nodeptr _Inserted;
+        {
+            _Tree_temp_node<_Alnode> _Newnode(_Getal(), _Scary->_Myhead, _STD forward<_Valtys>(_Vals)...);
+            const auto& _Keyval = _Traits::_Kfn(_Newnode._Ptr->_Myval);
+            if
+                _CONSTEXPR_IF(_Multi) { // duplicate check if unique
+                    _Loc = _Find_upper_bound(_Keyval);
+                }
+            else {
+                _Loc = _Find_lower_bound(_Keyval);
+                if (_Lower_bound_duplicate(_Loc._Bound, _Keyval)) {
+                    return {_Loc._Bound, false};
+                }
+            }
+
+            _Check_grow_by_1();
+            // nothrow hereafter
+            _Inserted = _Newnode._Release();
+        }
+
+        return {_Scary->_Insert_node(_Loc._Location, _Inserted), true};
+    }
+
+    template <class... _Valtys>
+    pair<_Nodeptr, bool> _Emplace(_Valtys&&... _Vals) {
+        return _Emplace1(
+            bool_constant < !_Multi
+                && _Traits::template _In_place_key_extractor<_Remove_cvref_t<_Valtys>...>::_Extractable > {},
+            _STD forward<_Valtys>(_Vals)...);
+    }
+
+#endif // _HAS_IF_CONSTEXPR
 
 public:
-    template <class... _Valty>
-    _Pairib emplace(_Valty&&... _Val) { // try to insert value_type(_Val...), favoring right side
-        _Nodeptr _Newnode = _Buynode(_STD forward<_Valty>(_Val)...);
-        return _Insert_nohint(false, _Newnode->_Myval, _Newnode);
+    template <class... _Valtys>
+    pair<iterator, bool> emplace(_Valtys&&... _Vals) {
+        const auto _Result = _Emplace(_STD forward<_Valtys>(_Vals)...);
+        return {iterator(_Result.first, _Get_scary()), _Result.second};
     }
 
-    template <class... _Valty>
-    iterator emplace_hint(const_iterator _Where, _Valty&&... _Val) { // insert value_type(_Val...) at _Where
-        _Nodeptr _Newnode = _Buynode(_STD forward<_Valty>(_Val)...);
-        return _Insert_hint(_Where, _Newnode->_Myval, _Newnode);
+protected:
+#if _HAS_IF_CONSTEXPR
+    template <class... _Valtys>
+    _Nodeptr _Emplace_hint(const _Nodeptr _Hint, _Valtys&&... _Vals) {
+        using _In_place_key_extractor = typename _Traits::template _In_place_key_extractor<_Remove_cvref_t<_Valtys>...>;
+        const auto _Scary             = _Get_scary();
+        _Tree_find_hint_result<_Nodeptr> _Loc;
+        _Nodeptr _Inserted;
+        if constexpr (!_Multi && _In_place_key_extractor::_Extractable) {
+            _Loc = _Find_hint(_Hint, _In_place_key_extractor::_Extract(_Vals...));
+            if (_Loc._Duplicate) {
+                return _Loc._Location._Parent;
+            }
+
+            _Check_grow_by_1();
+            _Inserted = _Tree_temp_node<_Alnode>(_Getal(), _Scary->_Myhead, _STD forward<_Valtys>(_Vals)...)._Release();
+            // nothrow hereafter
+        } else {
+            _Tree_temp_node<_Alnode> _Newnode(_Getal(), _Scary->_Myhead, _STD forward<_Valtys>(_Vals)...);
+            _Loc = _Find_hint(_Hint, _Traits::_Kfn(_Newnode._Ptr->_Myval));
+            if constexpr (!_Multi) {
+                if (_Loc._Duplicate) {
+                    return _Loc._Location._Parent;
+                }
+            }
+
+            _Check_grow_by_1();
+            // nothrow hereafter
+            _Inserted = _Newnode._Release();
+        }
+
+        return _Scary->_Insert_node(_Loc._Location, _Inserted);
+    }
+#else // ^^^ _HAS_IF_CONSTEXPR // !_HAS_IF_CONSTEXPR vvv
+    template <class... _Valtys>
+    _Nodeptr _Emplace_hint1(true_type, const _Nodeptr _Hint, _Valtys&&... _Vals) {
+        using _In_place_key_extractor = typename _Traits::template _In_place_key_extractor<_Remove_cvref_t<_Valtys>...>;
+        const auto _Scary = _Get_scary();
+        const auto _Loc = _Find_hint(_Hint, _In_place_key_extractor::_Extract(_Vals...));
+        if (_Loc._Duplicate) {
+            return _Loc._Location._Parent;
+        }
+
+        _Check_grow_by_1();
+        const auto _Inserted =
+            _Tree_temp_node<_Alnode>(_Getal(), _Scary->_Myhead, _STD forward<_Valtys>(_Vals)...)._Release();
+        // nothrow hereafter
+
+        return _Scary->_Insert_node(_Loc._Location, _Inserted);
+    }
+
+    template <class... _Valtys>
+    _Nodeptr _Emplace_hint1(false_type, const _Nodeptr _Hint, _Valtys&&... _Vals) {
+        const auto _Scary = _Get_scary();
+        _Tree_find_hint_result<_Nodeptr> _Loc;
+        _Nodeptr _Inserted;
+        {
+            _Tree_temp_node<_Alnode> _Newnode(_Getal(), _Scary->_Myhead, _STD forward<_Valtys>(_Vals)...);
+            _Loc = _Find_hint(_Hint, _Traits::_Kfn(_Newnode._Ptr->_Myval));
+            if (_Loc._Duplicate) {
+                return _Loc._Location._Parent;
+            }
+
+            _Check_grow_by_1();
+            // nothrow hereafter
+            _Inserted = _Newnode._Release();
+        }
+
+        return _Scary->_Insert_node(_Loc._Location, _Inserted);
+    }
+
+    template <class... _Valtys>
+    _Nodeptr _Emplace_hint(const _Nodeptr _Hint, _Valtys&&... _Vals) {
+        return _Emplace_hint1(
+            bool_constant < !_Multi
+                && _Traits::template _In_place_key_extractor<_Remove_cvref_t<_Valtys>...>::_Extractable > {},
+            _Hint, _STD forward<_Valtys>(_Vals)...);
+    }
+#endif // _HAS_IF_CONSTEXPR
+
+public:
+    template <class... _Valtys>
+    iterator emplace_hint(const_iterator _Where, _Valtys&&... _Vals) { // insert value_type(_Val...) at _Where
+        const auto _Scary = _Get_scary();
+#if _ITERATOR_DEBUG_LEVEL == 2
+        _STL_VERIFY(_Where._Getcont() == _Scary, "map/set insert iterator outside range");
+#endif // _ITERATOR_DEBUG_LEVEL == 2
+        return iterator(_Emplace_hint(_Where._Ptr, _STD forward<_Valtys>(_Vals)...), _Scary);
     }
 
     ~_Tree() noexcept { // destroy tree
-        _Get_data()._Erase_head(_Getal());
-#if _ITERATOR_DEBUG_LEVEL != 0
+        const auto _Scary = _Get_scary();
+        _Scary->_Erase_head(_Getal());
+#if _ITERATOR_DEBUG_LEVEL != 0 // TRANSITION, ABI
         auto&& _Alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
-        _Delete_plain(_Alproxy, _Myproxy());
+        _Delete_plain_internal(_Alproxy, _Scary->_Myproxy);
 #endif /* _ITERATOR_DEBUG_LEVEL != 0 */
     }
 
@@ -920,17 +1208,19 @@ private:
             _Copy_assign(_Right, false_type{});
         } else {
             clear();
-            _Get_data()._Orphan_all();
-            auto&& _Alproxy       = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
-            auto&& _Alproxy_right = _GET_PROXY_ALLOCATOR(_Alnode, _Right._Getal());
-            _Container_proxy_ptr<_Alty> _Proxy(_Alproxy_right, _Leave_proxy_unbound{});
-            auto& _Nc_right = const_cast<_Tree&>(_Right);
-            auto& _My_data  = _Get_data();
-            auto _Newhead   = _Node::_Buyheadnode(_Nc_right._Getal());
-            _Node::_Freenode0(_Getal(), _My_data._Myhead);
-            _Pocca(_Getal(), _Right._Getal());
-            _My_data._Myhead = _Newhead;
-            _Proxy._Bind(_Alproxy, _STD addressof(_My_data));
+            const auto _Scary = _Get_scary();
+            _Scary->_Orphan_all();
+            auto& _Al             = _Getal();
+            auto&& _Alproxy       = _GET_PROXY_ALLOCATOR(_Alnode, _Al);
+            const auto& _Right_al = _Right._Getal();
+            auto&& _Right_alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Right_al);
+            _Container_proxy_ptr<_Alty> _Proxy(_Right_alproxy, _Leave_proxy_unbound{});
+            auto _Right_al_non_const = _Right_al;
+            auto _Newhead            = _Node::_Buyheadnode(_Right_al_non_const);
+            _Node::_Freenode0(_Al, _Scary->_Myhead);
+            _Pocca(_Al, _Right_al);
+            _Scary->_Myhead = _Newhead;
+            _Proxy._Bind(_Alproxy, _Scary);
             _Getcomp() = _Right._Getcomp();
             _Copy(_Right, _Copy_tag());
         }
@@ -945,304 +1235,346 @@ public:
         return *this;
     }
 
-    _NODISCARD iterator begin() noexcept { // return iterator for beginning of mutable sequence
-        auto& _My_data = _Get_data();
-        return iterator(_My_data._Lmost(), _STD addressof(_My_data));
+    _NODISCARD iterator begin() noexcept {
+        const auto _Scary = _Get_scary();
+        return iterator(_Scary->_Myhead->_Left, _Scary);
     }
 
-    _NODISCARD const_iterator begin() const noexcept { // return iterator for beginning of nonmutable sequence
-        auto& _My_data = _Get_data();
-        return const_iterator(_My_data._Lmost(), _STD addressof(_My_data));
+    _NODISCARD const_iterator begin() const noexcept {
+        const auto _Scary = _Get_scary();
+        return const_iterator(_Scary->_Myhead->_Left, _Scary);
     }
 
-    _NODISCARD iterator end() noexcept { // return iterator for end of mutable sequence
-        auto& _My_data = _Get_data();
-        return iterator(_My_data._Myhead, _STD addressof(_My_data));
+    _NODISCARD iterator end() noexcept {
+        const auto _Scary = _Get_scary();
+        return iterator(_Scary->_Myhead, _Scary);
     }
 
-    _NODISCARD const_iterator end() const noexcept { // return iterator for end of nonmutable sequence
-        auto& _My_data = _Get_data();
-        return const_iterator(_My_data._Myhead, _STD addressof(_My_data));
+    _NODISCARD const_iterator end() const noexcept {
+        const auto _Scary = _Get_scary();
+        return const_iterator(_Scary->_Myhead, _Scary);
     }
 
-    _Unchecked_iterator _Unchecked_begin() noexcept { // return unchecked iterator for beginning of mutable sequence
-        return _Unchecked_iterator(_Get_data()._Lmost(), nullptr);
+    _Unchecked_iterator _Unchecked_begin() noexcept {
+        return _Unchecked_iterator(_Get_scary()->_Myhead->_Left, nullptr);
     }
 
     _Unchecked_const_iterator _Unchecked_begin() const noexcept {
-        // return unchecked iterator for beginning of nonmutable sequence
-        return _Unchecked_const_iterator(_Get_data()._Lmost(), nullptr);
+        return _Unchecked_const_iterator(_Get_scary()->_Myhead->_Left, nullptr);
     }
 
-    _Unchecked_iterator _Unchecked_end() noexcept { // return unchecked iterator for end of mutable sequence
-        return _Unchecked_iterator(_Get_data()._Myhead, nullptr);
+    _Default_sentinel _Unchecked_end() const noexcept {
+        return {};
     }
 
-    _Unchecked_const_iterator _Unchecked_end() const noexcept {
-        // return unchecked iterator for end of nonmutable sequence
-        return _Unchecked_const_iterator(_Get_data()._Myhead, nullptr);
+    _Unchecked_const_iterator _Unchecked_end_iter() const noexcept {
+        return _Unchecked_const_iterator(_Get_scary()->_Myhead, nullptr);
     }
 
-    _NODISCARD reverse_iterator rbegin() noexcept { // return iterator for beginning of reversed mutable sequence
+    _NODISCARD reverse_iterator rbegin() noexcept {
         return reverse_iterator(end());
     }
 
-    _NODISCARD const_reverse_iterator rbegin() const
-        noexcept { // return iterator for beginning of reversed nonmutable sequence
+    _NODISCARD const_reverse_iterator rbegin() const noexcept {
         return const_reverse_iterator(end());
     }
 
-    _NODISCARD reverse_iterator rend() noexcept { // return iterator for end of reversed mutable sequence
+    _NODISCARD reverse_iterator rend() noexcept {
         return reverse_iterator(begin());
     }
 
-    _NODISCARD const_reverse_iterator rend() const noexcept { // return iterator for end of reversed nonmutable sequence
+    _NODISCARD const_reverse_iterator rend() const noexcept {
         return const_reverse_iterator(begin());
     }
 
-    _NODISCARD const_iterator cbegin() const noexcept { // return iterator for beginning of nonmutable sequence
+    _NODISCARD const_iterator cbegin() const noexcept {
         return begin();
     }
 
-    _NODISCARD const_iterator cend() const noexcept { // return iterator for end of nonmutable sequence
+    _NODISCARD const_iterator cend() const noexcept {
         return end();
     }
 
-    _NODISCARD const_reverse_iterator crbegin() const
-        noexcept { // return iterator for beginning of reversed nonmutable sequence
+    _NODISCARD const_reverse_iterator crbegin() const noexcept {
         return rbegin();
     }
 
-    _NODISCARD const_reverse_iterator crend() const
-        noexcept { // return iterator for end of reversed nonmutable sequence
+    _NODISCARD const_reverse_iterator crend() const noexcept {
         return rend();
     }
 
-    _NODISCARD size_type size() const noexcept { // return length of sequence
-        return _Get_data()._Mysize;
+    _NODISCARD size_type size() const noexcept {
+        return _Get_scary()->_Mysize;
     }
 
-    _NODISCARD size_type max_size() const noexcept { // return maximum possible length of sequence
-        return _Alnode_traits::max_size(_Getal());
+    _NODISCARD size_type max_size() const noexcept {
+        return _Min_value(
+            static_cast<size_type>((numeric_limits<difference_type>::max)()), _Alnode_traits::max_size(_Getal()));
     }
 
-    _NODISCARD bool empty() const noexcept { // return true only if sequence is empty
+    _NODISCARD bool empty() const noexcept {
         return size() == 0;
     }
 
-    _NODISCARD allocator_type get_allocator() const noexcept { // return allocator object for values
+    _NODISCARD allocator_type get_allocator() const noexcept {
         return static_cast<allocator_type>(_Getal());
     }
 
-    _NODISCARD key_compare key_comp() const { // return object for comparing keys
+    _NODISCARD key_compare key_comp() const {
         return _Getcomp();
     }
 
-    _NODISCARD value_compare value_comp() const { // return object for comparing values
+    _NODISCARD value_compare value_comp() const {
         return value_compare(key_comp());
     }
 
     template <bool _Multi2 = _Multi, enable_if_t<!_Multi2, int> = 0>
-    _Pairib insert(const value_type& _Val) { // try to insert node with value _Val, favoring right side
-        return _Insert_nohint(false, _Val, _Not_a_node_tag());
+    pair<iterator, bool> insert(const value_type& _Val) {
+        const auto _Result = _Emplace(_Val);
+        return {iterator(_Result.first, _Get_scary()), _Result.second};
     }
 
     template <bool _Multi2 = _Multi, enable_if_t<_Multi2, int> = 0>
-    iterator insert(const value_type& _Val) { // try to insert node with value _Val, favoring right side
-        return _Insert_nohint(false, _Val, _Not_a_node_tag()).first;
+    iterator insert(const value_type& _Val) {
+        return iterator(_Emplace(_Val).first, _Get_scary());
     }
 
     template <bool _Multi2 = _Multi, enable_if_t<!_Multi2, int> = 0>
-    _Pairib insert(value_type&& _Val) { // try to insert node with value _Val, favoring right side
-        return _Insert_nohint(false, _STD move(_Val), _Not_a_node_tag());
+    pair<iterator, bool> insert(value_type&& _Val) {
+        const auto _Result = _Emplace(_STD move(_Val));
+        return {iterator(_Result.first, _Get_scary()), _Result.second};
     }
 
     template <bool _Multi2 = _Multi, enable_if_t<_Multi2, int> = 0>
-    iterator insert(value_type&& _Val) { // try to insert node with value _Val, favoring right side
-        return _Insert_nohint(false, _STD move(_Val), _Not_a_node_tag()).first;
+    iterator insert(value_type&& _Val) {
+        return iterator(_Emplace(_STD move(_Val)).first, _Get_scary());
     }
 
-    iterator insert(const_iterator _Where,
-        const value_type& _Val) { // try to insert node with value _Val using _Where as a hint
-        return _Insert_hint(_Where, _Val, _Not_a_node_tag());
+    iterator insert(const_iterator _Where, const value_type& _Val) {
+        const auto _Scary = _Get_scary();
+#if _ITERATOR_DEBUG_LEVEL == 2
+        _STL_VERIFY(_Where._Getcont() == _Scary, "map/set insert iterator outside range");
+#endif // _ITERATOR_DEBUG_LEVEL == 2
+        return iterator(_Emplace_hint(_Where._Ptr, _Val), _Scary);
     }
 
     iterator insert(const_iterator _Where, value_type&& _Val) {
-        // try to insert node with value _Val using _Where as a hint
-        return _Insert_hint(_Where, _STD move(_Val), _Not_a_node_tag());
+        const auto _Scary = _Get_scary();
+#if _ITERATOR_DEBUG_LEVEL == 2
+        _STL_VERIFY(_Where._Getcont() == _Scary, "map/set insert iterator outside range");
+#endif // _ITERATOR_DEBUG_LEVEL == 2
+        return iterator(_Emplace_hint(_Where._Ptr, _STD move(_Val)), _Scary);
     }
 
     template <class _Iter>
-    void insert(_Iter _First, _Iter _Last) { // insert [_First, _Last) one at a time
+    void insert(_Iter _First, _Iter _Last) {
         _Adl_verify_range(_First, _Last);
-        auto _UFirst      = _Get_unwrapped(_First);
-        const auto _ULast = _Get_unwrapped(_Last);
+        auto _UFirst       = _Get_unwrapped(_First);
+        const auto _ULast  = _Get_unwrapped(_Last);
+        const auto _Myhead = _Get_scary()->_Myhead;
         for (; _UFirst != _ULast; ++_UFirst) {
-            emplace_hint(end(), *_UFirst);
+            _Emplace_hint(_Myhead, *_UFirst);
         }
     }
 
-    void insert(initializer_list<value_type> _Ilist) { // insert initializer_list
+    void insert(initializer_list<value_type> _Ilist) {
         insert(_Ilist.begin(), _Ilist.end());
     }
 
-    template <class _Iter = iterator, class = enable_if_t<!is_same_v<_Iter, const_iterator>>>
-    iterator erase(iterator _Where) { // erase element at _Where
-        return erase(const_iterator{_Where});
-    }
-
-    iterator erase(const_iterator _Where) { // erase element at _Where
-        auto& _My_data = _Get_data();
-#if _ITERATOR_DEBUG_LEVEL == 2
-        _STL_VERIFY(_Where._Getcont() == _STD addressof(_My_data) && !_Where._Ptr->_Isnil,
-            "map/set erase iterator outside range");
-#endif // _ITERATOR_DEBUG_LEVEL == 2
-
-        const_iterator _Successor = _Where;
+private:
+    _Nodeptr _Erase_unchecked(_Unchecked_const_iterator _Where) {
+        const auto _Scary                    = _Get_scary();
+        _Unchecked_const_iterator _Successor = _Where;
         ++_Successor; // save successor iterator for return
-        _Nodeptr _Erasednode = _My_data._Extract(_Where); // node to erase
-        _My_data._Orphan_ptr(_Erasednode);
+        _Nodeptr _Erasednode = _Scary->_Extract(_Where); // node to erase
+        _Scary->_Orphan_ptr(_Erasednode);
         _Node::_Freenode(_Getal(), _Erasednode); // delete erased node
-        return iterator(_Successor._Ptr, _STD addressof(_My_data)); // return successor iterator
+        return _Successor._Ptr; // return successor nodeptr
     }
 
-    iterator erase(const_iterator _First, const_iterator _Last) { // erase [_First, _Last)
-        if (_First == begin() && _Last == end()) {
+    _Nodeptr _Erase_unchecked(_Unchecked_const_iterator _First, _Unchecked_const_iterator _Last) {
+        const auto _Begin = _Unchecked_begin();
+        if (_First == _Begin && _Last._Ptr->_Isnil) {
             // erase all
             clear();
-            return begin();
+            return _Last._Ptr;
         }
 
         // partial erase, one at a time
         while (_First != _Last) {
-            erase(_First++);
+            _Erase_unchecked(_First++);
         }
 
-        return iterator(_First._Ptr, _STD addressof(_Get_data()));
+        return _Last._Ptr;
     }
 
-    size_type erase(const key_type& _Keyval) { // erase and count all that match _Keyval
-        _Pairii _Where  = equal_range(_Keyval);
-        const auto _Num = static_cast<size_type>(_STD distance(_Where.first, _Where.second));
-        erase(_Where.first, _Where.second);
+public:
+    template <class _Iter = iterator, class = enable_if_t<!is_same_v<_Iter, const_iterator>>>
+    iterator erase(iterator _Where) {
+        const auto _Scary = _Get_scary();
+#if _ITERATOR_DEBUG_LEVEL == 2
+        _STL_VERIFY(_Where._Getcont() == _Scary, "map/set erase iterator from incorrect container");
+        _STL_VERIFY(!_Where._Ptr->_Isnil, "cannot erase map/set end() iterator");
+#endif // _ITERATOR_DEBUG_LEVEL == 2
+        return iterator(_Erase_unchecked(_Where._Unwrapped()), _Scary);
+    }
+
+    iterator erase(const_iterator _Where) {
+        const auto _Scary = _Get_scary();
+#if _ITERATOR_DEBUG_LEVEL == 2
+        _STL_VERIFY(_Where._Getcont() == _Scary, "map/set erase iterator from incorrect container");
+        _STL_VERIFY(!_Where._Ptr->_Isnil, "cannot erase map/set end() iterator");
+#endif // _ITERATOR_DEBUG_LEVEL == 2
+        return iterator(_Erase_unchecked(_Where._Unwrapped()), _Scary);
+    }
+
+    iterator erase(const_iterator _First, const_iterator _Last) {
+        return iterator(_Erase_unchecked(_First._Unwrapped(), _Last._Unwrapped()), _Get_scary());
+    }
+
+    size_type erase(const key_type& _Keyval) {
+        const auto _Where = _Eqrange(_Keyval);
+        const _Unchecked_const_iterator _First(_Where.first, nullptr);
+        const _Unchecked_const_iterator _Last(_Where.second, nullptr);
+        const auto _Num = static_cast<size_type>(_STD distance(_First, _Last));
+        _Erase_unchecked(_First, _Last);
         return _Num;
     }
 
-    void clear() noexcept { // erase all
-        auto& _My_data = _Get_data();
-        _My_data._Orphan_ptr(nullptr);
-        auto _Head = _My_data._Myhead;
-        _My_data._Erase_tree(_Getal(), _Head->_Parent);
-        _Head->_Parent   = _Head;
-        _Head->_Left     = _Head;
-        _Head->_Right    = _Head;
-        _My_data._Mysize = 0;
+    void clear() noexcept {
+        const auto _Scary = _Get_scary();
+        _Scary->_Orphan_ptr(nullptr);
+        auto _Head = _Scary->_Myhead;
+        _Scary->_Erase_tree(_Getal(), _Head->_Parent);
+        _Head->_Parent  = _Head;
+        _Head->_Left    = _Head;
+        _Head->_Right   = _Head;
+        _Scary->_Mysize = 0;
     }
 
-    _NODISCARD iterator find(const key_type& _Keyval) { // find an element in mutable sequence that matches _Keyval
-        iterator _Where = lower_bound(_Keyval);
-        return _Where == end() || _DEBUG_LT_PRED(_Getcomp(), _Keyval, _Key(_Where._Ptr)) ? end() : _Where;
+private:
+    template <class _Other>
+    _NODISCARD _Nodeptr _Find(const _Other& _Keyval) const {
+        const _Tree_find_result<_Nodeptr> _Loc = _Find_lower_bound(_Keyval);
+        if (_Lower_bound_duplicate(_Loc._Bound, _Keyval)) {
+            return _Loc._Bound;
+        }
+
+        return _Get_scary()->_Myhead;
+    }
+
+public:
+    _NODISCARD iterator find(const key_type& _Keyval) {
+        return iterator(_Find(_Keyval), _Get_scary());
     }
 
     _NODISCARD const_iterator find(const key_type& _Keyval) const {
-        // find an element in nonmutable sequence that matches _Keyval
-        const_iterator _Where = lower_bound(_Keyval);
-        return _Where == end() || _DEBUG_LT_PRED(_Getcomp(), _Keyval, _Key(_Where._Ptr)) ? end() : _Where;
+        return const_iterator(_Find(_Keyval), _Get_scary());
     }
 
     template <class _Other, class _Mycomp = key_compare, class = typename _Mycomp::is_transparent>
     _NODISCARD iterator find(const _Other& _Keyval) {
-        // find an element in mutable sequence that matches _Keyval
-        iterator _Where = lower_bound(_Keyval);
-        return _Where == end() || _DEBUG_LT_PRED(_Getcomp(), _Keyval, _Key(_Where._Ptr)) ? end() : _Where;
+        return iterator(_Find(_Keyval), _Get_scary());
     }
 
     template <class _Other, class _Mycomp = key_compare, class = typename _Mycomp::is_transparent>
     _NODISCARD const_iterator find(const _Other& _Keyval) const {
-        // find an element in nonmutable sequence that matches _Keyval
-        const_iterator _Where = lower_bound(_Keyval);
-        return _Where == end() || _DEBUG_LT_PRED(_Getcomp(), _Keyval, _Key(_Where._Ptr)) ? end() : _Where;
+        return const_iterator(_Find(_Keyval), _Get_scary());
     }
 
-    _NODISCARD size_type count(const key_type& _Keyval) const { // count all elements that match _Keyval
-        _Paircc _Ans = equal_range(_Keyval);
-        return static_cast<size_type>(_STD distance(_Ans.first, _Ans.second));
+#if _HAS_CXX20
+    _NODISCARD bool contains(const key_type& _Keyval) const {
+        return _Lower_bound_duplicate(_Find_lower_bound(_Keyval)._Bound, _Keyval);
+    }
+
+    template <class _Other, class _Mycomp = key_compare, class = typename _Mycomp::is_transparent>
+    _NODISCARD bool contains(const _Other& _Keyval) const {
+        return _Lower_bound_duplicate(_Find_lower_bound(_Keyval)._Bound, _Keyval);
+    }
+#endif // _HAS_CXX20
+
+    _NODISCARD size_type count(const key_type& _Keyval) const {
+        if
+            _CONSTEXPR_IF(_Multi) {
+                const auto _Ans = _Eqrange(_Keyval);
+                return static_cast<size_type>(_STD distance(
+                    _Unchecked_const_iterator(_Ans.first, nullptr), _Unchecked_const_iterator(_Ans.second, nullptr)));
+            }
+        else {
+            return _Lower_bound_duplicate(_Find_lower_bound(_Keyval)._Bound, _Keyval);
+        }
     }
 
     template <class _Other, class _Mycomp = key_compare, class = typename _Mycomp::is_transparent>
     _NODISCARD size_type count(const _Other& _Keyval) const {
-        // count all elements that match _Keyval
-        _Paircc _Ans = equal_range(_Keyval);
-        return static_cast<size_type>(_STD distance(_Ans.first, _Ans.second));
+        const auto _Ans = _Eqrange(_Keyval);
+        return static_cast<size_type>(_STD distance(
+            _Unchecked_const_iterator(_Ans.first, nullptr), _Unchecked_const_iterator(_Ans.second, nullptr)));
     }
 
     _NODISCARD iterator lower_bound(const key_type& _Keyval) {
-        // find leftmost node not less than _Keyval in mutable tree
-        return iterator(_Lbound(_Keyval), _STD addressof(_Get_data()));
+        return iterator(_Find_lower_bound(_Keyval)._Bound, _Get_scary());
     }
 
     _NODISCARD const_iterator lower_bound(const key_type& _Keyval) const {
-        // find leftmost node not less than _Keyval in nonmutable tree
-        return const_iterator(_Lbound(_Keyval), _STD addressof(_Get_data()));
+        return const_iterator(_Find_lower_bound(_Keyval)._Bound, _Get_scary());
     }
 
     template <class _Other, class _Mycomp = key_compare, class = typename _Mycomp::is_transparent>
     _NODISCARD iterator lower_bound(const _Other& _Keyval) {
-        // find leftmost node not less than _Keyval in mutable tree
-        return iterator(_Lbound(_Keyval), _STD addressof(_Get_data()));
+        return iterator(_Find_lower_bound(_Keyval)._Bound, _Get_scary());
     }
 
     template <class _Other, class _Mycomp = key_compare, class = typename _Mycomp::is_transparent>
     _NODISCARD const_iterator lower_bound(const _Other& _Keyval) const {
-        // find leftmost node not less than _Keyval in nonmutable tree
-        return const_iterator(_Lbound(_Keyval), _STD addressof(_Get_data()));
+        return const_iterator(_Find_lower_bound(_Keyval)._Bound, _Get_scary());
     }
 
     _NODISCARD iterator upper_bound(const key_type& _Keyval) {
-        // find leftmost node greater than _Keyval in mutable tree
-        return iterator(_Ubound(_Keyval), _STD addressof(_Get_data()));
+        return iterator(_Find_upper_bound(_Keyval)._Bound, _Get_scary());
     }
 
     _NODISCARD const_iterator upper_bound(const key_type& _Keyval) const {
-        // find leftmost node greater than _Keyval in nonmutable tree
-        return const_iterator(_Ubound(_Keyval), _STD addressof(_Get_data()));
+        return const_iterator(_Find_upper_bound(_Keyval)._Bound, _Get_scary());
     }
 
     template <class _Other, class _Mycomp = key_compare, class = typename _Mycomp::is_transparent>
     _NODISCARD iterator upper_bound(const _Other& _Keyval) {
-        // find leftmost node greater than _Keyval in mutable tree
-        return iterator(_Ubound(_Keyval), _STD addressof(_Get_data()));
+        return iterator(_Find_upper_bound(_Keyval)._Bound, _Get_scary());
     }
 
     template <class _Other, class _Mycomp = key_compare, class = typename _Mycomp::is_transparent>
     _NODISCARD const_iterator upper_bound(const _Other& _Keyval) const {
-        // find leftmost node greater than _Keyval in nonmutable tree
-        return const_iterator(_Ubound(_Keyval), _STD addressof(_Get_data()));
+        return const_iterator(_Find_upper_bound(_Keyval)._Bound, _Get_scary());
     }
 
-    _NODISCARD _Pairii equal_range(const key_type& _Keyval) { // find range equivalent to _Keyval in mutable tree
-        return _Eqrange(_Keyval);
+    _NODISCARD pair<iterator, iterator> equal_range(const key_type& _Keyval) {
+        const auto _Result = _Eqrange(_Keyval);
+        const auto _Scary  = _Get_scary();
+        return {iterator(_Result.first, _Scary), iterator(_Result.second, _Scary)};
     }
 
-    _NODISCARD _Paircc equal_range(
-        const key_type& _Keyval) const { // find range equivalent to _Keyval in nonmutable tree
-        return _Eqrange(_Keyval);
-    }
-
-    template <class _Other, class _Mycomp = key_compare,
-        class = typename _Mycomp::is_transparent>
-    _NODISCARD _Pairii equal_range(const _Other& _Keyval) { // find range equivalent to _Keyval in mutable tree
-        return _Eqrange(_Keyval);
+    _NODISCARD pair<const_iterator, const_iterator> equal_range(const key_type& _Keyval) const {
+        const auto _Result = _Eqrange(_Keyval);
+        const auto _Scary  = _Get_scary();
+        return {const_iterator(_Result.first, _Scary), const_iterator(_Result.second, _Scary)};
     }
 
     template <class _Other, class _Mycomp = key_compare, class = typename _Mycomp::is_transparent>
-    _NODISCARD _Paircc equal_range(const _Other& _Keyval) const {
-        // find range equivalent to _Keyval in nonmutable tree
-        return _Eqrange(_Keyval);
+    _NODISCARD pair<iterator, iterator> equal_range(const _Other& _Keyval) {
+        const auto _Result = _Eqrange(_Keyval);
+        const auto _Scary  = _Get_scary();
+        return {iterator(_Result.first, _Scary), iterator(_Result.second, _Scary)};
     }
 
-    void swap(_Tree& _Right) _NOEXCEPT_COND(_Is_nothrow_swappable<key_compare>::value) // strengthened
-    { // exchange contents with _Right
+    template <class _Other, class _Mycomp = key_compare, class = typename _Mycomp::is_transparent>
+    _NODISCARD pair<const_iterator, const_iterator> equal_range(const _Other& _Keyval) const {
+        const auto _Result = _Eqrange(_Keyval);
+        const auto _Scary  = _Get_scary();
+        return {const_iterator(_Result.first, _Scary), const_iterator(_Result.second, _Scary)};
+    }
+
+    void swap(_Tree& _Right) _NOEXCEPT_COND(_Is_nothrow_swappable<key_compare>::value) { // strengthened
         if (this != _STD addressof(_Right)) { // (maybe) swap allocators, swap control information
             _Pocs(_Getal(), _Right._Getal());
             _Swap_val(_Right);
@@ -1250,235 +1582,162 @@ public:
     }
 
 protected:
-    template <class _Valty>
-    _Nodeptr _Buy_if_not_node(_Nodeptr _Node, _Valty&&) { // node exists, just return it
-        return _Node;
-    }
-
-    template <class _Valty>
-    _Nodeptr _Buy_if_not_node(_Not_a_node_tag, _Valty&& _Val) { // node doesn't exist, make it
-        return _Buynode(_STD forward<_Valty>(_Val));
-    }
-
-    void _Destroy_if_node(_Nodeptr _Newnode) { // node exists, destroy it
-        _Node::_Freenode(_Getal(), _Newnode);
-    }
-
-    void _Destroy_if_node(_Not_a_node_tag) { // node doesn't exist, do nothing
-    }
-
-    template <class _Valty, class _Nodety>
-    iterator _Insert_hint(const_iterator _Where, _Valty&& _Val, _Nodety _Newnode) {
-        // try to insert node using _Where as a hint
-        const_iterator _Next;
-        bool _Leftish  = false; // assume nearest point is end of sequence
-        auto& _My_data = _Get_data();
-
-        _TRY_BEGIN
-#if _ITERATOR_DEBUG_LEVEL == 2
-        _STL_VERIFY(_Where._Getcont() == _STD addressof(_My_data), "map/set insert iterator outside range");
-#endif // _ITERATOR_DEBUG_LEVEL == 2
-
-        if (size() == 0) {
-            return _Insert_at(true, _My_data._Myhead, _STD forward<_Valty>(_Val), _Newnode); // empty tree
-        } else if
-            _CONSTEXPR_IF(_Multi) { // insert even if duplicate
-                if (_Where == begin()) { // insert at beginning if before first element
-                    if (!_DEBUG_LT_PRED(_Getcomp(), _Key(_Where._Ptr), _Kfn(_Val))) {
-                        return _Insert_at(true, _Where._Ptr, _STD forward<_Valty>(_Val), _Newnode);
-                    }
-
-                    _Leftish = true; // nearest point is beginning of sequence
-                } else if (_Where == end()) { // insert at end if after last element
-                    if (!_DEBUG_LT_PRED(_Getcomp(), _Kfn(_Val), _Key(_My_data._Rmost()))) {
-                        return _Insert_at(false, _My_data._Rmost(), _STD forward<_Valty>(_Val), _Newnode);
-                    }
-                } else if (!_DEBUG_LT_PRED(_Getcomp(), _Key(_Where._Ptr), _Kfn(_Val))
-                           && !_DEBUG_LT_PRED(_Getcomp(), _Kfn(_Val),
-                                  _Key((--(_Next = _Where))._Ptr))) { // insert before _Where
-                    if (_Next._Ptr->_Right->_Isnil) {
-                        return _Insert_at(false, _Next._Ptr, _STD forward<_Valty>(_Val), _Newnode);
-                    } else {
-                        return _Insert_at(true, _Where._Ptr, _STD forward<_Valty>(_Val), _Newnode);
-                    }
-                } else if (!_DEBUG_LT_PRED(_Getcomp(), _Kfn(_Val), _Key(_Where._Ptr))
-                           && (++(_Next = _Where) == end()
-                                  || !_DEBUG_LT_PRED(
-                                         _Getcomp(), _Key(_Next._Ptr), _Kfn(_Val)))) { // insert after _Where
-                    if (_Where._Ptr->_Right->_Isnil) {
-                        return _Insert_at(false, _Where._Ptr, _STD forward<_Valty>(_Val), _Newnode);
-                    } else {
-                        return _Insert_at(true, _Next._Ptr, _STD forward<_Valty>(_Val), _Newnode);
-                    }
-                } else {
-                    _Leftish = true; // nearest point is beginning of sequence
-                }
-            }
-        else { // insert only if unique
-            if (_Where == begin()) { // insert at beginning if before first element
-                if (_DEBUG_LT_PRED(_Getcomp(), _Kfn(_Val), _Key(_Where._Ptr))) {
-                    return _Insert_at(true, _Where._Ptr, _STD forward<_Valty>(_Val), _Newnode);
-                }
-            } else if (_Where == end()) { // insert at end if after last element
-                if (_DEBUG_LT_PRED(_Getcomp(), _Key(_My_data._Rmost()), _Kfn(_Val))) {
-                    return _Insert_at(false, _My_data._Rmost(), _STD forward<_Valty>(_Val), _Newnode);
-                }
-            } else if (_DEBUG_LT_PRED(_Getcomp(), _Kfn(_Val), _Key(_Where._Ptr))
-                       && _DEBUG_LT_PRED(_Getcomp(), _Key((--(_Next = _Where))._Ptr),
-                              _Kfn(_Val))) { // insert before _Where
-                if (_Next._Ptr->_Right->_Isnil) {
-                    return _Insert_at(false, _Next._Ptr, _STD forward<_Valty>(_Val), _Newnode);
-                } else {
-                    return _Insert_at(true, _Where._Ptr, _STD forward<_Valty>(_Val), _Newnode);
-                }
-            } else if (_DEBUG_LT_PRED(_Getcomp(), _Key(_Where._Ptr), _Kfn(_Val))
-                       && (++(_Next = _Where) == end()
-                              || _DEBUG_LT_PRED(_Getcomp(), _Kfn(_Val), _Key(_Next._Ptr)))) { // insert after _Where
-                if (_Where._Ptr->_Right->_Isnil) {
-                    return _Insert_at(false, _Where._Ptr, _STD forward<_Valty>(_Val), _Newnode);
-                } else {
-                    return _Insert_at(true, _Next._Ptr, _STD forward<_Valty>(_Val), _Newnode);
-                }
-            }
-        }
-        _CATCH_ALL
-        _Destroy_if_node(_Newnode);
-        _RERAISE;
-        _CATCH_END
-
-        return _Insert_nohint(_Leftish, _STD forward<_Valty>(_Val), _Newnode).first;
-    }
-
-    template <class _Valty, class _Nodety>
-    _Pairib _Insert_nohint(bool _Leftish, _Valty&& _Val, _Nodety _Newnode) { // try to insert node, on left if _Leftish
-        auto& _My_data = _Get_data();
-        _TRY_BEGIN
-        _Nodeptr _Wherenode = _My_data._Myhead;
-        _Nodeptr _Trynode   = _Wherenode->_Parent;
-        bool _Addleft       = true; // add to left of head if tree empty
-
-        while (!_Trynode->_Isnil) { // look for leaf to insert before (_Addleft) or after
-            _Wherenode = _Trynode;
-            if (_Leftish) {
-                _Addleft = !_DEBUG_LT_PRED(_Getcomp(), _Key(_Trynode),
-                    _Kfn(_Val)); // favor left end
-            } else {
-                _Addleft = _DEBUG_LT_PRED(_Getcomp(), _Kfn(_Val),
-                    _Key(_Trynode)); // favor right end
-            }
-
-            _Trynode = _Addleft ? _Trynode->_Left : _Trynode->_Right;
-        }
-
+    template <class _Keyty>
+    _Tree_find_hint_result<_Nodeptr> _Find_hint(const _Nodeptr _Hint, const _Keyty& _Keyval) const {
+        const auto& _Comp = _Getcomp();
+        const auto _Head  = _Get_scary()->_Myhead;
         if
-            _CONSTEXPR_IF(_Multi) {
-                return _Pairib(_Insert_at(_Addleft, _Wherenode, _STD forward<_Valty>(_Val), _Newnode), true);
+            _CONSTEXPR_IF(_Multi) { // insert even if duplicate
+                if (_Hint->_Isnil) {
+                    // insert at end if greater than or equal to last element
+                    if (_Head->_Parent->_Isnil
+                        || !_DEBUG_LT_PRED(_Comp, _Keyval, _Traits::_Kfn(_Head->_Right->_Myval))) {
+                        return {{_Head->_Right, _Tree_child::_Right}, false};
+                    }
+
+                    // _Hint is end(); it must be closer to the end of equivalents
+                    return {_Find_upper_bound(_Keyval)._Location, false};
+                }
+
+                if (_Hint == _Head->_Left) {
+                    // insert at beginning if less than or equal to first element
+                    if (!_DEBUG_LT_PRED(_Comp, _Traits::_Kfn(_Hint->_Myval), _Keyval)) {
+                        return {{_Hint, _Tree_child::_Left}, false};
+                    }
+
+                    // _Hint is begin(); it must be closer to the beginning of equivalents
+                    return {_Find_lower_bound(_Keyval)._Location, false};
+                }
+
+                if (!_DEBUG_LT_PRED(_Comp, _Traits::_Kfn(_Hint->_Myval), _Keyval)) {
+                    // _Val <= *_Hint
+                    const auto _Prev = (--(_Unchecked_const_iterator(_Hint, nullptr)))._Ptr;
+                    if (!_DEBUG_LT_PRED(_Comp, _Keyval, _Traits::_Kfn(_Prev->_Myval))) {
+                        // _Val <= *_Hint and _Val >= *prev(_Hint); insert here
+                        if (_Prev->_Right->_Isnil) {
+                            return {{_Prev, _Tree_child::_Right}, false};
+                        } else {
+                            return {{_Hint, _Tree_child::_Left}, false};
+                        }
+                    }
+
+                    // _Val goes before *_Hint; _Hint must be closer to the end of equivalents
+                    return {_Find_upper_bound(_Keyval)._Location, false};
+                }
+
+                // _Val goes after *_Hint; _Hint must be closer to the beginning of equivalents
+                return {_Find_lower_bound(_Keyval)._Location, false};
             }
         else { // insert only if unique
-            iterator _Where = iterator(_Wherenode, _STD addressof(_My_data));
-            if (!_Addleft) { // need to test if insert after is okay
-            } else if (_Where == begin()) {
-                return _Pairib(_Insert_at(true, _Wherenode, _STD forward<_Valty>(_Val), _Newnode), true);
+            if (_Hint->_Isnil) { // insert at end if after last element
+                // insert at end if greater than last element
+                if (_Head->_Parent->_Isnil || _DEBUG_LT_PRED(_Comp, _Traits::_Kfn(_Head->_Right->_Myval), _Keyval)) {
+                    return {{_Head->_Right, _Tree_child::_Right}, false};
+                }
+            } else if (_Hint == _Head->_Left) {
+                // insert at beginning if less than first element
+                if (_DEBUG_LT_PRED(_Comp, _Keyval, _Traits::_Kfn(_Hint->_Myval))) {
+                    return {{_Hint, _Tree_child::_Left}, false};
+                }
+            } else if (_DEBUG_LT_PRED(_Comp, _Keyval, _Traits::_Kfn(_Hint->_Myval))) {
+                // _Val < *_Hint
+                const auto _Prev = (--(_Unchecked_const_iterator(_Hint, nullptr)))._Ptr;
+                if (_DEBUG_LT_PRED(_Comp, _Traits::_Kfn(_Prev->_Myval), _Keyval)) {
+                    // _Val < *_Hint and _Val > *prev(_Hint); insert here
+                    if (_Prev->_Right->_Isnil) {
+                        return {{_Prev, _Tree_child::_Right}, false};
+                    } else {
+                        return {{_Hint, _Tree_child::_Left}, false};
+                    }
+                }
+            } else if (_DEBUG_LT_PRED(_Comp, _Traits::_Kfn(_Hint->_Myval), _Keyval)) {
+                // _Val > *_Hint
+                const auto _Next = (++(_Unchecked_const_iterator(_Hint, nullptr)))._Ptr;
+                if (_Next->_Isnil || _DEBUG_LT_PRED(_Comp, _Keyval, _Traits::_Kfn(_Next->_Myval))) {
+                    // _Val > *_Hint and _Val < *next(_Hint); insert here
+                    if (_Hint->_Right->_Isnil) {
+                        return {{_Hint, _Tree_child::_Right}, false};
+                    }
+
+                    return {{_Next, _Tree_child::_Left}, false};
+                }
             } else {
-                --_Where; // need to test if insert before is okay
+                // _Val is equivalent to *_Hint; don't insert
+                return {{_Hint, _Tree_child::_Right}, true};
             }
 
-            if (_DEBUG_LT_PRED(_Getcomp(), _Key(_Where._Ptr), _Kfn(_Val))) {
-                return _Pairib(_Insert_at(_Addleft, _Wherenode, _STD forward<_Valty>(_Val), _Newnode), true);
-            } else { // duplicate, don't insert
-                _Destroy_if_node(_Newnode);
-                return _Pairib(_Where, false);
+            const auto _Loc = _Find_lower_bound(_Keyval);
+            if (_Lower_bound_duplicate(_Loc._Bound, _Keyval)) {
+                return {{_Loc._Bound, _Tree_child::_Unused}, true};
             }
+
+            return {_Loc._Location, false};
         }
-        _CATCH_ALL
-        _Destroy_if_node(_Newnode);
-        _RERAISE;
-        _CATCH_END
     }
 
-    template <class _Valty, class _Nodety>
-    iterator _Insert_at(bool _Addleft, _Nodeptr _Wherenode, _Valty&& _Val,
-        _Nodety _Node) { // add node with value next to _Wherenode, to left if _Addleft
-        auto& _My_data = _Get_data();
-        if (max_size() - 1 <= _My_data._Mysize) { // tree would get too big, fail
-            _Destroy_if_node(_Node);
-            _Xlength_error("map/set<T> too long");
-        }
-
-        _Nodeptr _Newnode = _Buy_if_not_node(_Node, _STD forward<_Valty>(_Val));
-
-        ++_My_data._Mysize;
-        _Newnode->_Parent = _Wherenode;
-
-        if (_Wherenode == _My_data._Myhead) { // first node in tree, just set head values
-            _My_data._Root()  = _Newnode;
-            _My_data._Lmost() = _Newnode;
-            _My_data._Rmost() = _Newnode;
-        } else if (_Addleft) { // add to left of _Wherenode
-            _Wherenode->_Left = _Newnode;
-            if (_Wherenode == _My_data._Lmost()) {
-                _My_data._Lmost() = _Newnode;
-            }
-        } else { // add to right of _Wherenode
-            _Wherenode->_Right = _Newnode;
-            if (_Wherenode == _My_data._Rmost()) {
-                _My_data._Rmost() = _Newnode;
+    template <class _Keyty>
+    _Tree_find_result<_Nodeptr> _Find_upper_bound(const _Keyty& _Keyval) const {
+        const auto _Scary = _Get_scary();
+        _Tree_find_result<_Nodeptr> _Result{{_Scary->_Myhead->_Parent, _Tree_child::_Right}, _Scary->_Myhead};
+        _Nodeptr _Trynode = _Result._Location._Parent;
+        while (!_Trynode->_Isnil) {
+            _Result._Location._Parent = _Trynode;
+            if (_DEBUG_LT_PRED(_Getcomp(), _Keyval, _Traits::_Kfn(_Trynode->_Myval))) {
+                _Result._Location._Child = _Tree_child::_Left;
+                _Result._Bound           = _Trynode;
+                _Trynode                 = _Trynode->_Left;
+            } else {
+                _Result._Location._Child = _Tree_child::_Right;
+                _Trynode                 = _Trynode->_Right;
             }
         }
 
-        for (_Nodeptr _Pnode = _Newnode; _Pnode->_Parent->_Color == _Red;) {
-            if (_Pnode->_Parent == _Pnode->_Parent->_Parent->_Left) { // fixup red-red in left subtree
-                _Wherenode = _Pnode->_Parent->_Parent->_Right;
-                if (_Wherenode->_Color == _Red) { // parent has two red children, blacken both
-                    _Pnode->_Parent->_Color          = _Black;
-                    _Wherenode->_Color               = _Black;
-                    _Pnode->_Parent->_Parent->_Color = _Red;
-                    _Pnode                           = _Pnode->_Parent->_Parent;
-                } else { // parent has red and black children
-                    if (_Pnode == _Pnode->_Parent->_Right) { // rotate right child to left
-                        _Pnode = _Pnode->_Parent;
-                        _My_data._Lrotate(_Pnode);
-                    }
+        return _Result;
+    }
 
-                    _Pnode->_Parent->_Color          = _Black; // propagate red up
-                    _Pnode->_Parent->_Parent->_Color = _Red;
-                    _My_data._Rrotate(_Pnode->_Parent->_Parent);
-                }
-            } else { // fixup red-red in right subtree
-                _Wherenode = _Pnode->_Parent->_Parent->_Left;
-                if (_Wherenode->_Color == _Red) { // parent has two red children, blacken both
-                    _Pnode->_Parent->_Color          = _Black;
-                    _Wherenode->_Color               = _Black;
-                    _Pnode->_Parent->_Parent->_Color = _Red;
-                    _Pnode                           = _Pnode->_Parent->_Parent;
-                } else { // parent has red and black children
-                    if (_Pnode == _Pnode->_Parent->_Left) { // rotate left child to right
-                        _Pnode = _Pnode->_Parent;
-                        _My_data._Rrotate(_Pnode);
-                    }
+    template <class _Keyty>
+    bool _Lower_bound_duplicate(const _Nodeptr _Bound, const _Keyty& _Keyval) const {
+        return !_Bound->_Isnil && !_DEBUG_LT_PRED(_Getcomp(), _Keyval, _Traits::_Kfn(_Bound->_Myval));
+    }
 
-                    _Pnode->_Parent->_Color          = _Black; // propagate red up
-                    _Pnode->_Parent->_Parent->_Color = _Red;
-                    _My_data._Lrotate(_Pnode->_Parent->_Parent);
-                }
+    template <class _Keyty>
+    _Tree_find_result<_Nodeptr> _Find_lower_bound(const _Keyty& _Keyval) const {
+        const auto _Scary = _Get_scary();
+        _Tree_find_result<_Nodeptr> _Result{{_Scary->_Myhead->_Parent, _Tree_child::_Right}, _Scary->_Myhead};
+        _Nodeptr _Trynode = _Result._Location._Parent;
+        while (!_Trynode->_Isnil) {
+            _Result._Location._Parent = _Trynode;
+            if (_DEBUG_LT_PRED(_Getcomp(), _Traits::_Kfn(_Trynode->_Myval), _Keyval)) {
+                _Result._Location._Child = _Tree_child::_Right;
+                _Trynode                 = _Trynode->_Right;
+            } else {
+                _Result._Location._Child = _Tree_child::_Left;
+                _Result._Bound           = _Trynode;
+                _Trynode                 = _Trynode->_Left;
             }
         }
 
-        _My_data._Root()->_Color = _Black; // root is always black
-        return iterator(_Newnode, _STD addressof(_My_data));
+        return _Result;
+    }
+
+    void _Check_grow_by_1() {
+        if (max_size() == _Get_scary()->_Mysize) {
+            _Throw_tree_length_error();
+        }
     }
 
     template <class _Moveit>
     void _Copy(const _Tree& _Right, _Moveit _Movefl) { // copy or move entire tree from _Right
-        auto& _My_data   = _Get_data();
-        _My_data._Root() = _Copy_nodes(_Right._Get_data()._Root(), _My_data._Myhead, _Movefl);
-        _My_data._Mysize = _Right.size();
-        if (!_My_data._Root()->_Isnil) { // nonempty tree, look for new smallest and largest
-            _My_data._Lmost() = _Scary_val::_Min(_My_data._Root());
-            _My_data._Rmost() = _Scary_val::_Max(_My_data._Root());
+        const auto _Scary        = _Get_scary();
+        const auto _Right_scary  = _Right._Get_scary();
+        _Scary->_Myhead->_Parent = _Copy_nodes(_Right_scary->_Myhead->_Parent, _Scary->_Myhead, _Movefl);
+        _Scary->_Mysize          = _Right_scary->_Mysize;
+        if (!_Scary->_Myhead->_Parent->_Isnil) { // nonempty tree, look for new smallest and largest
+            _Scary->_Myhead->_Left  = _Scary_val::_Min(_Scary->_Myhead->_Parent);
+            _Scary->_Myhead->_Right = _Scary_val::_Max(_Scary->_Myhead->_Parent);
         } else { // empty tree, just tidy head pointers
-            _My_data._Lmost() = _My_data._Myhead;
-            _My_data._Rmost() = _My_data._Myhead;
+            _Scary->_Myhead->_Left  = _Scary->_Myhead;
+            _Scary->_Myhead->_Right = _Scary->_Myhead;
         }
     }
 
@@ -1498,9 +1757,10 @@ protected:
     }
 
     template <class _Moveit>
-    _Nodeptr _Copy_nodes(_Nodeptr _Rootnode, _Nodeptr _Wherenode,
-        _Moveit _Movefl) { // copy entire subtree, recursively
-        _Nodeptr _Newroot = _Get_data()._Myhead; // point at nil node
+    _Nodeptr _Copy_nodes(_Nodeptr _Rootnode, _Nodeptr _Wherenode, _Moveit _Movefl) {
+        // copy entire subtree, recursively
+        const auto _Scary = _Get_scary();
+        _Nodeptr _Newroot = _Scary->_Myhead; // point at nil node
 
         if (!_Rootnode->_Isnil) { // copy or move a node, then any subtrees
             typename is_same<key_type, value_type>::type _Is_set;
@@ -1515,7 +1775,7 @@ protected:
             _Pnode->_Left  = _Copy_nodes(_Rootnode->_Left, _Pnode, _Movefl);
             _Pnode->_Right = _Copy_nodes(_Rootnode->_Right, _Pnode, _Movefl);
             _CATCH_ALL
-            _Get_data()._Erase_tree_and_orphan(_Getal(), _Newroot); // subtree copy failed, bail out
+            _Scary->_Erase_tree_and_orphan(_Getal(), _Newroot); // subtree copy failed, bail out
             _RERAISE;
             _CATCH_END
         }
@@ -1524,17 +1784,19 @@ protected:
     }
 
     template <class _Other>
-    _Paircc _Eqrange(const _Other& _Keyval) const { // find leftmost node not less than _Keyval
-        auto& _My_data   = _Get_data();
-        _Nodeptr _Pnode  = _My_data._Root();
-        _Nodeptr _Lonode = _My_data._Myhead; // end() if search fails
-        _Nodeptr _Hinode = _My_data._Myhead; // end() if search fails
+    pair<_Nodeptr, _Nodeptr> _Eqrange(const _Other& _Keyval) const { // find range of nodes equivalent to _Keyval
+        const auto _Scary = _Get_scary();
+        const auto& _Comp = _Getcomp();
+        _Nodeptr _Pnode   = _Scary->_Myhead->_Parent;
+        _Nodeptr _Lonode  = _Scary->_Myhead; // end() if search fails
+        _Nodeptr _Hinode  = _Scary->_Myhead; // end() if search fails
 
         while (!_Pnode->_Isnil) {
-            if (_DEBUG_LT_PRED(_Getcomp(), _Key(_Pnode), _Keyval)) {
+            const auto& _Nodekey = _Traits::_Kfn(_Pnode->_Myval);
+            if (_DEBUG_LT_PRED(_Comp, _Nodekey, _Keyval)) {
                 _Pnode = _Pnode->_Right; // descend right subtree
             } else { // _Pnode not less than _Keyval, remember it
-                if (_Hinode->_Isnil && _DEBUG_LT_PRED(_Getcomp(), _Keyval, _Key(_Pnode))) {
+                if (_Hinode->_Isnil && _DEBUG_LT_PRED(_Comp, _Keyval, _Nodekey)) {
                     _Hinode = _Pnode; // _Pnode greater, remember it
                 }
 
@@ -1543,9 +1805,10 @@ protected:
             }
         }
 
-        _Pnode = _Hinode->_Isnil ? _My_data._Root() : _Hinode->_Left; // continue scan for upper bound
+        _Pnode = _Hinode->_Isnil ? _Scary->_Myhead->_Parent : _Hinode->_Left; // continue scan for upper bound
         while (!_Pnode->_Isnil) {
-            if (_DEBUG_LT_PRED(_Getcomp(), _Keyval, _Key(_Pnode))) { // _Pnode greater than _Keyval, remember it
+            if (_DEBUG_LT_PRED(_Getcomp(), _Keyval, _Traits::_Kfn(_Pnode->_Myval))) {
+                // _Pnode greater than _Keyval, remember it
                 _Hinode = _Pnode;
                 _Pnode  = _Pnode->_Left; // descend left subtree
             } else {
@@ -1553,85 +1816,25 @@ protected:
             }
         }
 
-        const_iterator _First = const_iterator(_Lonode, _STD addressof(_My_data));
-        const_iterator _Last  = const_iterator(_Hinode, _STD addressof(_My_data));
-        return _Paircc(_First, _Last);
-    }
-
-    template <class _Other>
-    _Pairii _Eqrange(const _Other& _Keyval) { // find leftmost node not less than _Keyval
-        _Paircc _Ans(static_cast<const _Tree*>(this)->_Eqrange(_Keyval));
-        const auto _My_addr = _STD addressof(_Get_data());
-        iterator _First     = iterator(_Ans.first._Ptr, _My_addr);
-        iterator _Last      = iterator(_Ans.second._Ptr, _My_addr);
-        return _Pairii(_First, _Last);
-    }
-
-    bool _Compare(
-        const key_type& _Left, const key_type& _Right) const { // compare key_type to key_type, with debug checks
-        return _DEBUG_LT_PRED(_Getcomp(), _Left, _Right);
-    }
-
-    template <class _Ty1, class _Ty2>
-    bool _Compare(const _Ty1& _Left, const _Ty2& _Right) const { // compare _Ty1 to _Ty2, without debug checks
-        return _Getcomp()(_Left, _Right);
-    }
-
-    template <class _Other>
-    _Nodeptr _Lbound(const _Other& _Keyval) const { // find leftmost node not less than _Keyval
-        _Nodeptr _Wherenode = _Get_data()._Myhead; // end() if search fails
-        _Nodeptr _Pnode     = _Wherenode->_Parent;
-
-        while (!_Pnode->_Isnil) {
-            if (_Compare(_Key(_Pnode), _Keyval)) {
-                _Pnode = _Pnode->_Right; // descend right subtree
-            } else { // _Pnode not less than _Keyval, remember it
-                _Wherenode = _Pnode;
-                _Pnode     = _Pnode->_Left; // descend left subtree
-            }
-        }
-
-        return _Wherenode; // return best remembered candidate
-    }
-
-    template <class _Other>
-    _Nodeptr _Ubound(const _Other& _Keyval) const { // find leftmost node greater than _Keyval
-        auto& _My_data      = _Get_data();
-        _Nodeptr _Pnode     = _My_data._Root();
-        _Nodeptr _Wherenode = _My_data._Myhead; // end() if search fails
-
-        while (!_Pnode->_Isnil) {
-            if (_Compare(_Keyval, _Key(_Pnode))) { // _Pnode greater than _Keyval, remember it
-                _Wherenode = _Pnode;
-                _Pnode     = _Pnode->_Left; // descend left subtree
-            } else {
-                _Pnode = _Pnode->_Right; // descend right subtree
-            }
-        }
-
-        return _Wherenode; // return best remembered candidate
-    }
-
-    const key_type& _Kfn(const value_type& _Val) const { // get key from value
-        return _Traits::_Kfn(_Val);
-    }
-
-    const key_type& _Key(_Nodeptr _Pnode) const { // return reference to key in node
-        return _Kfn(_Pnode->_Myval);
+        return {_Lonode, _Hinode};
     }
 
 #if _HAS_CXX17
 public:
     using node_type = typename _Traits::node_type;
 
-    node_type extract(const const_iterator _Where) { // extract the node denoted by _Where
-        auto& _My_data  = _Get_data();
-        const auto _Ptr = _My_data._Extract(_Where);
-        _My_data._Orphan_ptr(_Ptr);
+    node_type extract(const const_iterator _Where) {
+        const auto _Scary = _Get_scary();
+#if _ITERATOR_DEBUG_LEVEL == 2
+        _STL_VERIFY(_Where._Getcont() == _Scary && !_Where._Ptr->_Isnil, "map/set erase iterator outside range");
+#endif // _ITERATOR_DEBUG_LEVEL == 2
+
+        const auto _Ptr = _Scary->_Extract(_Where._Unwrapped());
+        _Scary->_Orphan_ptr(_Ptr);
         return node_type::_Make(_Ptr, _Getal());
     }
 
-    node_type extract(const key_type& _Keyval) { // extract the first node whose key matches _Keyval
+    node_type extract(const key_type& _Keyval) {
         const const_iterator _Where = find(_Keyval);
         if (_Where == end()) {
             return node_type{};
@@ -1640,7 +1843,7 @@ public:
         return extract(_Where);
     }
 
-    auto insert(node_type&& _Handle) { // insert the node (if any) held in _Handle
+    auto insert(node_type&& _Handle) {
         if (_Handle.empty()) {
             if constexpr (_Multi) {
                 return end();
@@ -1650,30 +1853,69 @@ public:
         }
 
         _Check_node_allocator(_Handle);
-
-        const auto _Result = _Insert_nohint(false, _Handle._Getptr()->_Myval, _STD addressof(_Handle));
+        const auto _Scary        = _Get_scary();
+        const auto _Attempt_node = _Handle._Getptr();
+        const auto& _Keyval      = _Traits::_Kfn(_Attempt_node->_Myval);
+        _Tree_find_result<_Nodeptr> _Loc;
         if constexpr (_Multi) {
-            return _Result.first;
+            _Loc = _Find_upper_bound(_Keyval);
         } else {
-            return _Insert_return_type<iterator, node_type>{_Result.first, _Result.second, _STD move(_Handle)};
+            _Loc = _Find_lower_bound(_Keyval);
+            if (_Lower_bound_duplicate(_Loc._Bound, _Keyval)) {
+                return _Insert_return_type<iterator, node_type>{
+                    iterator(_Loc._Bound, _Scary), false, _STD move(_Handle)};
+            }
+        }
+
+        _Check_grow_by_1();
+
+        // nothrow hereafter
+
+        _Attempt_node->_Left = _Scary->_Myhead;
+        // _Attempt_node->_Parent handled in _Insert_node
+        _Attempt_node->_Right = _Scary->_Myhead;
+        _Attempt_node->_Color = _Red;
+
+        const auto _Inserted = _Scary->_Insert_node(_Loc._Location, _Handle._Release());
+        if constexpr (_Multi) {
+            return iterator(_Inserted, _Scary);
+        } else {
+            return _Insert_return_type<iterator, node_type>{iterator(_Inserted, _Scary), true, _STD move(_Handle)};
         }
     }
 
-    iterator insert(
-        const const_iterator _Hint, node_type&& _Handle) { // insert the node held in _Handle (if any), with hint
+    iterator insert(const const_iterator _Hint, node_type&& _Handle) {
+        const auto _Scary = _Get_scary();
+#if _ITERATOR_DEBUG_LEVEL == 2
+        _STL_VERIFY(_Hint._Getcont() == _Scary, "map/set insert iterator outside range");
+#endif // _ITERATOR_DEBUG_LEVEL == 2
         if (_Handle.empty()) {
             return end();
         }
 
         _Check_node_allocator(_Handle);
-        return _Insert_hint(_Hint, _Handle._Getptr()->_Myval, _STD addressof(_Handle));
+        const auto _Attempt_node = _Handle._Getptr();
+        const auto& _Keyval      = _Traits::_Kfn(_Attempt_node->_Myval);
+        const auto _Loc          = _Find_hint(_Hint._Ptr, _Keyval);
+        if (_Loc._Duplicate) {
+            return iterator(_Loc._Location._Parent, _Scary);
+        }
+
+        _Check_grow_by_1();
+
+        _Attempt_node->_Left = _Scary->_Myhead;
+        // _Attempt_node->_Parent handled in _Insert_node
+        _Attempt_node->_Right = _Scary->_Myhead;
+        _Attempt_node->_Color = _Red;
+
+        return iterator(_Scary->_Insert_node(_Loc._Location, _Handle._Release()), _Scary);
     }
 
     template <class>
     friend class _Tree;
 
     template <class _Other_traits>
-    void merge(_Tree<_Other_traits>& _That) { // transfer all nodes from _That into *this
+    void merge(_Tree<_Other_traits>& _That) {
         static_assert(is_same_v<_Nodeptr, typename _Tree<_Other_traits>::_Nodeptr>,
             "merge() requires an argument with a compatible node type.");
 
@@ -1687,27 +1929,45 @@ public:
         }
 
 #if _ITERATOR_DEBUG_LEVEL == 2
-        if
-            _CONSTEXPR_IF(!_Alnode_traits::is_always_equal::value) {
-                _STL_VERIFY(_Getal() == _That._Getal(), "allocator incompatible for merge");
-            }
+        if constexpr (!_Alnode_traits::is_always_equal::value) {
+            _STL_VERIFY(_Getal() == _That._Getal(), "allocator incompatible for merge");
+        }
 #endif // _ITERATOR_DEBUG_LEVEL == 2
 
-        _Node_merge_wrapper<_Other_traits> _Wrapper{_That, {}};
-        auto _First      = _That.begin();
-        const auto _Last = _That.end();
-        while (_First != _Last) {
-            _Wrapper._Where = _First;
+        const auto _Scary      = _Get_scary();
+        const auto _Head       = _Scary->_Myhead;
+        const auto _That_scary = _That._Get_scary();
+        auto _First            = _That._Unchecked_begin();
+        while (!_First._Ptr->_Isnil) {
+            const auto _Attempt_node = _First._Ptr;
             ++_First;
-            const auto _Result = _Insert_nohint(false, *_Wrapper._Where, _STD addressof(_Wrapper));
-            if (_Result.second) { // Reparent iterators for the merged node.
-                _Reparent_ptr(_Wrapper._Where._Ptr, _That);
+            _Tree_find_result<_Nodeptr> _Loc;
+            const auto& _Keyval = _Traits::_Kfn(_Attempt_node->_Myval);
+            if constexpr (_Multi) {
+                _Loc = _Find_upper_bound(_Keyval);
+            } else {
+                _Loc = _Find_lower_bound(_Keyval);
+                if (_Lower_bound_duplicate(_Loc._Bound, _Keyval)) {
+                    continue;
+                }
             }
+
+            _Check_grow_by_1();
+
+            // nothrow hereafter for this iteration
+            const auto _Extracted = _That_scary->_Extract(_Unchecked_const_iterator(_Attempt_node, nullptr));
+            _Extracted->_Left     = _Head;
+            // _Extracted->_Parent handled in _Insert_node
+            _Extracted->_Right = _Head;
+            _Extracted->_Color = _Red;
+
+            const auto _Inserted = _Scary->_Insert_node(_Loc._Location, _Extracted);
+            _Reparent_ptr(_Inserted, _That);
         }
     }
 
     template <class _Other_traits>
-    void merge(_Tree<_Other_traits>&& _That) { // transfer all nodes from _That into *this
+    void merge(_Tree<_Other_traits>&& _That) {
         static_assert(is_same_v<_Nodeptr, typename _Tree<_Other_traits>::_Nodeptr>,
             "merge() requires an argument with a compatible node type.");
 
@@ -1718,61 +1978,30 @@ public:
     }
 
 protected:
-    _Nodeptr _Buy_if_not_node(node_type* const _Node_handle, _Any_tag) { // Extract node from node handle
-        const auto _Ptr  = _Node_handle->_Release();
-        const auto _Head = _Get_data()._Myhead;
-        _Ptr->_Left      = _Head;
-        _Ptr->_Right     = _Head;
-        return _Ptr;
-    }
-
-    void _Destroy_if_node(node_type*) { // Handle retains ownership of node
-    }
-
     template <class _Other_traits>
-    struct _Node_merge_wrapper {
-        _Tree<_Other_traits>& _That;
-        typename _Tree<_Other_traits>::iterator _Where;
-    };
-
-    template <class _Other_traits>
-    auto _Buy_if_not_node(_Node_merge_wrapper<_Other_traits>* const _Wrapper,
-        _Any_tag) { // transition the denoted node into this container
-        const auto _Ptr  = _Wrapper->_That._Get_data()._Extract(_Wrapper->_Where);
-        const auto _Head = _Get_data()._Myhead;
-        _Ptr->_Left      = _Head;
-        _Ptr->_Right     = _Head;
-        return _Ptr;
-    }
-
-    template <class _Other_traits>
-    void _Destroy_if_node(_Node_merge_wrapper<_Other_traits>*) { // source container retains ownership of node
-    }
-
-    template <class _Other_traits>
-    void _Reparent_ptr(const _Nodeptr _Ptr,
-        _Tree<_Other_traits>& _Old_parent) { // steal iterators with specified node pointer from _Old_parent
+    void _Reparent_ptr(const _Nodeptr _Ptr, _Tree<_Other_traits>& _Old_parent) {
         (void) _Ptr;
         (void) _Old_parent;
 #if _ITERATOR_DEBUG_LEVEL == 2
         _Lockit _Lock(_LOCK_DEBUG);
-        auto _Pnext = reinterpret_cast<const_iterator**>(_Old_parent._Getpfirst());
+        const auto _Old_parent_scary = _Old_parent._Get_scary();
+        _Iterator_base12** _Pnext    = &_Old_parent_scary->_Myproxy->_Myfirstiter;
         _STL_VERIFY(_Pnext, "source container corrupted");
-        if (_Ptr == nullptr || _Ptr == _Old_parent._Get_data()._Myhead) {
+        if (_Ptr == nullptr || _Ptr == _Old_parent_scary->_Myhead) {
             return;
         }
 
-        const auto _My_saved_first = _Getpfirst();
-        const auto _My_saved_proxy = _Myproxy();
+        const auto _My_saved_proxy               = _Get_scary()->_Myproxy;
+        _Iterator_base12** const _My_saved_first = &_My_saved_proxy->_Myfirstiter;
 
         while (*_Pnext) {
-            const auto _Next = reinterpret_cast<const_iterator**>((*_Pnext)->_Getpnext());
-            if ((*_Pnext)->_Ptr == _Ptr) { // reparent the iterator
-                const_iterator* const _Iter = *_Pnext;
-                *_Pnext                     = *_Next;
-                _Iter->_Myproxy             = _My_saved_proxy;
-                _Iter->_Mynextiter          = *_My_saved_first;
-                *_My_saved_first            = _Iter;
+            _Iterator_base12** const _Next = &(*_Pnext)->_Mynextiter;
+            const auto _Iter               = static_cast<const_iterator*>(*_Pnext);
+            if (_Iter->_Ptr == _Ptr) { // reparent the iterator
+                *_Pnext            = *_Next;
+                _Iter->_Myproxy    = _My_saved_proxy;
+                _Iter->_Mynextiter = *_My_saved_first;
+                *_My_saved_first   = _Iter;
             } else { // skip the iterator
                 _Pnext = _Next;
             }
@@ -1780,7 +2009,7 @@ protected:
 #endif // _ITERATOR_DEBUG_LEVEL == 2
     }
 
-    void _Check_node_allocator(node_type& _Handle) const { // ensure that _Handle and *this have compatible allocators
+    void _Check_node_allocator(node_type& _Handle) const {
         (void) _Handle;
 #if _ITERATOR_DEBUG_LEVEL == 2
         _STL_VERIFY(get_allocator() == _Handle._Getal(), "node handle allocator incompatible for insert");
@@ -1788,55 +2017,41 @@ protected:
     }
 #endif // _HAS_CXX17
 
-    void _Alloc_sentinel_and_proxy() { // construct head node, proxy
-        auto& _My_data  = _Get_data();
-        auto&& _Alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
-        _Container_proxy_ptr<_Alnode> _Proxy(_Alproxy, _My_data);
-        _My_data._Myhead = _Node::_Buyheadnode(_Getal());
+    void _Alloc_sentinel_and_proxy() {
+        const auto _Scary = _Get_scary();
+        auto&& _Alproxy   = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
+        _Container_proxy_ptr<_Alnode> _Proxy(_Alproxy, *_Scary);
+        _Scary->_Myhead = _Node::_Buyheadnode(_Getal());
         _Proxy._Release();
     }
 
-#if _ITERATOR_DEBUG_LEVEL != 0
-    _Iterator_base12** _Getpfirst() const { // get address of iterator chain
-        return _Get_data()._Getpfirst();
-    }
-
-    _Container_proxy*& _Myproxy() noexcept { // return reference to _Myproxy
-        return _Get_data()._Myproxy;
-    }
-
-    _Container_proxy* const& _Myproxy() const noexcept { // return const reference to _Myproxy
-        return _Get_data()._Myproxy;
-    }
-#endif // _ITERATOR_DEBUG_LEVEL != 0
-
     template <class... _Valty>
-    _Nodeptr _Buynode(_Valty&&... _Val) { // allocate a node with defaults and set links and value
-        return _Node::_Buynode(_Getal(), _Get_data()._Myhead, _STD forward<_Valty>(_Val)...);
+    _Nodeptr _Buynode(_Valty&&... _Val) {
+        return _Node::_Buynode(_Getal(), _Get_scary()->_Myhead, _STD forward<_Valty>(_Val)...);
     }
 
-    key_compare& _Getcomp() noexcept { // return reference to ordering predicate
+    key_compare& _Getcomp() noexcept {
         return _Mypair._Get_first();
     }
 
-    const key_compare& _Getcomp() const noexcept { // return const reference to ordering predicate
+    const key_compare& _Getcomp() const noexcept {
         return _Mypair._Get_first();
     }
 
-    _Alnode& _Getal() noexcept { // return reference to allocator
-        return _Mypair._Get_second()._Get_first();
+    _Alnode& _Getal() noexcept {
+        return _Mypair._Myval2._Get_first();
     }
 
-    const _Alnode& _Getal() const noexcept { // return const reference to allocator
-        return _Mypair._Get_second()._Get_first();
+    const _Alnode& _Getal() const noexcept {
+        return _Mypair._Myval2._Get_first();
     }
 
-    _Scary_val& _Get_data() noexcept { // return reference to _Scary_val
-        return _Mypair._Get_second()._Get_second();
+    _Scary_val* _Get_scary() noexcept {
+        return _STD addressof(_Mypair._Myval2._Myval2);
     }
 
-    const _Scary_val& _Get_data() const noexcept { // return const reference to _Scary_val
-        return _Mypair._Get_second()._Get_second();
+    const _Scary_val* _Get_scary() const noexcept {
+        return _STD addressof(_Mypair._Myval2._Myval2);
     }
 
 private:
@@ -1844,38 +2059,34 @@ private:
 };
 
 template <class _Traits>
-_NODISCARD inline bool operator==(
-    const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) { // test for _Tree equality
-    return _Left.size() == _Right.size() && _STD equal(_Left.begin(), _Left.end(), _Right.begin());
+_NODISCARD bool operator==(const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) {
+    return _Left.size() == _Right.size()
+           && _STD equal(_Left._Unchecked_begin(), _Left._Unchecked_end_iter(), _Right._Unchecked_begin());
 }
 
 template <class _Traits>
-_NODISCARD inline bool operator!=(
-    const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) { // test for _Tree inequality
+_NODISCARD bool operator!=(const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) {
     return !(_Left == _Right);
 }
 
 template <class _Traits>
-_NODISCARD inline bool operator<(
-    const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) { // test if _Less < _Right for _Trees
-    return _STD lexicographical_compare(_Left.begin(), _Left.end(), _Right.begin(), _Right.end());
+_NODISCARD bool operator<(const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) {
+    return _STD lexicographical_compare(
+        _Left._Unchecked_begin(), _Left._Unchecked_end_iter(), _Right._Unchecked_begin(), _Right._Unchecked_end_iter());
 }
 
 template <class _Traits>
-_NODISCARD inline bool operator>(
-    const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) { // test if _Less > _Right for _Trees
+_NODISCARD bool operator>(const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) {
     return _Right < _Left;
 }
 
 template <class _Traits>
-_NODISCARD inline bool operator<=(
-    const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) { // test if _Less <= _Right for _Trees
+_NODISCARD bool operator<=(const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) {
     return !(_Right < _Left);
 }
 
 template <class _Traits>
-_NODISCARD inline bool operator>=(
-    const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) { // test if _Less >= _Right for _Trees
+_NODISCARD bool operator>=(const _Tree<_Traits>& _Left, const _Tree<_Traits>& _Right) {
     return !(_Left < _Right);
 }
 _STD_END
@@ -1884,7 +2095,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XTREE_
 
 /*

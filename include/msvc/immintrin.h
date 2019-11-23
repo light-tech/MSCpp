@@ -2110,10 +2110,12 @@ extern unsigned int __cdecl _enclu_u32(const int, size_t __data[]);
 extern unsigned int __cdecl _enclv_u32(const int, size_t __data[]);
 
 // Div & idiv
-extern unsigned __int64 __cdecl _udiv128(unsigned __int64, unsigned __int64, unsigned __int64, unsigned __int64*);
-extern __int64          __cdecl _div128(__int64, __int64, __int64, __int64*);
-extern unsigned         __cdecl _udiv64(unsigned __int64, unsigned, unsigned*);
-extern int              __cdecl _div64(__int64, int, int*);
+#if defined(_M_X64)
+extern unsigned __int64 __cdecl _udiv128(unsigned __int64 /* highdividend */, unsigned __int64 /* lowdividend */, unsigned __int64 /* divisor */, unsigned __int64* /* remainder */);
+extern __int64          __cdecl _div128(__int64 /* highdividend */, __int64 /* lowdividend */, __int64 /* divisor */, __int64* /* remainder */);
+#endif  // defined (_M_X64)
+extern unsigned         __cdecl _udiv64(unsigned __int64 /* dividend */, unsigned /* divisor */, unsigned* /* remainder */);
+extern int              __cdecl _div64(__int64 /* dividend */, int /* divisor */, int* /* remainder */);
 
 /*
 * Intel(R) Control-Flow Enforcement Technology (CET) shadow stack intrinsic functions
@@ -2370,6 +2372,23 @@ extern __m128  _mm_erfinv_ps(__m128);
 extern __m128d _mm_erfinv_pd(__m128d);
 extern __m256  _mm256_erfinv_ps(__m256);
 extern __m256d _mm256_erfinv_pd(__m256d);
+
+/* Cache line demote */
+extern void _mm_cldemote(void const *);
+#define _cldemote  _mm_cldemote
+
+/* Direct stores */
+extern void _directstoreu_u32(void *, unsigned int);
+#if defined (_M_X64)
+extern void _directstoreu_u64(void *, unsigned __int64);
+#endif  /* defined (_M_X64) */
+extern void _movdir64b(void *, void const *);
+
+/* User wait */
+extern void _umonitor(void *);
+extern unsigned char _umwait(unsigned int, unsigned __int64);
+extern unsigned char _tpause(unsigned int, unsigned __int64);
+
 
 #if defined __cplusplus
 }; /* End "C" */

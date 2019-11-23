@@ -16,6 +16,7 @@
 // CRT DLL Export/Import Macros
 //
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// used to annotate symbols exported from msvcp140
 #ifndef _CRTIMP2
     #if defined CRTDLL2 && defined _CRTBLD
         #define _CRTIMP2 __declspec(dllexport)
@@ -24,21 +25,37 @@
     #endif
 #endif
 
-// functions defined in msvcp140_1 are annotated with _CRTIMP3
-#ifndef _CRTIMP3
-    #if defined MSVC_SUPPLEMENTAL_1 && defined _CRTBLD
-        #define _CRTIMP3 __declspec(dllexport)
+// used to annotate symbols exported from msvcp140_1
+#ifndef _CRT_SATELLITE_1
+    #if defined _BUILDING_SATELLITE_1 && defined _CRTBLD
+        #define _CRT_SATELLITE_1 __declspec(dllexport)
     #else
-        #define _CRTIMP3
+        #define _CRT_SATELLITE_1
     #endif
 #endif
 
-// functions defined in msvcp140_2 are annotated with _CRTIMP4
-#ifndef _CRTIMP4
-    #if defined MSVC_SUPPLEMENTAL_2 && defined _CRTBLD
-        #define _CRTIMP4 __declspec(dllexport)
+// used to annotate symbols exported from msvcp140_2
+#ifndef _CRT_SATELLITE_2
+    #if defined _BUILDING_SATELLITE_2 && defined _CRTBLD
+        #define _CRT_SATELLITE_2 __declspec(dllexport)
     #else
-        #define _CRTIMP4
+        #define _CRT_SATELLITE_2
+    #endif
+#endif
+
+// Symbols exported from msvcp140_codecvt_ids are annotated with _CRT_SATELLITE_CODECVT_IDS, except for symbols which
+// are data members of classes exported from msvcp140 that must themselves be exported from msvcp140_codecvt_ids, which
+// are annotated with _CRT_SATELLITE_CODECVT_IDS_NOIMPORT.
+#ifndef _CRT_SATELLITE_CODECVT_IDS
+    #if defined _BUILDING_SATELLITE_CODECVT_IDS && defined _CRTBLD
+        #define _CRT_SATELLITE_CODECVT_IDS __declspec(dllexport)
+        #define _CRT_SATELLITE_CODECVT_IDS_NOIMPORT __declspec(dllexport)
+    #elif defined(_DLL)
+        #define _CRT_SATELLITE_CODECVT_IDS __declspec(dllimport)
+        #define _CRT_SATELLITE_CODECVT_IDS_NOIMPORT
+    #else
+        #define _CRT_SATELLITE_CODECVT_IDS
+        #define _CRT_SATELLITE_CODECVT_IDS_NOIMPORT
     #endif
 #endif
 

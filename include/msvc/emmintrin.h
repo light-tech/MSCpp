@@ -208,6 +208,11 @@ extern void _mm_storer_pd(double *_Dp, __m128d _A);
 extern void _mm_storeh_pd(double *_Dp, __m128d _A);
 extern void _mm_storel_pd(double *_Dp, __m128d _A);
 
+/* Alternate intrinsic names definition */
+#define _mm_set_pd1(a)   _mm_set1_pd(a)
+#define _mm_load_pd1(p)  _mm_load1_pd(p)
+#define _mm_store_pd1(p, a) _mm_store1_pd((p), (a))
+
 /*
  * Integer, arithmetic
  */

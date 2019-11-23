@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _ISO646
 #define _ISO646
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #if !defined(__cplusplus) || defined(_MSC_EXTENSIONS)
 // clang-format off
@@ -19,7 +20,7 @@
 #define xor_eq ^=
 // clang-format on
 #endif // !defined(__cplusplus) || defined(_MSC_EXTENSIONS)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _ISO646
 
 /*

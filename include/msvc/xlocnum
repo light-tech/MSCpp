@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _XLOCNUM_
 #define _XLOCNUM_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <climits>
 #include <cmath>
 #include <cstdio>
@@ -79,7 +80,7 @@ inline float _Stofx_v2(const char* _Str, char** _Endptr, int _Pten, int* _Perr) 
 
 // FUNCTION TEMPLATE _Find_elem
 template <class _Elem, size_t _Base_size>
-inline size_t _Find_elem(const _Elem (&_Base)[_Base_size],
+size_t _Find_elem(const _Elem (&_Base)[_Base_size],
     const _Elem _Ch) { // lookup _Ch in array storing NUL-terminated string _Base
                        // pre: _Base contains no nulls except for _Base[_Base_size - 1]
     return static_cast<size_t>(_Find_unchecked(_Base, _Base + (_Base_size - 1), _Ch) - _Base);
@@ -88,7 +89,7 @@ inline size_t _Find_elem(const _Elem (&_Base)[_Base_size],
 inline wchar_t* _Maklocwcs(const wchar_t* _Ptr) { // copy NTWCS to allocated storage
     const size_t _Count = _CSTD wcslen(_Ptr) + 1;
 
-    wchar_t* _Ptrdest = (wchar_t*) _calloc_dbg(_Count, sizeof(wchar_t), _CRT_BLOCK, __FILE__, __LINE__);
+    wchar_t* _Ptrdest = static_cast<wchar_t*>(_calloc_dbg(_Count, sizeof(wchar_t), _CRT_BLOCK, __FILE__, __LINE__));
 
     if (!_Ptrdest) {
         _Xbad_alloc();
@@ -105,6 +106,9 @@ private:
     friend _Tidy_guard<numpunct>;
 
 public:
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t, unsigned short>,
+        _FACET_SPECIALIZATION_MESSAGE);
+
     using string_type = basic_string<_Elem, char_traits<_Elem>, allocator<_Elem>>;
     using char_type   = _Elem;
 
@@ -145,16 +149,16 @@ public:
         _Init(_Lobj, _Isdef);
     }
 
-    static size_t _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
-        if (_Ppf != nullptr && *_Ppf == nullptr) {
+    static size_t _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
+        // return locale category mask and construct standard facet
+        if (_Ppf && !*_Ppf) {
             *_Ppf = new numpunct<_Elem>(_Locinfo(_Ploc->c_str()), 0, true);
         }
         return _X_NUMERIC;
     }
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~numpunct() noexcept { // destroy the object
+    virtual __CLR_OR_THIS_CALL ~numpunct() noexcept {
         _Tidy();
     }
 
@@ -172,8 +176,8 @@ protected:
     }
 
     void _Getvals(wchar_t, const lconv* _Ptr, _Locinfo::_Cvtvec) { // get values
-        _Dp         = (_Elem) _Ptr->_W_decimal_point[0];
-        _Kseparator = (_Elem) _Ptr->_W_thousands_sep[0];
+        _Dp         = static_cast<_Elem>(_Ptr->_W_decimal_point[0]);
+        _Kseparator = static_cast<_Elem>(_Ptr->_W_thousands_sep[0]);
     }
 
     void _Init(const _Locinfo& _Lobj, bool _Isdef = false) { // initialize from _Lobj
@@ -195,7 +199,7 @@ protected:
             _Dp         = _Maklocchr('.', static_cast<_Elem*>(nullptr), _Cvt);
             _Kseparator = _Maklocchr(',', static_cast<_Elem*>(nullptr), _Cvt);
         } else {
-            _Getvals((_Elem) 0, _Ptr, _Cvt);
+            _Getvals(_Elem{}, _Ptr, _Cvt);
         }
     }
 
@@ -221,9 +225,9 @@ protected:
 
 private:
     void _Tidy() noexcept { // free all storage
-        _CSTD free((void*) _Grouping);
-        _CSTD free((void*) _Falsename);
-        _CSTD free((void*) _Truename);
+        _CSTD free(const_cast<char*>(_Grouping));
+        _CSTD free(const_cast<_Elem*>(_Falsename));
+        _CSTD free(const_cast<_Elem*>(_Truename));
     }
 
     const char* _Grouping; // grouping string, "" for "C" locale
@@ -237,6 +241,8 @@ private:
 template <class _Elem>
 class numpunct_byname : public numpunct<_Elem> { // numpunct for named locale
 public:
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t>, _FACET_SPECIALIZATION_MESSAGE);
+
     explicit numpunct_byname(const char* _Locname, size_t _Refs = 0)
         : numpunct<_Elem>(_Locname, _Refs) { // construct for named locale
     }
@@ -246,12 +252,11 @@ public:
     }
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~numpunct_byname() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~numpunct_byname() noexcept {}
 };
 
 // STATIC numpunct::id OBJECT
-#if !(defined _CRTBLD && defined MSVC_SUPPLEMENTAL_2) // TRANSITION, VSO#578955
+#if !(defined _CRTBLD && defined _BUILDING_SATELLITE_2) // TRANSITION, VSO#578955
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdllimport-static-field-def"
@@ -263,15 +268,18 @@ __PURE_APPDOMAIN_GLOBAL locale::id numpunct<_Elem>::id;
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif // __clang__
-#endif // !(defined _CRTBLD && defined MSVC_SUPPLEMENTAL_2)
+#endif // !(defined _CRTBLD && defined _BUILDING_SATELLITE_2)
 
 // CLASS TEMPLATE num_get
 template <class _Elem, class _InIt = istreambuf_iterator<_Elem, char_traits<_Elem>>>
 class num_get : public locale::facet { // facet for converting text to encoded numbers
 public:
-    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
-        if (_Ppf != nullptr && *_Ppf == nullptr) {
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t, unsigned short>,
+        _FACET_SPECIALIZATION_MESSAGE);
+
+    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
+        // return locale category mask and construct standard facet
+        if (_Ppf && !*_Ppf) {
             *_Ppf = new num_get<_Elem, _InIt>(_Locinfo(_Ploc->c_str()));
         }
 
@@ -281,8 +289,7 @@ public:
     __PURE_APPDOMAIN_GLOBAL static locale::id id; // unique facet id
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~num_get() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~num_get() noexcept {}
 
     void _Init(const _Locinfo&) { // initialize from _Locinfo object
     }
@@ -662,11 +669,11 @@ private:
         const locale& _Loc) const { // get integer field from [_First, _Last) into _Ac
         const auto& _Punct_fac  = _STD use_facet<numpunct<_Elem>>(_Loc);
         const string _Grouping  = _Punct_fac.grouping();
-        const _Elem _Kseparator = _Grouping.size() == 0 ? (_Elem) 0 : _Punct_fac.thousands_sep();
+        const _Elem _Kseparator = _Grouping.size() == 0 ? _Elem{} : _Punct_fac.thousands_sep();
 
-        constexpr int _Numget_signoff = 22;
-        constexpr int _Numget_xoff    = 24;
-        static constexpr char _Src[]  = {"0123456789ABCDEFabcdef-+Xx"};
+        constexpr int _Numget_signoff             = 22;
+        constexpr int _Numget_xoff                = 24;
+        _STATIC_UNLESS_PURE constexpr char _Src[] = "0123456789ABCDEFabcdef-+Xx";
         _Elem _Atoms[sizeof(_Src)];
         const ctype<_Elem>& _Ctype_fac = _STD use_facet<ctype<_Elem>>(_Loc);
         _Ctype_fac.widen(&_Src[0], &_Src[sizeof(_Src)], _Atoms);
@@ -684,9 +691,17 @@ private:
         }
 
         _Basefield &= ios_base::basefield;
-        int _Base = _Basefield == ios_base::oct
-                        ? 8
-                        : _Basefield == ios_base::hex ? 16 : _Basefield == ios_base::_Fmtzero ? 0 : 10;
+
+        int _Base;
+        if (_Basefield == ios_base::oct) {
+            _Base = 8;
+        } else if (_Basefield == ios_base::hex) {
+            _Base = 16;
+        } else if (_Basefield == ios_base::_Fmtzero) {
+            _Base = 0;
+        } else {
+            _Base = 10;
+        }
 
         bool _Seendigit = false; // seen a digit in input
         bool _Nonzero   = false; // seen a nonzero digit in input
@@ -705,7 +720,7 @@ private:
         }
 
         const auto _Dlen = static_cast<size_t>(_Base == 0 || _Base == 10 ? 10 : _Base == 8 ? 8 : 16 + 6);
-        string _Groups((size_t) 1, (char) _Seendigit);
+        string _Groups(1, static_cast<char>(_Seendigit));
         size_t _Group = 0;
 
         for (char* const _Pe = &_Ac[_MAX_INT_DIG - 1]; _First != _Last; ++_First) { // look for digits and separators
@@ -721,7 +736,7 @@ private:
                 if (_Groups[_Group] != CHAR_MAX) {
                     ++_Groups[_Group];
                 }
-            } else if (_Groups[_Group] == '\0' || _Kseparator == (_Elem) 0 || *_First != _Kseparator) {
+            } else if (_Groups[_Group] == '\0' || _Kseparator == _Elem{} || *_First != _Kseparator) {
                 break; // not a group separator, done
             } else { // add a new group to _Groups string
                 _Groups.push_back('\0');
@@ -769,9 +784,9 @@ private:
         bool _Bad              = false;
         bool _Sticky           = false;
 
-        constexpr int _Numget_signoff = 10;
-        constexpr int _Numget_eoff    = 12;
-        static constexpr char _Src[]  = {"0123456789-+Ee"};
+        constexpr int _Numget_signoff             = 10;
+        constexpr int _Numget_eoff                = 12;
+        _STATIC_UNLESS_PURE constexpr char _Src[] = "0123456789-+Ee";
         _Elem _Atoms[sizeof(_Src)];
         const ctype<_Elem>& _Ctype_fac = _STD use_facet<ctype<_Elem>>(_Iosbase.getloc());
         _Ctype_fac.widen(&_Src[0], &_Src[sizeof(_Src)], _Atoms);
@@ -810,8 +825,8 @@ private:
                 }
             }
         } else { // grouping specified, gather digits and group sizes
-            const _Elem _Kseparator = _Grouping.size() == 0 ? (_Elem) 0 : _Punct_fac.thousands_sep();
-            string _Groups((size_t) 1, '\0');
+            const _Elem _Kseparator = _Grouping.size() == 0 ? _Elem{} : _Punct_fac.thousands_sep();
+            string _Groups(1, '\0');
             size_t _Group = 0;
 
             for (; _First != _Last; ++_First) {
@@ -830,7 +845,7 @@ private:
                     if (_Groups[_Group] != CHAR_MAX) {
                         ++_Groups[_Group];
                     }
-                } else if (_Groups[_Group] == '\0' || _Kseparator == (_Elem) 0 || *_First != _Kseparator) {
+                } else if (_Groups[_Group] == '\0' || _Kseparator == _Elem{} || *_First != _Kseparator) {
                     break; // not a group separator, done
                 } else { // add a new group to _Groups string
                     _Groups.push_back('\0');
@@ -905,7 +920,7 @@ private:
 
         if (_Seendigit && _First != _Last
             && (*_First == _Atoms[_Numget_eoff + 1]
-                   || *_First == _Atoms[_Numget_eoff])) { // 'e' or 'E', collect exponent
+                || *_First == _Atoms[_Numget_eoff])) { // 'e' or 'E', collect exponent
             *_Ptr++ = 'e';
             ++_First;
             _Seendigit   = false;
@@ -950,10 +965,10 @@ private:
         const auto& _Punct_fac = _STD use_facet<numpunct<_Elem>>(_Iosbase.getloc());
         const string _Grouping = _Punct_fac.grouping();
 
-        constexpr int _Numget_signoff = 22;
-        constexpr int _Numget_xoff    = 24;
-        constexpr int _Numget_poff    = 26;
-        static constexpr char _Src[]  = {"0123456789ABCDEFabcdef-+XxPp"};
+        constexpr int _Numget_signoff             = 22;
+        constexpr int _Numget_xoff                = 24;
+        constexpr int _Numget_poff                = 26;
+        _STATIC_UNLESS_PURE constexpr char _Src[] = "0123456789ABCDEFabcdef-+XxPp";
         _Elem _Atoms[sizeof(_Src)];
         const ctype<_Elem>& _Ctype_fac = _STD use_facet<ctype<_Elem>>(_Iosbase.getloc());
         _Ctype_fac.widen(&_Src[0], &_Src[sizeof(_Src)], _Atoms);
@@ -1001,8 +1016,8 @@ private:
                 }
             }
         } else { // grouping specified, gather digits and group sizes
-            const _Elem _Kseparator = _Grouping.size() == 0 ? (_Elem) 0 : _Punct_fac.thousands_sep();
-            string _Groups((size_t) 1, '\0');
+            const _Elem _Kseparator = _Grouping.size() == 0 ? _Elem{} : _Punct_fac.thousands_sep();
+            string _Groups(1, '\0');
             size_t _Group = 0;
 
             for (; _First != _Last; ++_First) {
@@ -1018,7 +1033,7 @@ private:
                     if (_Groups[_Group] != CHAR_MAX) {
                         ++_Groups[_Group];
                     }
-                } else if (_Groups[_Group] == '\0' || _Kseparator == (_Elem) 0 || *_First != _Kseparator) {
+                } else if (_Groups[_Group] == '\0' || _Kseparator == _Elem{} || *_First != _Kseparator) {
                     break; // not a group separator, done
                 } else { // add a new group to _Groups string
                     _Groups.push_back('\0');
@@ -1077,7 +1092,7 @@ private:
 
         if (_Seendigit && _First != _Last
             && (*_First == _Atoms[_Numget_poff + 1]
-                   || *_First == _Atoms[_Numget_poff])) { // 'p' or 'P', collect exponent
+                || *_First == _Atoms[_Numget_poff])) { // 'p' or 'P', collect exponent
             *_Ptr++ = 'p';
             ++_First;
             _Seendigit   = false;
@@ -1139,9 +1154,12 @@ __PURE_APPDOMAIN_GLOBAL locale::id num_get<_Elem, _InIt>::id;
 template <class _Elem, class _OutIt = ostreambuf_iterator<_Elem, char_traits<_Elem>>>
 class num_put : public locale::facet { // facet for converting encoded numbers to text
 public:
-    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
-        if (_Ppf != nullptr && *_Ppf == nullptr) {
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t, unsigned short>,
+        _FACET_SPECIALIZATION_MESSAGE);
+
+    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
+        // return locale category mask and construct standard facet
+        if (_Ppf && !*_Ppf) {
             *_Ppf = new num_put<_Elem, _OutIt>(_Locinfo(_Ploc->c_str()));
         }
 
@@ -1151,8 +1169,7 @@ public:
     __PURE_APPDOMAIN_GLOBAL static locale::id id; // unique facet id
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~num_put() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~num_put() noexcept {}
 
     void __CLR_OR_THIS_CALL _Init(const _Locinfo&) { // initialize from _Locinfo object
     }
@@ -1216,7 +1233,7 @@ protected:
     virtual _OutIt __CLR_OR_THIS_CALL do_put(
         _OutIt _Dest, ios_base& _Iosbase, _Elem _Fill, bool _Val) const { // put formatted bool to _Dest
         if (!(_Iosbase.flags() & ios_base::boolalpha)) {
-            return do_put(_Dest, _Iosbase, _Fill, (long) _Val);
+            return do_put(_Dest, _Iosbase, _Fill, static_cast<long>(_Val));
         } else { // put "false" or "true"
             const auto& _Punct_fac = _STD use_facet<numpunct<_Elem>>(_Iosbase.getloc());
             basic_string<_Elem> _Str;
@@ -1226,9 +1243,12 @@ protected:
                 _Str.assign(_Punct_fac.falsename());
             }
 
-            size_t _Fillcount = _Iosbase.width() <= 0 || (size_t) _Iosbase.width() <= _Str.size()
-                                    ? 0
-                                    : (size_t) _Iosbase.width() - _Str.size();
+            size_t _Fillcount;
+            if (_Iosbase.width() <= 0 || static_cast<size_t>(_Iosbase.width()) <= _Str.size()) {
+                _Fillcount = 0;
+            } else {
+                _Fillcount = static_cast<size_t>(_Iosbase.width()) - _Str.size();
+            }
 
             if ((_Iosbase.flags() & ios_base::adjustfield) != ios_base::left) { // put leading fill
                 _Dest      = _Rep(_Dest, _Fill, _Fillcount);
@@ -1240,6 +1260,8 @@ protected:
         }
     }
 
+#pragma warning(push)
+#pragma warning(disable : 4774) // format string expected in argument N is not a string literal (/Wall)
     virtual _OutIt __CLR_OR_THIS_CALL do_put(
         _OutIt _Dest, ios_base& _Iosbase, _Elem _Fill, long _Val) const { // put formatted long to _Dest
         char _Buf[2 * _MAX_INT_DIG], _Fmt[6];
@@ -1278,7 +1300,7 @@ protected:
         char _Fmt[8];
         bool _Isfixed         = (_Iosbase.flags() & ios_base::floatfield) == ios_base::fixed;
         streamsize _Precision = _Iosbase.precision() <= 0 && !_Isfixed ? 6 : _Iosbase.precision(); // desired precision
-        size_t _Bufsize       = (size_t) _Precision;
+        size_t _Bufsize       = static_cast<size_t>(_Precision);
         if (_Isfixed && 1e10 < _CSTD fabs(_Val)) { // f or F format
             int _Ptwo;
             (void) _CSTD frexp(_Val, &_Ptwo);
@@ -1287,7 +1309,7 @@ protected:
 
         _Buf.resize(_Bufsize + 50); // add fudge factor
         const auto _Ngen = static_cast<size_t>(_CSTD sprintf_s(
-            (char*) _Buf.c_str(), _Buf.size(), _Ffmt(_Fmt, 0, _Iosbase.flags()), (int) _Precision, _Val));
+            &_Buf[0], _Buf.size(), _Ffmt(_Fmt, 0, _Iosbase.flags()), static_cast<int>(_Precision), _Val));
 
         return _Fput(_Dest, _Iosbase, _Fill, _Buf.c_str(), _Ngen);
     }
@@ -1298,7 +1320,7 @@ protected:
         char _Fmt[8];
         bool _Isfixed         = (_Iosbase.flags() & ios_base::floatfield) == ios_base::fixed;
         streamsize _Precision = _Iosbase.precision() <= 0 && !_Isfixed ? 6 : _Iosbase.precision(); // desired precision
-        size_t _Bufsize       = (size_t) _Precision;
+        size_t _Bufsize       = static_cast<size_t>(_Precision);
         if (_Isfixed && 1e10 < _CSTD fabsl(_Val)) { // f or F format
             int _Ptwo;
             (void) _CSTD frexpl(_Val, &_Ptwo);
@@ -1307,10 +1329,11 @@ protected:
 
         _Buf.resize(_Bufsize + 50); // add fudge factor
         const auto _Ngen = static_cast<size_t>(_CSTD sprintf_s(
-            (char*) _Buf.c_str(), _Buf.size(), _Ffmt(_Fmt, 'L', _Iosbase.flags()), (int) _Precision, _Val));
+            &_Buf[0], _Buf.size(), _Ffmt(_Fmt, 'L', _Iosbase.flags()), static_cast<int>(_Precision), _Val));
 
         return _Fput(_Dest, _Iosbase, _Fill, _Buf.c_str(), _Ngen);
     }
+#pragma warning(pop)
 
     virtual _OutIt __CLR_OR_THIS_CALL do_put(
         _OutIt _Dest, ios_base& _Iosbase, _Elem _Fill, const void* _Val) const { // put formatted void pointer to _Dest
@@ -1340,18 +1363,30 @@ private:
             *_Ptr++ = _Spec; // 'L' qualifier for long double only
         }
 
+        char _Ch; // specifier
         ios_base::fmtflags _Ffl = _Flags & ios_base::floatfield;
         if (_Flags & ios_base::uppercase) {
-            *_Ptr++ = _Ffl == ios_base::fixed
-                          ? 'f'
-                          : _Ffl == ios_base::hexfloat ? 'A' // added with TR1
-                                                       : _Ffl == ios_base::scientific ? 'E' : 'G'; // specifier
+            if (_Ffl == ios_base::fixed) {
+                _Ch = 'f';
+            } else if (_Ffl == ios_base::hexfloat) {
+                _Ch = 'A'; // added with TR1
+            } else if (_Ffl == ios_base::scientific) {
+                _Ch = 'E';
+            } else {
+                _Ch = 'G';
+            }
         } else {
-            *_Ptr++ = _Ffl == ios_base::fixed
-                          ? 'f'
-                          : _Ffl == ios_base::hexfloat ? 'a' // added with TR1
-                                                       : _Ffl == ios_base::scientific ? 'e' : 'g'; // specifier
+            if (_Ffl == ios_base::fixed) {
+                _Ch = 'f';
+            } else if (_Ffl == ios_base::hexfloat) {
+                _Ch = 'a'; // added with TR1
+            } else if (_Ffl == ios_base::scientific) {
+                _Ch = 'e';
+            } else {
+                _Ch = 'g';
+            }
         }
+        *_Ptr++ = _Ch;
 
         *_Ptr = '\0';
         return _Fmt;
@@ -1389,16 +1424,22 @@ private:
 
         size_t _Off     = _Poff == _Count ? _Eoff : _Poff;
         const char* _Pg = &_Grouping[0];
-        while (*_Pg != CHAR_MAX && '\0' < *_Pg && (size_t) *_Pg < _Off - _Prefix) { // add thousands separator
-            _Groupstring.insert(_Off -= *_Pg, (size_t) 1, _Kseparator);
+        while (*_Pg != CHAR_MAX && '\0' < *_Pg && static_cast<size_t>(*_Pg) < _Off - _Prefix) {
+            // add thousands separator
+            _Groupstring.insert(_Off -= *_Pg, 1, _Kseparator);
             if ('\0' < _Pg[1]) {
                 ++_Pg; // not last group, advance
             }
         }
 
         _Count = _Groupstring.size();
-        size_t _Fillcount =
-            _Iosbase.width() <= 0 || (size_t) _Iosbase.width() <= _Count ? 0 : (size_t) _Iosbase.width() - _Count;
+
+        size_t _Fillcount;
+        if (_Iosbase.width() <= 0 || static_cast<size_t>(_Iosbase.width()) <= _Count) {
+            _Fillcount = 0;
+        } else {
+            _Fillcount = static_cast<size_t>(_Iosbase.width()) - _Count;
+        }
 
         ios_base::fmtflags _Adjustfield = _Iosbase.flags() & ios_base::adjustfield;
         if (_Adjustfield != ios_base::left && _Adjustfield != ios_base::internal) { // put leading fill
@@ -1464,7 +1505,8 @@ private:
         const char* _Pg        = &_Grouping[0];
         if (*_Pg != CHAR_MAX && '\0' < *_Pg) { // grouping specified, add thousands separators
             const _Elem _Kseparator = _Punct_fac.thousands_sep();
-            while (*_Pg != CHAR_MAX && '\0' < *_Pg && (size_t) *_Pg < _Count - _Prefix) { // insert thousands separator
+            while (*_Pg != CHAR_MAX && '\0' < *_Pg && static_cast<size_t>(*_Pg) < _Count - _Prefix) {
+                // insert thousands separator
                 _Count -= *_Pg;
                 _Groupstring.insert(_Count, 1, _Kseparator);
                 if ('\0' < _Pg[1]) {
@@ -1474,8 +1516,13 @@ private:
         }
 
         _Count = _Groupstring.size();
-        size_t _Fillcount =
-            _Iosbase.width() <= 0 || (size_t) _Iosbase.width() <= _Count ? 0 : (size_t) _Iosbase.width() - _Count;
+
+        size_t _Fillcount;
+        if (_Iosbase.width() <= 0 || static_cast<size_t>(_Iosbase.width()) <= _Count) {
+            _Fillcount = 0;
+        } else {
+            _Fillcount = static_cast<size_t>(_Iosbase.width()) - _Count;
+        }
 
         ios_base::fmtflags _Adjustfield = _Iosbase.flags() & ios_base::adjustfield;
         if (_Adjustfield != ios_base::left && _Adjustfield != ios_base::internal) { // put leading fill
@@ -1551,7 +1598,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XLOCNUM_
 
 /*

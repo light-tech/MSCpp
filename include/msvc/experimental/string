@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _EXPERIMENTAL_STRING_
 #define _EXPERIMENTAL_STRING_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <experimental/xutility>
 #include <xstring>
@@ -20,15 +21,13 @@ namespace experimental {
 
         // FUNCTION TEMPLATE erase_if
         template <class _Elem, class _Traits, class _Alloc, class _Pr>
-        inline void erase_if(
-            basic_string<_Elem, _Traits, _Alloc>& _Cont, _Pr _Pred) { // erase each element satisfying _Pred
+        void erase_if(basic_string<_Elem, _Traits, _Alloc>& _Cont, _Pr _Pred) { // erase each element satisfying _Pred
             _Erase_remove_if(_Cont, _Pass_fn(_Pred));
         }
 
         // FUNCTION TEMPLATE erase
         template <class _Elem, class _Traits, class _Alloc, class _Uty>
-        inline void erase(
-            basic_string<_Elem, _Traits, _Alloc>& _Cont, const _Uty& _Val) { // erase each element matching _Val
+        void erase(basic_string<_Elem, _Traits, _Alloc>& _Cont, const _Uty& _Val) { // erase each element matching _Val
             _Erase_remove(_Cont, _Val);
         }
 
@@ -41,7 +40,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _EXPERIMENTAL_STRING_
 
 /*

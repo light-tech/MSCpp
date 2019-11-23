@@ -3,7 +3,8 @@
 
 #ifndef _CVT_KSC5601_
 #define _CVT_KSC5601_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 //
 //     Name:     Unified Hangeul(KSC5601-1992) to Unicode table
 //     Unicode version: 2.0
@@ -5333,19 +5334,12 @@ namespace stdext {
     } // namespace cvt
 } // namespace stdext
 
-#ifdef _TEST_IT
-#define NCHARS 0x10000
-#define MYWC_MAX 0xffff
-#define MYFILE "ksc5601"
-#define MYNAME stdext::cvt::codecvt_ksc5601<wchar_t>
-#include <cvt/xtest>
-#endif // _TEST_IT
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_KSC5601_
 
 /*

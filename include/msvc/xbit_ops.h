@@ -3,9 +3,8 @@
 #pragma once
 #ifndef _XBIT_OPS_H
 #define _XBIT_OPS_H
-#ifndef RC_INVOKED
-
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <intrin0.h>
 
@@ -55,5 +54,5 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XBIT_OPS_H

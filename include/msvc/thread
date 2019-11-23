@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _THREAD_
 #define _THREAD_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <chrono>
 #include <memory>
 #include <process.h>
@@ -53,13 +54,20 @@ public:
         using _Tuple                 = tuple<decay_t<_Fn>, decay_t<_Args>...>;
         auto _Decay_copied           = _STD make_unique<_Tuple>(_STD forward<_Fn>(_Fx), _STD forward<_Args>(_Ax)...);
         constexpr auto _Invoker_proc = _Get_invoke<_Tuple>(make_index_sequence<1 + sizeof...(_Args)>{});
+
+#pragma warning(push)
+#pragma warning(disable : 5039) // pointer or reference to potentially throwing function passed to
+                                // extern C function under -EHc. Undefined behavior may occur
+                                // if this function throws an exception. (/Wall)
         _Thr._Hnd =
             reinterpret_cast<void*>(_CSTD _beginthreadex(nullptr, 0, _Invoker_proc, _Decay_copied.get(), 0, &_Thr._Id));
-        if (_Thr._Hnd == nullptr) { // failed to start thread
+#pragma warning(pop)
+
+        if (_Thr._Hnd) { // ownership transferred to the thread
+            (void) _Decay_copied.release();
+        } else { // failed to start thread
             _Thr._Id = 0;
             _Throw_Cpp_error(_RESOURCE_UNAVAILABLE_TRY_AGAIN);
-        } else { // ownership transferred to the thread
-            (void) _Decay_copied.release();
         }
     }
 
@@ -144,7 +152,7 @@ namespace this_thread {
     }
 
     template <class _Clock, class _Duration>
-    inline void sleep_until(const chrono::time_point<_Clock, _Duration>& _Abs_time) { // sleep until time point
+    void sleep_until(const chrono::time_point<_Clock, _Duration>& _Abs_time) { // sleep until time point
         for (;;) {
             const auto _Now = _Clock::now();
             if (_Abs_time <= _Now) {
@@ -158,7 +166,7 @@ namespace this_thread {
     }
 
     template <class _Rep, class _Period>
-    inline void sleep_for(const chrono::duration<_Rep, _Period>& _Rel_time) { // sleep for duration
+    void sleep_for(const chrono::duration<_Rep, _Period>& _Rel_time) { // sleep for duration
         sleep_until(chrono::steady_clock::now() + _Rel_time);
     }
 } // namespace this_thread
@@ -224,7 +232,7 @@ _NODISCARD inline bool operator>=(
 }
 
 template <class _Ch, class _Tr>
-inline basic_ostream<_Ch, _Tr>& operator<<(basic_ostream<_Ch, _Tr>& _Str, thread::id _Id) { // insert id into stream
+basic_ostream<_Ch, _Tr>& operator<<(basic_ostream<_Ch, _Tr>& _Str, thread::id _Id) { // insert id into stream
     return _Str << _Id._Id;
 }
 
@@ -245,7 +253,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _THREAD_
 
 /*

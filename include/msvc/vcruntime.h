@@ -23,6 +23,16 @@
 #ifndef _VCRUNTIME_H
 #define _VCRUNTIME_H
 
+#ifndef _VCRT_COMPILER_PREPROCESSOR
+// Many VCRuntime headers avoid exposing their contents to non-compilers like
+// the Windows resource compiler and Qt's meta-object compiler (moc).
+#if defined(RC_INVOKED) || defined(Q_MOC_RUN)
+#define _VCRT_COMPILER_PREPROCESSOR 0
+#else
+#define _VCRT_COMPILER_PREPROCESSOR 1
+#endif
+#endif // _VCRT_COMPILER_PREPROCESSOR
+
 #ifndef _UCRT
     #define _UCRT
 #endif
@@ -241,9 +251,49 @@ _CRT_BEGIN_C_HEADER
     #define __crt_countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
 #endif
 
-#if defined(_M_IX86) && defined(_CRT_LEGACY_X86_FLOATING_POINT_EXCEPTIONS) && !defined(_M_CEE_PURE)
+#if defined(_M_IX86) && defined(_CRT_LEGACY_X86_FLT_EXCEPTIONS) && !defined(_M_CEE_PURE)
     #pragma comment(lib, "legacy_x86_flt_exceptions")
 #endif
+
+#if !defined(_HAS_CXX17) && !defined(_HAS_CXX20)
+    #if defined(_MSVC_LANG)
+        #define _STL_LANG _MSVC_LANG
+    #else // ^^^ use _MSVC_LANG / use __cplusplus vvv
+        #define _STL_LANG __cplusplus
+    #endif // ^^^ use __cplusplus ^^^
+
+    #if _STL_LANG > 201703L
+        #define _HAS_CXX17 1
+        #define _HAS_CXX20 1
+    #elif _STL_LANG > 201402L
+        #define _HAS_CXX17 1
+        #define _HAS_CXX20 0
+    #else // _STL_LANG <= 201402L
+        #define _HAS_CXX17 0
+        #define _HAS_CXX20 0
+    #endif // Use the value of _STL_LANG to define _HAS_CXX17 and _HAS_CXX20
+
+    #undef _STL_LANG
+#endif // !defined(_HAS_CXX17) && !defined(_HAS_CXX20)
+
+#if !defined(_HAS_CXX17) || !defined(_HAS_CXX20) || _HAS_CXX20 && !_HAS_CXX17
+    #error _HAS_CXX17 and _HAS_CXX20 must both be defined, and _HAS_CXX20 must imply _HAS_CXX17
+#endif // Verify _HAS_CXX17 and _HAS_CXX20
+
+// [[nodiscard]] attributes on STL functions
+#ifndef _HAS_NODISCARD
+    #if _HAS_CXX17 || defined(__clang__) || defined(__EDG__) // TRANSITION, VSO#939899
+        #define _HAS_NODISCARD 1
+    #else
+        #define _HAS_NODISCARD 0
+    #endif
+#endif // _HAS_NODISCARD
+
+#if _HAS_NODISCARD
+    #define _NODISCARD [[nodiscard]]
+#else // ^^^ CAN HAZ [[nodiscard]] / NO CAN HAZ [[nodiscard]] vvv
+    #define _NODISCARD
+#endif // _HAS_NODISCARD
 
 // See note on use of "deprecate" at the top of this file
 #define _CRT_DEPRECATE_TEXT(_Text) __declspec(deprecated(_Text))

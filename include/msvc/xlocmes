@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _XLOCMES_
 #define _XLOCMES_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <xiosbase>
 
 #pragma pack(push, _CRT_PACKING)
@@ -17,14 +18,16 @@ _STD_BEGIN
 struct messages_base : public locale::facet { // base class for messages
     using catalog = int;
 
-    explicit messages_base(size_t _Refs = 0) : locale::facet(_Refs) { // default constructor
-    }
+    explicit messages_base(size_t _Refs = 0) : locale::facet(_Refs) {}
 };
 
 // CLASS TEMPLATE messages
 template <class _Elem>
 class messages : public messages_base { // facet for obtaining messages from a catalog
 public:
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t, unsigned short>,
+        _FACET_SPECIALIZATION_MESSAGE);
+
     using char_type   = _Elem;
     using string_type = basic_string<_Elem, char_traits<_Elem>, allocator<_Elem>>;
 
@@ -53,9 +56,9 @@ public:
         _Init(_Lobj);
     }
 
-    static size_t _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
-        if (_Ppf != nullptr && *_Ppf == nullptr) {
+    static size_t _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
+        // return locale category mask and construct standard facet
+        if (_Ppf && !*_Ppf) {
             *_Ppf = new messages<_Elem>(_Locinfo(_Ploc->c_str()));
         }
 
@@ -69,8 +72,7 @@ protected:
         _END_LOCINFO()
     }
 
-    virtual __CLR_OR_THIS_CALL ~messages() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~messages() noexcept {}
 
     void _Init(const _Locinfo&) { // initialize from _Locinfo object (do nothing)
     }
@@ -105,6 +107,8 @@ __PURE_APPDOMAIN_GLOBAL locale::id messages<_Elem>::id;
 template <class _Elem>
 class messages_byname : public messages<_Elem> { // messages for named locale
 public:
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t>, _FACET_SPECIALIZATION_MESSAGE);
+
     explicit messages_byname(const char* _Locname, size_t _Refs = 0)
         : messages<_Elem>(_Locname, _Refs) { // construct for named locale
     }
@@ -114,8 +118,7 @@ public:
     }
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~messages_byname() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~messages_byname() noexcept {}
 };
 
 #if defined(_DLL_CPPLIB)
@@ -134,7 +137,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XLOCMES_
 
 /*

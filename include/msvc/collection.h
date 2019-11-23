@@ -9,7 +9,8 @@
 #ifndef _COLLECTION_H_
 #define _COLLECTION_H_
 
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #ifndef __cplusplus_winrt
     #error collection.h requires the /ZW compiler option.
@@ -2178,6 +2179,6 @@ template <> struct ::std::hash< ::Platform::String^> {
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 
 #endif // _COLLECTION_H_

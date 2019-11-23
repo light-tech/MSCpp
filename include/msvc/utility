@@ -2,9 +2,14 @@
 #pragma once
 #ifndef _UTILITY_
 #define _UTILITY_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <type_traits>
 #include <xstddef>
+
+#ifdef __cpp_lib_concepts
+#include <concepts>
+#endif // __cpp_lib_concepts
 
 #pragma pack(push, _CRT_PACKING)
 #pragma warning(push, _STL_WARNING_LEVEL)
@@ -30,13 +35,13 @@ _Post_equal_to_(_Left < _Right ? _Right : _Left) constexpr const _Ty& _Max_value
 
 // FUNCTION TEMPLATE iter_swap (from <algorithm>)
 template <class _FwdIt1, class _FwdIt2>
-inline void iter_swap(_FwdIt1 _Left, _FwdIt2 _Right) { // swap *_Left and *_Right
+void iter_swap(_FwdIt1 _Left, _FwdIt2 _Right) { // swap *_Left and *_Right
     swap(*_Left, *_Right);
 }
 
 // FUNCTION TEMPLATE swap
 template <class _Ty, size_t _Size, class>
-inline void swap(_Ty (&_Left)[_Size], _Ty (&_Right)[_Size])
+void swap(_Ty (&_Left)[_Size], _Ty (&_Right)[_Size])
     _NOEXCEPT_COND(_Is_nothrow_swappable<_Ty>::value) { // exchange arrays stored at _Left and _Right
     if (&_Left != &_Right) { // worth swapping, swap ranges
         _Ty* _First1 = _Left;
@@ -49,7 +54,7 @@ inline void swap(_Ty (&_Left)[_Size], _Ty (&_Right)[_Size])
 }
 
 template <class _Ty, class>
-inline void swap(_Ty& _Left, _Ty& _Right) _NOEXCEPT_COND(is_nothrow_move_constructible_v<_Ty>&&
+void swap(_Ty& _Left, _Ty& _Right) _NOEXCEPT_COND(is_nothrow_move_constructible_v<_Ty>&&
         is_nothrow_move_assignable_v<_Ty>) { // exchange values stored at _Left and _Right
     _Ty _Tmp = _STD move(_Left);
     _Left    = _STD move(_Right);
@@ -58,7 +63,7 @@ inline void swap(_Ty& _Left, _Ty& _Right) _NOEXCEPT_COND(is_nothrow_move_constru
 
 // FUNCTION TEMPLATE _Swap_adl
 template <class _Ty>
-inline void _Swap_adl(_Ty& _Left, _Ty& _Right)
+void _Swap_adl(_Ty& _Left, _Ty& _Right)
     _NOEXCEPT_COND(_Is_nothrow_swappable<_Ty>::value) { // exchange values stored at _Left and _Right, using ADL
     swap(_Left, _Right);
 }
@@ -74,8 +79,7 @@ _INLINE_VAR constexpr piecewise_construct_t piecewise_construct{};
 template <class...>
 class tuple;
 
-template <class _Ty1,
-    class _Ty2>
+template <class _Ty1, class _Ty2>
 struct pair { // store a pair of values
     using first_type  = _Ty1;
     using second_type = _Ty2;
@@ -169,10 +173,10 @@ struct pair { // store a pair of values
         : first(_STD forward<_Other1>(_Right.first)), second(_STD forward<_Other2>(_Right.second)) {}
 
     template <class _Tuple1, class _Tuple2, size_t... _Indexes1, size_t... _Indexes2>
-    inline pair(_Tuple1& _Val1, _Tuple2& _Val2, index_sequence<_Indexes1...>, index_sequence<_Indexes2...>);
+    pair(_Tuple1& _Val1, _Tuple2& _Val2, index_sequence<_Indexes1...>, index_sequence<_Indexes2...>);
 
     template <class... _Types1, class... _Types2>
-    inline pair(piecewise_construct_t, tuple<_Types1...> _Val1, tuple<_Types2...> _Val2);
+    pair(piecewise_construct_t, tuple<_Types1...> _Val1, tuple<_Types2...> _Val2);
 
     pair& operator=(const volatile pair&) = delete;
 
@@ -242,7 +246,7 @@ pair(_Ty1, _Ty2)->pair<_Ty1, _Ty2>;
 #endif // _HAS_CXX17
 
 template <class _Ty1, class _Ty2, class = enable_if_t<_Is_swappable<_Ty1>::value && _Is_swappable<_Ty2>::value>>
-inline void swap(pair<_Ty1, _Ty2>& _Left, pair<_Ty1, _Ty2>& _Right)
+void swap(pair<_Ty1, _Ty2>& _Left, pair<_Ty1, _Ty2>& _Right)
     _NOEXCEPT_COND(noexcept(_Left.swap(_Right))) { // swap _Left and _Right pairs
     _Left.swap(_Right);
 }
@@ -300,34 +304,32 @@ using _Unrefwrap_t = typename _Unrefwrap_helper<decay_t<_Ty>>::type;
 
 // FUNCTION TEMPLATE make_pair
 template <class _Ty1, class _Ty2>
-_NODISCARD constexpr pair<_Unrefwrap_t<_Ty1>, _Unrefwrap_t<_Ty2>> make_pair(
-    _Ty1&& _Val1, _Ty2&& _Val2) { // return pair composed from arguments
+_NODISCARD constexpr pair<_Unrefwrap_t<_Ty1>, _Unrefwrap_t<_Ty2>> make_pair(_Ty1&& _Val1, _Ty2&& _Val2)
+    _NOEXCEPT_COND(is_nothrow_constructible_v<_Unrefwrap_t<_Ty1>, _Ty1>&&
+            is_nothrow_constructible_v<_Unrefwrap_t<_Ty2>, _Ty2>) { // strengthened
+    // return pair composed from arguments
     using _Mypair = pair<_Unrefwrap_t<_Ty1>, _Unrefwrap_t<_Ty2>>;
     return _Mypair(_STD forward<_Ty1>(_Val1), _STD forward<_Ty2>(_Val2));
 }
 
 namespace rel_ops { // nested namespace to hide relational operators from std
     template <class _Ty>
-    _NODISCARD inline bool operator!=(
-        const _Ty& _Left, const _Ty& _Right) { // test for inequality, in terms of equality
+    _NODISCARD bool operator!=(const _Ty& _Left, const _Ty& _Right) { // test for inequality, in terms of equality
         return !(_Left == _Right);
     }
 
     template <class _Ty>
-    _NODISCARD inline bool operator>(
-        const _Ty& _Left, const _Ty& _Right) { // test if _Left > _Right, in terms of operator<
+    _NODISCARD bool operator>(const _Ty& _Left, const _Ty& _Right) { // test if _Left > _Right, in terms of operator<
         return _Right < _Left;
     }
 
     template <class _Ty>
-    _NODISCARD inline bool operator<=(
-        const _Ty& _Left, const _Ty& _Right) { // test if _Left <= _Right, in terms of operator<
+    _NODISCARD bool operator<=(const _Ty& _Left, const _Ty& _Right) { // test if _Left <= _Right, in terms of operator<
         return !(_Right < _Left);
     }
 
     template <class _Ty>
-    _NODISCARD inline bool operator>=(
-        const _Ty& _Left, const _Ty& _Right) { // test if _Left >= _Right, in terms of operator<
+    _NODISCARD bool operator>=(const _Ty& _Left, const _Ty& _Right) { // test if _Left >= _Right, in terms of operator<
         return !(_Left < _Right);
     }
 } // namespace rel_ops
@@ -338,8 +340,7 @@ _STD_BEGIN
 template <class _Tuple>
 struct tuple_size;
 
-template <class _Tuple,
-    class = void>
+template <class _Tuple, class = void>
 struct _Tuple_size_sfinae { // selected when tuple_size<_Tuple>::value isn't well-formed
 };
 
@@ -522,7 +523,7 @@ _NODISCARD constexpr const _Ty2&& get(
 
 // FUNCTION TEMPLATE exchange
 template <class _Ty, class _Other = _Ty>
-inline _Ty exchange(_Ty& _Val, _Other&& _New_val) { // assign _New_val to _Val, return previous _Val
+_Ty exchange(_Ty& _Val, _Other&& _New_val) { // assign _New_val to _Val, return previous _Val
     _Ty _Old_val = static_cast<_Ty&&>(_Val);
     _Val         = static_cast<_Other&&>(_New_val);
     return _Old_val;
@@ -573,7 +574,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _UTILITY_
 
 /*

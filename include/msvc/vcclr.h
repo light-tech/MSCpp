@@ -13,7 +13,6 @@
 #define _INC_VCCLR
 #ifndef RC_INVOKED
 
-#using <mscorlib.dll>
 #include <gcroot.h>
 
 #pragma warning(push)

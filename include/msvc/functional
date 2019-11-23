@@ -2,11 +2,12 @@
 #pragma once
 #ifndef _FUNCTIONAL_
 #define _FUNCTIONAL_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <exception>
 #include <tuple>
 #include <typeinfo>
-#include <xmemory0>
+#include <xmemory>
 #include <xstddef>
 #if _HAS_CXX17
 #include <memory>
@@ -398,7 +399,7 @@ protected:
 
 // FUNCTION TEMPLATE bind1st
 template <class _Fn, class _Ty>
-_NODISCARD inline binder1st<_Fn> bind1st(const _Fn& _Func, const _Ty& _Left) { // return a binder1st functor adapter
+_NODISCARD binder1st<_Fn> bind1st(const _Fn& _Func, const _Ty& _Left) { // return a binder1st functor adapter
     typename _Fn::first_argument_type _Val(_Left);
     return binder1st<_Fn>(_Func, _Val);
 }
@@ -431,7 +432,7 @@ protected:
 
 // FUNCTION TEMPLATE bind2nd
 template <class _Fn, class _Ty>
-_NODISCARD inline binder2nd<_Fn> bind2nd(const _Fn& _Func, const _Ty& _Right) { // return a binder2nd functor adapter
+_NODISCARD binder2nd<_Fn> bind2nd(const _Fn& _Func, const _Ty& _Right) { // return a binder2nd functor adapter
     typename _Fn::second_argument_type _Val(_Right);
     return binder2nd<_Fn>(_Func, _Val);
 }
@@ -469,16 +470,16 @@ protected:
 };
 
 // FUNCTION TEMPLATE ptr_fun
-#define _PTR_FUN(CALL_OPT, X1, X2, X3)                                                                             \
-    template <class _Arg, class _Result>                                                                           \
-    _NODISCARD inline pointer_to_unary_function<_Arg, _Result, _Result(CALL_OPT*)(_Arg)> ptr_fun(                  \
-        _Result(CALL_OPT* _Left)(_Arg)) { /* return pointer_to_unary_function functor adapter */                   \
-        return pointer_to_unary_function<_Arg, _Result, _Result(CALL_OPT*)(_Arg)>(_Left);                          \
-    }                                                                                                              \
-    template <class _Arg1, class _Arg2, class _Result>                                                             \
-    _NODISCARD inline pointer_to_binary_function<_Arg1, _Arg2, _Result, _Result(CALL_OPT*)(_Arg1, _Arg2)> ptr_fun( \
-        _Result(CALL_OPT* _Left)(_Arg1, _Arg2)) { /* return pointer_to_binary_function functor adapter */          \
-        return pointer_to_binary_function<_Arg1, _Arg2, _Result, _Result(CALL_OPT*)(_Arg1, _Arg2)>(_Left);         \
+#define _PTR_FUN(CALL_OPT, X1, X2, X3)                                                                      \
+    template <class _Arg, class _Result>                                                                    \
+    _NODISCARD pointer_to_unary_function<_Arg, _Result, _Result(CALL_OPT*)(_Arg)> ptr_fun(                  \
+        _Result(CALL_OPT* _Left)(_Arg)) { /* return pointer_to_unary_function functor adapter */            \
+        return pointer_to_unary_function<_Arg, _Result, _Result(CALL_OPT*)(_Arg)>(_Left);                   \
+    }                                                                                                       \
+    template <class _Arg1, class _Arg2, class _Result>                                                      \
+    _NODISCARD pointer_to_binary_function<_Arg1, _Arg2, _Result, _Result(CALL_OPT*)(_Arg1, _Arg2)> ptr_fun( \
+        _Result(CALL_OPT* _Left)(_Arg1, _Arg2)) { /* return pointer_to_binary_function functor adapter */   \
+        return pointer_to_binary_function<_Arg1, _Arg2, _Result, _Result(CALL_OPT*)(_Arg1, _Arg2)>(_Left);  \
     }
 
 _NON_MEMBER_CALL(_PTR_FUN, X1, X2, X3)
@@ -547,24 +548,23 @@ private:
 
 // FUNCTION TEMPLATE mem_fun
 template <class _Result, class _Ty>
-_NODISCARD inline mem_fun_t<_Result, _Ty> mem_fun(_Result (_Ty::*_Pm)()) { // return a mem_fun_t functor adapter
+_NODISCARD mem_fun_t<_Result, _Ty> mem_fun(_Result (_Ty::*_Pm)()) { // return a mem_fun_t functor adapter
     return mem_fun_t<_Result, _Ty>(_Pm);
 }
 
 template <class _Result, class _Ty, class _Arg>
-_NODISCARD inline mem_fun1_t<_Result, _Ty, _Arg> mem_fun(
-    _Result (_Ty::*_Pm)(_Arg)) { // return a mem_fun1_t functor adapter
+_NODISCARD mem_fun1_t<_Result, _Ty, _Arg> mem_fun(_Result (_Ty::*_Pm)(_Arg)) { // return a mem_fun1_t functor adapter
     return mem_fun1_t<_Result, _Ty, _Arg>(_Pm);
 }
 
 template <class _Result, class _Ty>
-_NODISCARD inline const_mem_fun_t<_Result, _Ty> mem_fun(
+_NODISCARD const_mem_fun_t<_Result, _Ty> mem_fun(
     _Result (_Ty::*_Pm)() const) { // return a const_mem_fun_t functor adapter
     return const_mem_fun_t<_Result, _Ty>(_Pm);
 }
 
 template <class _Result, class _Ty, class _Arg>
-_NODISCARD inline const_mem_fun1_t<_Result, _Ty, _Arg> mem_fun(
+_NODISCARD const_mem_fun1_t<_Result, _Ty, _Arg> mem_fun(
     _Result (_Ty::*_Pm)(_Arg) const) { // return a const_mem_fun1_t functor adapter
     return const_mem_fun1_t<_Result, _Ty, _Arg>(_Pm);
 }
@@ -633,25 +633,24 @@ private:
 
 // FUNCTION TEMPLATE mem_fun_ref
 template <class _Result, class _Ty>
-_NODISCARD inline mem_fun_ref_t<_Result, _Ty> mem_fun_ref(
-    _Result (_Ty::*_Pm)()) { // return a mem_fun_ref_t functor adapter
+_NODISCARD mem_fun_ref_t<_Result, _Ty> mem_fun_ref(_Result (_Ty::*_Pm)()) { // return a mem_fun_ref_t functor adapter
     return mem_fun_ref_t<_Result, _Ty>(_Pm);
 }
 
 template <class _Result, class _Ty, class _Arg>
-_NODISCARD inline mem_fun1_ref_t<_Result, _Ty, _Arg> mem_fun_ref(
+_NODISCARD mem_fun1_ref_t<_Result, _Ty, _Arg> mem_fun_ref(
     _Result (_Ty::*_Pm)(_Arg)) { // return a mem_fun1_ref_t functor adapter
     return mem_fun1_ref_t<_Result, _Ty, _Arg>(_Pm);
 }
 
 template <class _Result, class _Ty>
-_NODISCARD inline const_mem_fun_ref_t<_Result, _Ty> mem_fun_ref(
+_NODISCARD const_mem_fun_ref_t<_Result, _Ty> mem_fun_ref(
     _Result (_Ty::*_Pm)() const) { // return a const_mem_fun_ref_t functor adapter
     return const_mem_fun_ref_t<_Result, _Ty>(_Pm);
 }
 
 template <class _Result, class _Ty, class _Arg>
-_NODISCARD inline const_mem_fun1_ref_t<_Result, _Ty, _Arg> mem_fun_ref(
+_NODISCARD const_mem_fun1_ref_t<_Result, _Ty, _Arg> mem_fun_ref(
     _Result (_Ty::*_Pm)(_Arg) const) { // return a const_mem_fun1_ref_t functor adapter
     return const_mem_fun1_ref_t<_Result, _Ty, _Arg>(_Pm);
 }
@@ -675,53 +674,24 @@ public:
     }
 };
 
-template <class _Rx,
-    class _Ty>
-_NODISCARD inline _Mem_fn<_Rx _Ty::*> mem_fn(_Rx _Ty::*_Pm) noexcept { // wrap a pointer to member function/data
+template <class _Rx, class _Ty>
+_NODISCARD _Mem_fn<_Rx _Ty::*> mem_fn(_Rx _Ty::*_Pm) noexcept { // wrap a pointer to member function/data
     return _Mem_fn<_Rx _Ty::*>(_Pm);
 }
 
+#if _HAS_CXX20
+// STRUCT identity
+struct identity {
+    using is_transparent = int;
+
+    template <class _Ty>
+    _NODISCARD constexpr _Ty&& operator()(_Ty&& _Left) const noexcept {
+        return _STD forward<_Ty>(_Left);
+    }
+};
+#endif // _HAS_CXX20
+
 #if _HAS_CXX17
-// CLASS TEMPLATE _Ebco_base
-template <class _Ty,
-    bool = is_empty_v<_Ty> && !is_final_v<_Ty>>
-class _Ebco_base : private _Ty { // Empty Base Class Optimization, active
-private:
-    using _Mybase = _Ty; // for visualization
-
-protected:
-    template <class _Other, enable_if_t<!is_same_v<_Remove_cvref_t<_Other>, _Ebco_base>, int> = 0>
-    explicit _Ebco_base(_Other&& _Val) _NOEXCEPT_COND(is_nothrow_constructible_v<_Ty, _Other>)
-        : _Ty(_STD forward<_Other>(_Val)) {}
-
-    _Ty& _Get_val() noexcept {
-        return *this;
-    }
-
-    const _Ty& _Get_val() const noexcept {
-        return *this;
-    }
-};
-
-template <class _Ty>
-class _Ebco_base<_Ty, false> { // Empty Base Class Optimization, inactive
-private:
-    _Ty _Myval;
-
-protected:
-    template <class _Other, enable_if_t<!is_same_v<_Remove_cvref_t<_Other>, _Ebco_base>, int> = 0>
-    explicit _Ebco_base(_Other&& _Val) _NOEXCEPT_COND(is_nothrow_constructible_v<_Ty, _Other>)
-        : _Myval(_STD forward<_Other>(_Val)) {}
-
-    _Ty& _Get_val() noexcept {
-        return _Myval;
-    }
-
-    const _Ty& _Get_val() const noexcept {
-        return _Myval;
-    }
-};
-
 // FUNCTION TEMPLATE not_fn
 struct _Not_fn_tag {};
 
@@ -783,8 +753,8 @@ public:
 
 template <class _Callable>
 _NODISCARD _Not_fn<decay_t<_Callable>> not_fn(_Callable&& _Obj)
-    _NOEXCEPT_COND(is_nothrow_constructible_v<decay_t<_Callable>, _Callable>) // strengthened
-{ // wrap a callable object to be negated
+    _NOEXCEPT_COND(is_nothrow_constructible_v<decay_t<_Callable>, _Callable>) { // strengthened
+    // wrap a callable object to be negated
     return _Not_fn<decay_t<_Callable>>(_STD forward<_Callable>(_Obj), _Not_fn_tag{});
 }
 #endif // _HAS_CXX17
@@ -794,11 +764,10 @@ _NODISCARD _Not_fn<decay_t<_Callable>> not_fn(_Callable&& _Obj)
 // CLASS bad_function_call
 class bad_function_call : public exception { // exception thrown when an empty std::function is called
 public:
-    bad_function_call() noexcept { // construct
-    }
+    bad_function_call() noexcept {} // construct
 
-    _NODISCARD virtual const char* __CLR_OR_THIS_CALL what() const
-        noexcept override { // return pointer to message string
+    _NODISCARD virtual const char* __CLR_OR_THIS_CALL what() const noexcept override {
+        // return pointer to message string
         return "bad function call";
     }
 };
@@ -810,36 +779,45 @@ template <class _Fty>
 class function;
 
 template <class _Ty>
-inline bool _Test_callable(
-    const _Ty& _Arg, true_type) noexcept { // std::function must store non-null testable callable objects
+_INLINE_VAR constexpr bool _Testable_callable_v =
+    disjunction_v<is_pointer<_Ty>, _Is_specialization<_Ty, function>, is_member_pointer<_Ty>>;
+
+#if _HAS_IF_CONSTEXPR
+template <class _Ty>
+bool _Test_callable(const _Ty& _Arg) noexcept { // determine whether std::function must store _Arg
+    if constexpr (_Testable_callable_v<_Ty>) {
+        return !!_Arg;
+    } else {
+        (void) _Arg;
+        return true;
+    }
+}
+#else // ^^^ _HAS_IF_CONSTEXPR // !_HAS_IF_CONSTEXPR vvv
+template <class _Ty>
+bool _Test_callable(true_type, const _Ty& _Arg) noexcept {
+    // std::function must store non-null testable callable objects
     return !!_Arg;
 }
 
 template <class _Ty>
-inline bool _Test_callable(const _Ty&, false_type) noexcept { // std::function must store arbitrary callable objects
+bool _Test_callable(false_type, const _Ty&) noexcept { // std::function must store arbitrary callable objects
     return true;
 }
 
 template <class _Ty>
-inline bool _Test_callable(const _Ty& _Arg) noexcept { // determine whether std::function must store _Arg
-    bool_constant<is_member_pointer_v<_Ty> || (is_pointer_v<_Ty> && is_function_v<remove_pointer_t<_Ty>>)> _Testable;
-    return _Test_callable(_Arg, _Testable);
+bool _Test_callable(const _Ty& _Arg) noexcept { // determine whether std::function must store _Arg
+    return _Test_callable(bool_constant<_Testable_callable_v<_Ty>>{}, _Arg);
 }
-
-template <class _Fty>
-inline bool _Test_callable(const function<_Fty>& _Arg) noexcept { // determine whether std::function must store _Arg
-    return !!_Arg;
-}
+#endif // _HAS_IF_CONSTEXPR
 
 #pragma warning(push)
-#pragma warning(disable : 4265) // class has virtual functions, but destructor is not virtual
+#pragma warning(disable : 4265) // class has virtual functions, but destructor is not virtual (/Wall)
 // CLASS TEMPLATE _Func_base
-template <class _Rx,
-    class... _Types>
+template <class _Rx, class... _Types>
 class __declspec(novtable) _Func_base { // abstract base for implementation types
 public:
     virtual _Func_base* _Copy(void*) const                 = 0;
-    virtual _Func_base* _Move(void*)                       = 0;
+    virtual _Func_base* _Move(void*) noexcept              = 0;
     virtual _Rx _Do_call(_Types&&...)                      = 0;
     virtual const type_info& _Target_type() const noexcept = 0;
     virtual void _Delete_this(bool) noexcept               = 0;
@@ -864,16 +842,16 @@ private:
 constexpr size_t _Space_size = (_Small_object_num_ptrs - 1) * sizeof(void*);
 
 template <class _Impl> // determine whether _Impl must be dynamically allocated
-using _Is_large = bool_constant<(_Space_size < sizeof(_Impl)) || !_Impl::_Nothrow_move::value>;
+_INLINE_VAR constexpr bool _Is_large = (_Space_size < sizeof(_Impl)) || !_Impl::_Nothrow_move::value;
 
 #pragma warning(push)
-#pragma warning(disable : 4265) // class has virtual functions, but destructor is not virtual
+#pragma warning(disable : 4265) // class has virtual functions, but destructor is not virtual (/Wall)
 
 #if _HAS_FUNCTION_ALLOCATOR_SUPPORT
 // CLASS TEMPLATE _Func_impl
 template <class _Callable, class _Alloc, class _Rx, class... _Types>
-class _Func_impl final
-    : public _Func_base<_Rx, _Types...> { // derived class for specific implementation types that use allocators
+class _Func_impl final : public _Func_base<_Rx, _Types...> {
+    // derived class for specific implementation types that use allocators
 public:
     using _Mybase        = _Func_base<_Rx, _Types...>;
     using _Myalty        = _Rebind_alloc_t<_Alloc, _Func_impl>;
@@ -882,37 +860,44 @@ public:
 
     template <class _Other1, class _Other2>
     _Func_impl(_Other1&& _Val, _Other2&& _Ax)
-        : _Mypair(_One_then_variadic_args_t(), _STD forward<_Other2>(_Ax), _STD forward<_Other1>(_Val)) { // construct
-    }
+        : _Mypair(_One_then_variadic_args_t(), _STD forward<_Other2>(_Ax), _STD forward<_Other1>(_Val)) {} // construct
 
     // dtor non-virtual due to _Delete_this()
 
 private:
     virtual _Mybase* _Copy(void* _Where) const override { // return clone of *this
-        return _Clone(_Where, _Is_large<_Func_impl>{});
+        auto& _Myax = _Mypair._Get_first();
+        if
+            _CONSTEXPR_IF(_Is_large<_Func_impl>) {
+                (void) _Where;
+                _Myalty _Rebound(_Myax);
+                _Alloc_construct_ptr<_Myalty> _Constructor{_Rebound};
+                _Constructor._Allocate();
+                _Construct_in_place(*_Constructor._Ptr, _Mypair._Myval2, _Myax);
+                return _Constructor._Release();
+            }
+        else {
+            const auto _Ptr = static_cast<_Func_impl*>(_Where);
+            _Construct_in_place(*_Ptr, _Mypair._Myval2, _Myax);
+            return _Ptr;
+        }
     }
 
-    _Mybase* _Clone(void*, true_type) const { // return clone of *this, large (dynamically allocated)
-        return _Alloc_rebound<_Func_impl>(_Myax(), _Callee(), _Myax());
-    }
-
-    _Mybase* _Clone(void* _Where, false_type) const { // return clone of *this, small (locally stored)
-        _Myalty _Al(_Myax());
-        _Func_impl* _Ptr = static_cast<_Func_impl*>(_Where);
-        _Myalty_traits::construct(_Al, _Ptr, _Callee(), _Myax());
-        return _Ptr;
-    }
-
-    virtual _Mybase* _Move(void* _Where) override { // return clone of *this
-        _Myalty _Al(_Myax());
-        _Func_impl* _Ptr = static_cast<_Func_impl*>(_Where);
-        _Myalty_traits::construct(_Al, _Ptr, _STD move(_Callee()), _STD move(_Myax()));
-        return _Ptr;
+    virtual _Mybase* _Move(void* _Where) noexcept override {
+        if
+            _CONSTEXPR_IF(_Is_large<_Func_impl>) {
+                (void) _Where;
+                return nullptr;
+            }
+        else {
+            const auto _Ptr = static_cast<_Func_impl*>(_Where);
+            _Construct_in_place(*_Ptr, _STD move(_Mypair._Myval2), _STD move(_Mypair._Get_first()));
+            return _Ptr;
+        }
     }
 
     virtual _Rx _Do_call(_Types&&... _Args) override { // call wrapped function
-        auto& _The_callee = _Callee();
-        return _Invoker_ret<_Rx>::_Call(_The_callee, _STD forward<_Types>(_Args)...);
+        return _Invoker_ret<_Rx>::_Call(_Mypair._Myval2, _STD forward<_Types>(_Args)...);
     }
 
     virtual const type_info& _Target_type() const noexcept override { // return type information for stored object
@@ -924,66 +909,55 @@ private:
     }
 
     virtual const void* _Get() const noexcept override { // return address of stored object
-        return _STD addressof(_Callee());
+        return _STD addressof(_Mypair._Myval2);
     }
 
     virtual void _Delete_this(bool _Deallocate) noexcept override { // destroy self
-        _Myalty _Al(_Myax());
-        _Myalty_traits::destroy(_Al, this);
+        _Myalty _Al(_Mypair._Get_first());
+        _Destroy_in_place(*this);
         if (_Deallocate) {
             _Deallocate_plain(_Al, this);
         }
     }
 
     _Compressed_pair<_Alloc, _Callable> _Mypair;
-
-    _Alloc& _Myax() noexcept { // return reference to allocator
-        return _Mypair._Get_first();
-    }
-
-    const _Alloc& _Myax() const noexcept { // return const reference to allocator
-        return _Mypair._Get_first();
-    }
-
-    _Callable& _Callee() noexcept { // return reference to wrapped function
-        return _Mypair._Get_second();
-    }
-
-    const _Callable& _Callee() const noexcept { // return const reference to wrapped function
-        return _Mypair._Get_second();
-    }
 };
 #endif // _HAS_FUNCTION_ALLOCATOR_SUPPORT
 
 // CLASS TEMPLATE _Func_impl_no_alloc
 template <class _Callable, class _Rx, class... _Types>
-class _Func_impl_no_alloc final
-    : public _Func_base<_Rx, _Types...> { // derived class for specific implementation types that don't use allocators
+class _Func_impl_no_alloc final : public _Func_base<_Rx, _Types...> {
+    // derived class for specific implementation types that don't use allocators
 public:
     using _Mybase       = _Func_base<_Rx, _Types...>;
     using _Nothrow_move = is_nothrow_move_constructible<_Callable>;
 
     template <class _Other, class = enable_if_t<!is_same_v<_Func_impl_no_alloc, decay_t<_Other>>>>
-    explicit _Func_impl_no_alloc(_Other&& _Val) : _Callee(_STD forward<_Other>(_Val)) { // construct
-    }
+    explicit _Func_impl_no_alloc(_Other&& _Val) : _Callee(_STD forward<_Other>(_Val)) {}
 
     // dtor non-virtual due to _Delete_this()
 
 private:
     virtual _Mybase* _Copy(void* _Where) const override { // return clone of *this
-        return _Clone(_Where, _Is_large<_Func_impl_no_alloc>{});
+        if
+            _CONSTEXPR_IF(_Is_large<_Func_impl_no_alloc>) {
+                (void) _Where;
+                return _Global_new<_Func_impl_no_alloc>(_Callee);
+            }
+        else {
+            return ::new (_Where) _Func_impl_no_alloc(_Callee);
+        }
     }
 
-    _Mybase* _Clone(void*, true_type) const { // return clone of *this, large (dynamically allocated)
-        return _Global_new<_Func_impl_no_alloc>(_Callee);
-    }
-
-    _Mybase* _Clone(void* _Where, false_type) const { // return clone of *this, small (locally stored)
-        return ::new (_Where) _Func_impl_no_alloc(_Callee);
-    }
-
-    virtual _Mybase* _Move(void* _Where) override { // return clone of *this
-        return ::new (_Where) _Func_impl_no_alloc(_STD move(_Callee));
+    virtual _Mybase* _Move(void* _Where) noexcept override {
+        if
+            _CONSTEXPR_IF(_Is_large<_Func_impl_no_alloc>) {
+                (void) _Where;
+                return nullptr;
+            }
+        else {
+            return ::new (_Where) _Func_impl_no_alloc(_STD move(_Callee));
+        }
     }
 
     virtual _Rx _Do_call(_Types&&... _Args) override { // call wrapped function
@@ -1014,8 +988,7 @@ private:
 #pragma warning(pop)
 
 // CLASS TEMPLATE _Func_class
-template <class _Ret,
-    class... _Types>
+template <class _Ret, class... _Types>
 class _Func_class : public _Arg_types<_Types...> { // implement function template
 public:
     using result_type = _Ret;
@@ -1034,7 +1007,7 @@ public:
         return _Impl->_Do_call(_STD forward<_Types>(_Args)...);
     }
 
-    ~_Func_class() noexcept { // destroy the object
+    ~_Func_class() noexcept {
         _Tidy();
     }
 
@@ -1044,19 +1017,19 @@ protected:
         enable_if_t<conjunction_v<negation<is_same<decay_t<_Fx>, _Function>>, _Is_invocable_r<_Ret, _Fx, _Types...>>>;
 
     bool _Empty() const noexcept { // return true if no stored object
-        return _Getimpl() == nullptr;
+        return !_Getimpl();
     }
 
     void _Reset_copy(const _Func_class& _Right) { // copy _Right's stored object
         if (!_Right._Empty()) {
-            _Set(_Right._Getimpl()->_Copy(_Getspace()));
+            _Set(_Right._Getimpl()->_Copy(&_Mystorage));
         }
     }
 
-    void _Reset_move(_Func_class&& _Right) { // move _Right's stored object
+    void _Reset_move(_Func_class&& _Right) noexcept { // move _Right's stored object
         if (!_Right._Empty()) {
             if (_Right._Local()) { // move and tidy
-                _Set(_Right._Getimpl()->_Move(_Getspace()));
+                _Set(_Right._Getimpl()->_Move(&_Mystorage));
                 _Right._Tidy();
             } else { // steal from _Right
                 _Set(_Right._Getimpl());
@@ -1072,17 +1045,15 @@ protected:
         }
 
         using _Impl = _Func_impl_no_alloc<decay_t<_Fx>, _Ret, _Types...>;
-        _Reset_impl<_Impl>(_STD forward<_Fx>(_Val), _Is_large<_Impl>{});
-    }
-
-    template <class _Myimpl, class _Fx>
-    void _Reset_impl(_Fx&& _Val, true_type) { // store copy of _Val, large (dynamically allocated)
-        _Set(_Global_new<_Myimpl>(_STD forward<_Fx>(_Val)));
-    }
-
-    template <class _Myimpl, class _Fx>
-    void _Reset_impl(_Fx&& _Val, false_type) { // store copy of _Val, small (locally stored)
-        _Set(::new (_Getspace()) _Myimpl(_STD forward<_Fx>(_Val)));
+        if
+            _CONSTEXPR_IF(_Is_large<_Impl>) {
+                // dynamically allocate _Val
+                _Set(_Global_new<_Impl>(_STD forward<_Fx>(_Val)));
+            }
+        else {
+            // store _Val in-situ
+            _Set(::new (static_cast<void*>(&_Mystorage)) _Impl(_STD forward<_Fx>(_Val)));
+        }
     }
 
 #if _HAS_FUNCTION_ALLOCATOR_SUPPORT
@@ -1093,24 +1064,22 @@ protected:
         }
 
         using _Myimpl = _Func_impl<decay_t<_Fx>, _Alloc, _Ret, _Types...>;
-        _Myimpl* _Ptr = nullptr;
-
-        _Rebind_alloc_t<_Alloc, _Myimpl> _Al(_Ax);
-        _Reset_impl_alloc(_STD forward<_Fx>(_Val), _Ax, _Ptr, _Al, _Is_large<_Myimpl>{});
-    }
-
-    template <class _Fx, class _Alloc, class _Myimpl, class _Alimpl>
-    void _Reset_impl_alloc(_Fx&& _Val, const _Alloc& _Ax, _Myimpl*, _Alimpl& _Al,
-        true_type) { // store copy of _Val with allocator, large (dynamically allocated)
-        _Set(_Unfancy(_Alloc_new(_Al, _STD forward<_Fx>(_Val), _Ax)));
-    }
-
-    template <class _Fx, class _Alloc, class _Myimpl, class _Alimpl>
-    void _Reset_impl_alloc(_Fx&& _Val, const _Alloc& _Ax, _Myimpl*, _Alimpl& _Al,
-        false_type) { // store copy of _Val with allocator, small (locally stored)
-        _Myimpl* _Ptr = static_cast<_Myimpl*>(_Getspace());
-        allocator_traits<_Alimpl>::construct(_Al, _Ptr, _STD forward<_Fx>(_Val), _Ax);
-        _Set(_Ptr);
+        if
+            _CONSTEXPR_IF(_Is_large<_Myimpl>) {
+                // dynamically allocate _Val
+                using _Alimpl = _Rebind_alloc_t<_Alloc, _Myimpl>;
+                _Alimpl _Al(_Ax);
+                _Alloc_construct_ptr<_Alimpl> _Constructor{_Al};
+                _Constructor._Allocate();
+                _Construct_in_place(*_Constructor._Ptr, _STD forward<_Fx>(_Val), _Ax);
+                _Set(_Unfancy(_Constructor._Release()));
+            }
+        else {
+            // store _Val in-situ
+            const auto _Ptr = reinterpret_cast<_Myimpl*>(&_Mystorage);
+            _Construct_in_place(*_Ptr, _STD forward<_Fx>(_Val), _Ax);
+            _Set(_Ptr);
+        }
     }
 #endif // _HAS_FUNCTION_ALLOCATOR_SUPPORT
 
@@ -1146,7 +1115,7 @@ protected:
 
 private:
     bool _Local() const noexcept { // test for locally stored copy of object
-        return _Getimpl() == _Getspace();
+        return _Getimpl() == static_cast<const void*>(&_Mystorage);
     }
 
     union _Storage { // storage for small objects (basic_string is small)
@@ -1163,14 +1132,6 @@ private:
 
     void _Set(_Ptrt* _Ptr) noexcept { // store pointer to object
         _Mystorage._Ptrs[_Small_object_num_ptrs - 1] = _Ptr;
-    }
-
-    void* _Getspace() noexcept { // get pointer to storage space
-        return &_Mystorage;
-    }
-
-    const void* _Getspace() const noexcept { // get pointer to storage space
-        return &_Mystorage;
     }
 };
 
@@ -1194,11 +1155,9 @@ private:
     using _Mybase = typename _Get_function_impl<_Fty>::type;
 
 public:
-    function() noexcept { // construct empty function wrapper
-    }
+    function() noexcept {} // construct empty function wrapper
 
-    function(nullptr_t) noexcept { // construct empty function wrapper from null pointer
-    }
+    function(nullptr_t) noexcept {} // construct empty function wrapper from null pointer
 
     function(const function& _Right) { // construct holding copy of _Right
         this->_Reset_copy(_Right);
@@ -1211,17 +1170,16 @@ public:
 
 #if _HAS_FUNCTION_ALLOCATOR_SUPPORT
     template <class _Alloc>
-    function(allocator_arg_t, const _Alloc&) noexcept { // construct empty function wrapper, allocator
+    function(allocator_arg_t, const _Alloc&) noexcept {} // construct empty function wrapper, allocator
+
+    template <class _Alloc>
+    function(allocator_arg_t, const _Alloc&, nullptr_t) noexcept {
+        // construct empty function wrapper from null pointer, allocator
     }
 
     template <class _Alloc>
-    function(allocator_arg_t, const _Alloc&,
-        nullptr_t) noexcept { // construct empty function wrapper from null pointer, allocator
-    }
-
-    template <class _Alloc>
-    function(allocator_arg_t, const _Alloc& _Ax,
-        const function& _Right) { // construct wrapper holding copy of _Right, allocator
+    function(allocator_arg_t, const _Alloc& _Ax, const function& _Right) {
+        // construct wrapper holding copy of _Right, allocator
         this->_Reset_alloc(_Right, _Ax);
     }
 
@@ -1231,24 +1189,25 @@ public:
     }
 #endif // _HAS_FUNCTION_ALLOCATOR_SUPPORT
 
-    function& operator=(const function& _Right) { // assign _Right
+    function& operator=(const function& _Right) {
         function(_Right).swap(*this);
         return *this;
     }
 
-    function(function&& _Right) { // construct holding moved copy of _Right
+    function(function&& _Right) noexcept {
         this->_Reset_move(_STD move(_Right));
     }
 
 #if _HAS_FUNCTION_ALLOCATOR_SUPPORT
     template <class _Alloc>
-    function(allocator_arg_t, const _Alloc& _Al,
-        function&& _Right) { // construct wrapper holding moved copy of _Right, allocator
+    function(allocator_arg_t, const _Alloc& _Al, function&& _Right) {
+        // construct wrapper holding moved copy of _Right, allocator
         this->_Reset_alloc(_STD move(_Right), _Al);
     }
 #endif // _HAS_FUNCTION_ALLOCATOR_SUPPORT
 
-    function& operator=(function&& _Right) { // assign by moving _Right
+    function& operator=(function&& _Right) noexcept { // strengthened
+        // assign by moving _Right
         if (this != _STD addressof(_Right)) { // clean up and copy
             this->_Tidy();
             this->_Reset_move(_STD move(_Right));
@@ -1275,8 +1234,8 @@ public:
     }
 
     template <class _Fx>
-    function& operator=(
-        reference_wrapper<_Fx> _Func) noexcept { // assign wrapper holding reference_wrapper to function object
+    function& operator=(reference_wrapper<_Fx> _Func) noexcept {
+        // assign wrapper holding reference_wrapper to function object
         this->_Tidy();
         this->_Reset(_Func);
         return *this;
@@ -1316,7 +1275,6 @@ public:
 };
 
 #if _HAS_CXX17
-
 #define _FUNCTION_POINTER_DEDUCTION_GUIDE(CALL_OPT, X1, X2, X3) \
     template <class _Ret, class... _Types>                      \
     function(_Ret(CALL_OPT*)(_Types...))->function<_Ret(_Types...)>; // intentionally discards CALL_OPT
@@ -1325,15 +1283,12 @@ _NON_MEMBER_CALL(_FUNCTION_POINTER_DEDUCTION_GUIDE, X1, X2, X3)
 #undef _FUNCTION_POINTER_DEDUCTION_GUIDE
 
 // STRUCT TEMPLATE _Deduce_signature
-template <class _Fx,
-    class = void>
-struct _Deduce_signature { // can't deduce signature when &_Fx::operator() is missing, inaccessible, or ambiguous
-};
+template <class _Fx, class = void>
+struct _Deduce_signature {}; // can't deduce signature when &_Fx::operator() is missing, inaccessible, or ambiguous
 
 template <class _Fx>
 struct _Deduce_signature<_Fx, void_t<decltype(&_Fx::operator())>>
-    : _Is_memfunptr<decltype(&_Fx::operator())>::_Guide_type { // N4687 23.14.13.2.1 [func.wrap.func.con]/12
-};
+    : _Is_memfunptr<decltype(&_Fx::operator())>::_Guide_type {}; // N4687 23.14.13.2.1 [func.wrap.func.con]/12
 
 template <class _Fx>
 function(_Fx)->function<typename _Deduce_signature<_Fx>::type>;
@@ -1341,29 +1296,29 @@ function(_Fx)->function<typename _Deduce_signature<_Fx>::type>;
 
 // FUNCTION TEMPLATE swap
 template <class _Fty>
-inline void swap(
-    function<_Fty>& _Left, function<_Fty>& _Right) noexcept { // swap contents of _Left with contents of _Right
+void swap(function<_Fty>& _Left, function<_Fty>& _Right) noexcept {
+    // swap contents of _Left with contents of _Right
     _Left.swap(_Right);
 }
 
 // TEMPLATE NULL POINTER COMPARISONS
 template <class _Fty>
-_NODISCARD inline bool operator==(const function<_Fty>& _Other, nullptr_t) noexcept { // compare to null pointer
+_NODISCARD bool operator==(const function<_Fty>& _Other, nullptr_t) noexcept { // compare to null pointer
     return !_Other;
 }
 
 template <class _Fty>
-_NODISCARD inline bool operator==(nullptr_t, const function<_Fty>& _Other) noexcept { // compare to null pointer
+_NODISCARD bool operator==(nullptr_t, const function<_Fty>& _Other) noexcept { // compare to null pointer
     return !_Other;
 }
 
 template <class _Fty>
-_NODISCARD inline bool operator!=(const function<_Fty>& _Other, nullptr_t) noexcept { // compare to null pointer
+_NODISCARD bool operator!=(const function<_Fty>& _Other, nullptr_t) noexcept { // compare to null pointer
     return static_cast<bool>(_Other);
 }
 
 template <class _Fty>
-_NODISCARD inline bool operator!=(nullptr_t, const function<_Fty>& _Other) noexcept { // compare to null pointer
+_NODISCARD bool operator!=(nullptr_t, const function<_Fty>& _Other) noexcept { // compare to null pointer
     return static_cast<bool>(_Other);
 }
 
@@ -1406,8 +1361,8 @@ struct is_bind_expression : false_type { // template to indicate that _Tx is not
 };
 
 template <class _Ret, class _Fx, class... _Types>
-struct is_bind_expression<_Binder<_Ret, _Fx, _Types...>>
-    : true_type { // template specialization to indicate a bind expression
+struct is_bind_expression<_Binder<_Ret, _Fx, _Types...>> : true_type {
+    // template specialization to indicate a bind expression
 };
 
 template <class _Tx>
@@ -1476,7 +1431,7 @@ struct _Select_fixer<_Cv_TiD, false, false, _Jx> { // placeholder fixer
 };
 
 template <class _Cv_TiD, class _Untuple>
-inline auto _Fix_arg(_Cv_TiD& _Tid, _Untuple&& _Ut)
+auto _Fix_arg(_Cv_TiD& _Tid, _Untuple&& _Ut)
     -> decltype(_Select_fixer<_Cv_TiD>::_Fix(_Tid, _STD move(_Ut))) { // translate an argument for bind
     return _Select_fixer<_Cv_TiD>::_Fix(_Tid, _STD move(_Ut));
 }
@@ -1485,7 +1440,7 @@ inline auto _Fix_arg(_Cv_TiD& _Tid, _Untuple&& _Ut)
 #pragma warning(disable : 4100) // TRANSITION, VSO#181496, unreferenced formal parameter
 // FUNCTION TEMPLATE _Call_binder
 template <class _Ret, size_t... _Ix, class _Cv_FD, class _Cv_tuple_TiD, class _Untuple>
-inline auto _Call_binder(_Invoker_ret<_Ret>, index_sequence<_Ix...>, _Cv_FD& _Obj, _Cv_tuple_TiD& _Tpl, _Untuple&& _Ut)
+auto _Call_binder(_Invoker_ret<_Ret>, index_sequence<_Ix...>, _Cv_FD& _Obj, _Cv_tuple_TiD& _Tpl, _Untuple&& _Ut)
     -> decltype(_Invoker_ret<_Ret>::_Call(
         _Obj, _Fix_arg(_STD get<_Ix>(_Tpl), _STD move(_Ut))...)) { // bind() and bind<R>() invocation
     return _Invoker_ret<_Ret>::_Call(_Obj, _Fix_arg(_STD get<_Ix>(_Tpl), _STD move(_Ut))...);
@@ -1498,8 +1453,7 @@ struct _Forced_result_type { // used by bind<R>()
     _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef _Ret result_type;
 };
 
-template <class _Ret,
-    class _Fx>
+template <class _Ret, class _Fx>
 struct _Binder_result_type { // provide result_type (sometimes)
     using _Decayed = decay_t<_Fx>;
 
@@ -1521,17 +1475,17 @@ private:
 public:
     explicit _Binder(_Fx&& _Func, _Types&&... _Args)
         : _Mypair(_One_then_variadic_args_t(), _STD forward<_Fx>(_Func),
-              _STD forward<_Types>(_Args)...) { // construct from forwarded callable object and arguments
+            _STD forward<_Types>(_Args)...) { // construct from forwarded callable object and arguments
     }
 
-#define _BINDER_OPERATOR(CONST_OPT)                                                                                 \
-    template <class... _Unbound>                                                                                    \
-    auto operator()(_Unbound&&... _Unbargs)                                                                         \
-        CONST_OPT->decltype(_Call_binder(_Invoker_ret<_Ret>(), _Seq(), _Mypair._Get_first(), _Mypair._Get_second(), \
-            _STD forward_as_tuple(_STD forward<_Unbound>(                                                           \
-                _Unbargs)...))) { /* invoke bound callable object with bound/unbound arguments */                   \
-        return _Call_binder(_Invoker_ret<_Ret>(), _Seq(), _Mypair._Get_first(), _Mypair._Get_second(),              \
-            _STD forward_as_tuple(_STD forward<_Unbound>(_Unbargs)...));                                            \
+#define _BINDER_OPERATOR(CONST_OPT)                                                                           \
+    template <class... _Unbound>                                                                              \
+    auto operator()(_Unbound&&... _Unbargs)                                                                   \
+        CONST_OPT->decltype(_Call_binder(_Invoker_ret<_Ret>(), _Seq(), _Mypair._Get_first(), _Mypair._Myval2, \
+            _STD forward_as_tuple(_STD forward<_Unbound>(                                                     \
+                _Unbargs)...))) { /* invoke bound callable object with bound/unbound arguments */             \
+        return _Call_binder(_Invoker_ret<_Ret>(), _Seq(), _Mypair._Get_first(), _Mypair._Myval2,              \
+            _STD forward_as_tuple(_STD forward<_Unbound>(_Unbargs)...));                                      \
     }
 
     _CLASS_DEFINE_CONST(_BINDER_OPERATOR)
@@ -1540,7 +1494,7 @@ public:
 
 // FUNCTION TEMPLATE bind (implicit return type)
 template <class _Fx, class... _Types>
-_NODISCARD inline _Binder<_Unforced, _Fx, _Types...> bind(
+_NODISCARD _Binder<_Unforced, _Fx, _Types...> bind(
     _Fx&& _Func, _Types&&... _Args) { // bind a callable object with an implicit return type
     return _Binder<_Unforced, _Fx, _Types...>(_STD forward<_Fx>(_Func), _STD forward<_Types>(_Args)...);
 }
@@ -1585,11 +1539,9 @@ struct uses_allocator<function<_Fty>, _Alloc> : true_type { // true_type if cont
 
 #if _HAS_CXX17
 // HETEROGENEOUS MEMORY BLOCK UTILITIES
-inline void _Add_alloc_size(size_t& _Size, const size_t _Size_added,
-    const size_t _Alignment) { // moves _Size up to account for storing an object of size _Size_added with alignment
-                               // _Alignment in a memory buffer
-                               // assumes that the memory buffer will be allocated for the "worst" alignment used in the
-                               // resulting buffer
+inline void _Add_alloc_size(size_t& _Size, const size_t _Size_added, const size_t _Alignment) {
+    // moves _Size up to account for storing an object of size _Size_added with alignment _Alignment in a memory buffer
+    // assumes that the memory buffer will be allocated for the "worst" alignment used in the resulting buffer
     const size_t _Align_masked = _Size & (_Alignment - 1u);
     _Size += _Size_added;
     if (_Align_masked != 0) {
@@ -1598,23 +1550,19 @@ inline void _Add_alloc_size(size_t& _Size, const size_t _Size_added,
 }
 
 template <class _Ty>
-inline void _Add_alloc_size(size_t& _Size) { // moves _Size up to account for allocating a _Ty
+void _Add_alloc_size(size_t& _Size) { // moves _Size up to account for allocating a _Ty
     _Add_alloc_size(_Size, sizeof(_Ty), alignof(_Ty));
 }
 
 template <class _Ty>
-inline void _Add_alloc_size(
-    size_t& _Size, const size_t _Count) { // moves _Size up to account for allocating an array of _Count _Ty instances
-    if (static_cast<size_t>(-1) / sizeof(_Ty) < _Count) {
-        _Xbad_alloc();
-    }
-
-    _Add_alloc_size(_Size, sizeof(_Ty) * _Count, alignof(_Ty));
+void _Add_alloc_size(size_t& _Size, const size_t _Count) {
+    // moves _Size up to account for allocating an array of _Count _Ty instances
+    _Add_alloc_size(_Size, _Get_size_of_n<sizeof(_Ty)>(_Count), alignof(_Ty));
 }
 
-inline void* _Decode_aligned_block(void*& _Base, size_t _Size,
-    const size_t _Alignment) { // "allocates" an object of size _Size and alignment _Alignment from _Base, and shifts
-                               // _Base up by the size necessary to decode that object.
+inline void* _Decode_aligned_block(void*& _Base, size_t _Size, const size_t _Alignment) {
+    // "allocates" an object of size _Size and alignment _Alignment from _Base, and shifts
+    // _Base up by the size necessary to decode that object.
     auto _Space  = static_cast<size_t>(-1);
     auto _Result = _STD align(_Alignment, _Size, _Base, _Space);
     _Base        = static_cast<char*>(_Base) + _Size;
@@ -1622,13 +1570,13 @@ inline void* _Decode_aligned_block(void*& _Base, size_t _Size,
 }
 
 template <class _Ty>
-inline _Ty* _Decode_aligned_block(void*& _Base) { // "allocates" a _Ty from _Base
+_Ty* _Decode_aligned_block(void*& _Base) { // "allocates" a _Ty from _Base
     return static_cast<_Ty*>(_Decode_aligned_block(_Base, sizeof(_Ty), alignof(_Ty)));
 }
 
 template <class _Ty>
-inline _Ty* _Decode_aligned_block(
-    void*& _Base, const size_t _Count) { // "allocates" an array of _Count _Ty instances from _Base
+_Ty* _Decode_aligned_block(void*& _Base, const size_t _Count) {
+    // "allocates" an array of _Count _Ty instances from _Base
     return static_cast<_Ty*>(_Decode_aligned_block(_Base, sizeof(_Ty) * _Count, alignof(_Ty)));
 }
 
@@ -1641,7 +1589,7 @@ struct _Global_delete {
 
 // CLASS TEMPLATE default_searcher
 template <class _FwdItHaystack, class _FwdItPat, class _Pred_eq>
-inline pair<_FwdItHaystack, _FwdItHaystack> _Search_pair_unchecked(_FwdItHaystack _First1, _FwdItHaystack _Last1,
+pair<_FwdItHaystack, _FwdItHaystack> _Search_pair_unchecked(_FwdItHaystack _First1, _FwdItHaystack _Last1,
     _FwdItPat _First2, _FwdItPat _Last2, _Pred_eq& _Eq, forward_iterator_tag,
     forward_iterator_tag) { // find first [_First2, _Last2) satisfying _Eq, arbitrary iterators
     for (;; ++_First1) { // loop until match or end of a sequence
@@ -1663,7 +1611,7 @@ inline pair<_FwdItHaystack, _FwdItHaystack> _Search_pair_unchecked(_FwdItHaystac
 }
 
 template <class _FwdItHaystack, class _FwdItPat, class _Pred_eq>
-inline pair<_FwdItHaystack, _FwdItHaystack> _Search_pair_unchecked(_FwdItHaystack _First1, _FwdItHaystack _Last1,
+pair<_FwdItHaystack, _FwdItHaystack> _Search_pair_unchecked(_FwdItHaystack _First1, _FwdItHaystack _Last1,
     _FwdItPat _First2, _FwdItPat _Last2, _Pred_eq& _Eq, random_access_iterator_tag,
     random_access_iterator_tag) { // find first [_First2, _Last2) satisfying _Eq, random-access iterators
     _Iter_diff_t<_FwdItHaystack> _Count1 = _Last1 - _First1;
@@ -1685,14 +1633,13 @@ inline pair<_FwdItHaystack, _FwdItHaystack> _Search_pair_unchecked(_FwdItHaystac
     return {_Last1, _Last1};
 }
 
-template <class _FwdItPat,
-    class _Pred_eq = equal_to<>>
+template <class _FwdItPat, class _Pred_eq = equal_to<>>
 class default_searcher { // functor to search haystacks for needles
 public:
     default_searcher(_FwdItPat _First, _FwdItPat _Last, _Pred_eq _Eq = _Pred_eq())
         : _Data{_One_then_variadic_args_t{}, _STD move(_Eq),
-              pair<_FwdItPat, _FwdItPat>{_First, _Last}} { // construct a default_searcher
-        const auto& _Pat = _Data._Get_second();
+            pair<_FwdItPat, _FwdItPat>{_First, _Last}} { // construct a default_searcher
+        const auto& _Pat = _Data._Myval2;
         _Adl_verify_range(_Pat.first, _Pat.second);
     }
 
@@ -1701,7 +1648,7 @@ public:
         _FwdItHaystack _First, _FwdItHaystack _Last) const { // search [_First, _Last) for the searcher's pattern
         _Adl_verify_range(_First, _Last);
         const auto& _Eq  = _Data._Get_first();
-        const auto& _Pat = _Data._Get_second();
+        const auto& _Pat = _Data._Myval2;
         _Adl_verify_range(_Pat.first, _Pat.second); // check again to ensure container is not destroyed
         const auto _Result =
             _Search_pair_unchecked(_Get_unwrapped(_First), _Get_unwrapped(_Last), _Get_unwrapped(_Pat.first),
@@ -1717,8 +1664,7 @@ private:
 
 
 // STRUCT TEMPLATE _Boyer_moore_hash_delta_1_table
-template <class _RanItPat, class _Hash_ty,
-    class _Pred_eq>
+template <class _RanItPat, class _Hash_ty, class _Pred_eq>
 struct _Boyer_moore_hash_delta_1_table { // stores the Boyer-Moore delta_1 table using a hash table
     using _Value_t = _Iter_value_t<_RanItPat>;
     using _Diff    = _Iter_diff_t<_RanItPat>;
@@ -1755,8 +1701,7 @@ private:
 
 
 // STRUCT TEMPLATE _Boyer_moore_flat_delta_1_table
-template <class _RanItPat,
-    _Iter_diff_t<_RanItPat> _Limit>
+template <class _RanItPat, _Iter_diff_t<_RanItPat> _Limit>
 struct _Boyer_moore_flat_delta_1_table { // stores the Boyer-Moore delta_1 table using a plain array lookup
     using _Value_t = _Iter_value_t<_RanItPat>;
     using _Diff    = _Iter_diff_t<_RanItPat>;
@@ -1793,7 +1738,7 @@ private:
 
 // FUNCTION TEMPLATE _Build_boyer_moore_delta_2_table
 template <class _RanItPat, class _Pred_eq>
-inline void _Build_boyer_moore_delta_2_table(_Iter_diff_t<_RanItPat>* _Shifts, const _RanItPat _Pat_first,
+void _Build_boyer_moore_delta_2_table(_Iter_diff_t<_RanItPat>* _Shifts, const _RanItPat _Pat_first,
     const _Iter_diff_t<_RanItPat> _Pat_size,
     _Pred_eq& _Eq) { // builds Boyer-Moore's delta_2 table from a pattern [_Pat_first, _Pat_first + _Pat_size)
                      // pre: _Shifts is a pointer to _Pat_size _Iter_diff_t<_RanIt>s
@@ -1824,8 +1769,8 @@ inline void _Build_boyer_moore_delta_2_table(_Iter_diff_t<_RanItPat>* _Shifts, c
 
 // FUNCTION TEMPLATE _Boyer_moore_search
 template <class _Delta1_t, class _RanItHaystack>
-inline pair<_RanItHaystack, _RanItHaystack> _Boyer_moore_search(const _Delta1_t& _Delta1,
-    typename _Delta1_t::_Diff* _Delta2, _RanItHaystack _First,
+pair<_RanItHaystack, _RanItHaystack> _Boyer_moore_search(const _Delta1_t& _Delta1, typename _Delta1_t::_Diff* _Delta2,
+    _RanItHaystack _First,
     _RanItHaystack _Last) { // run the loop of the Boyer-Moore string search algorithm
     static_assert(is_same_v<typename _Delta1_t::_Value_t, _Iter_value_t<_RanItHaystack>>,
         "boyer_moore_searcher requires matching iterator value types");
@@ -1868,8 +1813,8 @@ inline pair<_RanItHaystack, _RanItHaystack> _Boyer_moore_search(const _Delta1_t&
 
 // FUNCTION TEMPLATE _Boyer_moore_horspool_search
 template <class _Delta1_t, class _RanItHaystack>
-inline pair<_RanItHaystack, _RanItHaystack> _Boyer_moore_horspool_search(const _Delta1_t& _Delta1,
-    _RanItHaystack _First, _RanItHaystack _Last) { // run the loop of the Boyer-Moore-Horspool string search algorithm
+pair<_RanItHaystack, _RanItHaystack> _Boyer_moore_horspool_search(const _Delta1_t& _Delta1, _RanItHaystack _First,
+    _RanItHaystack _Last) { // run the loop of the Boyer-Moore-Horspool string search algorithm
     static_assert(is_same_v<typename _Delta1_t::_Value_t, _Iter_value_t<_RanItHaystack>>,
         "boyer_moore_horspool_searcher requires matching iterator value types");
     using _Diff = typename _Delta1_t::_Diff;
@@ -2109,14 +2054,13 @@ using _Boyer_moore_traits =
 
 
 // CLASS TEMPLATE boyer_moore_searcher
-template <class _RanItPat, class _Hash_ty = hash<_Iter_value_t<_RanItPat>>,
-    class _Pred_eq = equal_to<>>
+template <class _RanItPat, class _Hash_ty = hash<_Iter_value_t<_RanItPat>>, class _Pred_eq = equal_to<>>
 class boyer_moore_searcher { // an implementation of the Boyer-Moore string search algorithm
 public:
     boyer_moore_searcher(
         const _RanItPat _First, const _RanItPat _Last, _Hash_ty _Hash_fn = _Hash_ty(), _Pred_eq _Eq = _Pred_eq())
         : _Data(_Traits::template _Build_boyer_moore<true>(_First, _Last, _STD move(_Hash_fn),
-              _STD move(_Eq))) { // preprocess a pattern for use with the Boyer-Moore string search algorithm
+            _STD move(_Eq))) { // preprocess a pattern for use with the Boyer-Moore string search algorithm
     }
 
     boyer_moore_searcher(const boyer_moore_searcher& _Other) noexcept // strengthened
@@ -2150,15 +2094,14 @@ private:
 
 
 // CLASS TEMPLATE boyer_moore_horspool_searcher
-template <class _RanItPat, class _Hash_ty = hash<_Iter_value_t<_RanItPat>>,
-    class _Pred_eq = equal_to<>>
+template <class _RanItPat, class _Hash_ty = hash<_Iter_value_t<_RanItPat>>, class _Pred_eq = equal_to<>>
 class boyer_moore_horspool_searcher { // an implementation of the Boyer-Moore-Horspool string search algorithm
                                       // (equivalent to Boyer-Moore without the second table)
 public:
     boyer_moore_horspool_searcher(
         const _RanItPat _First, const _RanItPat _Last, _Hash_ty _Hash_fn = _Hash_ty(), _Pred_eq _Eq = _Pred_eq())
         : _Data(_Traits::template _Build_boyer_moore<false>(_First, _Last, _STD move(_Hash_fn),
-              _STD move(_Eq))) { // preprocess a pattern for use with the Boyer-Moore-Horspool string search algorithm
+            _STD move(_Eq))) { // preprocess a pattern for use with the Boyer-Moore-Horspool string search algorithm
     }
 
     boyer_moore_horspool_searcher(const boyer_moore_horspool_searcher& _Other) noexcept // strengthened
@@ -2212,7 +2155,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _FUNCTIONAL_
 
 /*

@@ -10,7 +10,7 @@
 
 #include <corecrt_terminate.h>
 
-#ifndef RC_INVOKED
+#if _VCRT_COMPILER_PREPROCESSOR
 
 _CRT_BEGIN_C_HEADER
 
@@ -60,4 +60,4 @@ struct _EXCEPTION_POINTERS;
 
 _CRT_END_C_HEADER
 
-#endif // RC_INVOKED
+#endif // _VCRT_COMPILER_PREPROCESSOR

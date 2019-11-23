@@ -3,7 +3,8 @@
 #pragma once
 #ifndef _XCHARCONV_H
 #define _XCHARCONV_H
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <stdint.h>
 #include <type_traits>
@@ -44,5 +45,5 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XCHARCONV_H

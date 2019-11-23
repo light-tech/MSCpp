@@ -2252,7 +2252,7 @@ template <typename _Value_type, int _Rank = 1> class array_view : public _Array_
     template <typename _T, int _R>
     friend class array;
 
-    friend const _Buffer_descriptor& details::_Get_buffer_descriptor<array_view<_Value_type, _Rank>>(const array_view<_Value_type, _Rank>& _Array) __GPU;
+    friend const _Base::_Buffer_descriptor& details::_Get_buffer_descriptor<array_view<_Value_type, _Rank>>(const array_view<_Value_type, _Rank>& _Array) __GPU;
 
 public:
     static const int rank = _Rank;
@@ -2584,7 +2584,7 @@ public:
     /// </returns>
     _Value_type& get_ref(const index<_Rank>& _Index) const __GPU
     {
-        void *_Ptr = _Access(_Index);
+        void *_Ptr = this->_Access(_Index);
         return *reinterpret_cast<value_type*>(_Ptr);
     }
 
@@ -2613,7 +2613,7 @@ public:
     /// </returns>
     _Value_type& operator() (const index<_Rank>& _Index) const __GPU
     {
-        void * _Ptr = _Access(_Read_write_access, _Index);
+        void * _Ptr = this->_Access(_Read_write_access, _Index);
         return *reinterpret_cast<_Value_type*>(_Ptr);
     }
 
@@ -2685,7 +2685,7 @@ public:
     /// </returns>
     array_view section(const Concurrency::index<_Rank>& _Section_origin, const Concurrency::extent<_Rank>& _Section_extent) const __GPU
     {
-        return _Convert<_Value_type>(_Section(_Section_origin, _Section_extent));
+        return _Convert<_Value_type>(this->_Section(_Section_origin, _Section_extent));
     }
 
     /// <summary>
@@ -2817,7 +2817,7 @@ public:
     /// </returns>
     template <int _New_rank> array_view<_Value_type,_New_rank> view_as(const Concurrency::extent<_New_rank>& _View_extent) const __GPU
     {
-        return _Convert<_Value_type>(_View_as(_View_extent));
+        return _Convert<_Value_type>(this->_View_as(_View_extent));
     }
 
     /// <summary>
@@ -2999,7 +2999,7 @@ private:
         _Initialize();
     }
 
-    array_view(_Buffer_descriptor& _Src_buffer, const Concurrency::extent<_Rank>& _Extent) __GPU
+    array_view(_Base::_Buffer_descriptor& _Src_buffer, const Concurrency::extent<_Rank>& _Extent) __GPU
         :_Base(_Src_buffer,_Extent)
     {
         _Initialize();
@@ -3046,7 +3046,7 @@ class array_view<const _Value_type, _Rank> : public _Array_view_base<_Rank, size
     friend class array_view<_Value_type, _Rank+1>;
     friend class array_view<const _Value_type, _Rank+1>;
 
-    friend const _Buffer_descriptor& details::_Get_buffer_descriptor<array_view<const _Value_type, _Rank>>(const array_view<const _Value_type, _Rank>& _Array) __GPU;
+    friend const _Base::_Buffer_descriptor& details::_Get_buffer_descriptor<array_view<const _Value_type, _Rank>>(const array_view<const _Value_type, _Rank>& _Array) __GPU;
 
 public:
     static const int rank = _Rank;
@@ -3430,7 +3430,7 @@ public:
     /// </returns>
     const _Value_type& get_ref(const index<_Rank>& _Index) const __GPU
     {
-        void *_Ptr = _Access(_Index);
+        void *_Ptr = this->_Access(_Index);
         return *reinterpret_cast<value_type*>(_Ptr);
     }
 
@@ -3459,7 +3459,7 @@ public:
     /// </returns>
     const _Value_type& operator() (const index<_Rank>& _Index) const __GPU
     {
-        void * _Ptr = _Access(_Read_access, _Index);
+        void * _Ptr = this->_Access(_Read_access, _Index);
         return *reinterpret_cast<value_type*>(_Ptr);
     }
 
@@ -3531,7 +3531,7 @@ public:
     /// </returns>
     array_view section(const Concurrency::index<_Rank>& _Section_origin, const Concurrency::extent<_Rank>& _Section_extent) const __GPU
     {
-        return _Convert<_Value_type>(_Section(_Section_origin, _Section_extent));
+        return _Convert<_Value_type>(this->_Section(_Section_origin, _Section_extent));
     }
 
     /// <summary>
@@ -3663,7 +3663,7 @@ public:
     /// </returns>
     template <int _New_rank> array_view<const _Value_type,_New_rank> view_as(const Concurrency::extent<_New_rank>& _View_extent) const __GPU
     {
-        return _Convert<_Value_type>(_View_as(_View_extent));
+        return _Convert<_Value_type>(this->_View_as(_View_extent));
     }
 
     /// <summary>

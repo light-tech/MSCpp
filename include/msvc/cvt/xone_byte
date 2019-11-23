@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _CVT_XONE_BYTE_
 #define _CVT_XONE_BYTE_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <cwchar>
 #include <locale>
 
@@ -33,49 +34,44 @@ namespace stdext {
             explicit _Cvt_one_byte(size_t _Refs = 0) : _Mybase(_Refs) { // construct with ref count
             }
 
-            virtual ~_Cvt_one_byte() noexcept { // destroy the object
-            }
+            virtual ~_Cvt_one_byte() noexcept {}
 
         protected:
             virtual result do_in(_Statype&, const _Byte* _First1, const _Byte* _Last1, const _Byte*& _Mid1,
-                _Elem* _First2, _Elem* _Last2,
-                _Elem*& _Mid2) const { // convert bytes [_First1, _Last1) to [_First2, _Last)
-                unsigned long _Maxc = _Maxcode; // to quiet warnings
-
+                _Elem* _First2, _Elem* _Last2, _Elem*& _Mid2) const {
+                // convert bytes [_First1, _Last1) to [_First2, _Last)
                 _Mid1 = _First1;
                 _Mid2 = _First2;
                 for (; _Mid1 != _Last1 && _Mid2 != _Last2; ++_Mid1) { // get a byte and map it
-                    unsigned short _Bytecode = (unsigned char) *_Mid1;
+                    unsigned short _Bytecode = static_cast<unsigned char>(*_Mid1);
 
                     if ((_Table::_Nlow <= _Bytecode && (_Bytecode = _Table::_Btw[_Bytecode - _Table::_Nlow]) == 0)
-                        || _Maxc < _Bytecode) {
+                        || _Maxcode < _Bytecode) {
                         return _Mybase::error;
                     }
 
-                    *_Mid2++ = (_Elem) _Bytecode;
+                    *_Mid2++ = static_cast<_Elem>(_Bytecode);
                 }
 
                 return _First1 == _Mid1 ? _Mybase::partial : _Mybase::ok;
             }
 
             virtual result do_out(_Statype&, const _Elem* _First1, const _Elem* _Last1, const _Elem*& _Mid1,
-                _Byte* _First2, _Byte* _Last2,
-                _Byte*& _Mid2) const { // convert [_First1, _Last1) to bytes [_First2, _Last)
-                unsigned long _Maxc = _Maxcode; // to quiet warnings
-
+                _Byte* _First2, _Byte* _Last2, _Byte*& _Mid2) const {
+                // convert [_First1, _Last1) to bytes [_First2, _Last)
                 _Mid1 = _First1;
                 _Mid2 = _First2;
                 for (; _Mid1 != _Last1 && _Mid2 != _Last2; ++_Mid1) { // get an element and map it
-                    unsigned long _Hugecode  = (unsigned long) *_Mid1;
-                    unsigned short _Widecode = (unsigned short) _Hugecode;
+                    unsigned long _Hugecode  = static_cast<unsigned long>(*_Mid1);
+                    unsigned short _Widecode = static_cast<unsigned short>(_Hugecode);
 
-                    if (_Maxc < _Widecode) {
+                    if (_Maxcode < _Widecode) {
                         return _Mybase::error; // value too large
                     }
 
                     if (_Widecode >= _Table::_Nlow
                         && (_Widecode >= 0x100
-                               || _Table::_Btw[_Widecode - _Table::_Nlow] != _Widecode)) { // search for a valid mapping
+                            || _Table::_Btw[_Widecode - _Table::_Nlow] != _Widecode)) { // search for a valid mapping
                         unsigned long _Lo = 0;
                         unsigned long _Hi = sizeof(_Table::_Wvalid) / sizeof(_Table::_Wvalid[0]);
 
@@ -97,7 +93,7 @@ namespace stdext {
                         }
                     }
 
-                    *_Mid2++ = (_Byte) _Widecode;
+                    *_Mid2++ = static_cast<_Byte>(_Widecode);
                 }
 
                 return _First1 == _Mid1 ? _Mybase::partial : _Mybase::ok;
@@ -113,7 +109,7 @@ namespace stdext {
                 noexcept { // return min(_Count, converted length of bytes [_First1, _Last1))
                 const auto _Wchars = static_cast<size_t>(_Last1 - _First1);
 
-                return (int) (_Wchars < _Count ? _Wchars : _Count);
+                return static_cast<int>(_Wchars < _Count ? _Wchars : _Count);
             }
 
             virtual bool do_always_noconv() const noexcept { // return true if conversions never change input
@@ -131,41 +127,12 @@ namespace stdext {
     } // namespace cvt
 } // namespace stdext
 
-#if 0 && defined(_TEST_IT) // disable standalone testing
-#define NCHARS 0x100
-#define MYWC_MAX 0xffff
-#define MYFILE "xone_byte"
-#define MYNAME stdext::cvt::_Cvt_one_byte<wchar_t, _TEST_TABLE>
-
-#ifndef _TEST_TABLE
-#define _TEST_TABLE test_table
-struct test_table {
- enum {
-  _Nlow = 0xfe,
-  _Nbytes = 1};
- static unsigned short _Btw[0x02];
- static unsigned short _Dbvalid[1];
- static unsigned short _Dbtw[1];
- static unsigned short _Wvalid[2];
- static unsigned char _Wtb[2];
- };
-
-unsigned short test_table::_Btw[2] = {0x3000, 0x2000};
-unsigned short test_table::_Dbvalid[1] = {0};
-unsigned short test_table::_Dbtw[1] = {0};
-unsigned short test_table::_Wvalid[2] = {0x2000, 0x3000};
-unsigned char test_table::_Wtb[2] = {0xff, 0xfe};
-#endif // _TEST_TABLE
-
-#include <cvt/xtest>
-#endif // 0 && defined(_TEST_IT)
-
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_XONE_BYTE_
 
 /*

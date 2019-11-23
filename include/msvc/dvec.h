@@ -22,7 +22,8 @@
 
 #ifndef _DVEC_H_INCLUDED
 #define _DVEC_H_INCLUDED
-#ifndef RC_INVOKED
+#include <vcruntime.h>
+#if _VCRT_COMPILER_PREPROCESSOR
 
 #if !defined __cplusplus
     #error ERROR: This file is only supported in C++ compilations!
@@ -34,7 +35,6 @@
 
 #include <immintrin.h> /* SSE2 intrinsic function definition include file */
 #include <fvec.h>
-#include <vcruntime.h>
 
 #ifndef _VEC_ASSERT
 #ifdef NDEBUG
@@ -1620,7 +1620,6 @@ inline F32vec4 F64vec4ToF32vec8(const F64vec4 &_A){
 
 #pragma pack(pop)
 
-#endif  /* defined (_M_CEE_PURE) */
-
-#endif  /* RC_INVOKED */
-#endif  /* _DVEC_H_INCLUDED */
+#endif /* defined (_M_CEE_PURE) */
+#endif /* _VCRT_COMPILER_PREPROCESSOR */
+#endif /* _DVEC_H_INCLUDED */

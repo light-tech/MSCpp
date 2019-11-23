@@ -10,6 +10,10 @@
 
 #pragma once
 
+#if defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64)
+#include <arm64_neon.h>
+#else  /* defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64)*/
+
 #include <stdint.h>
 #include <sal.h>
 
@@ -7716,3 +7720,5 @@ __n128x2 __vzipq_u8(__n128 _Qd, __n128 _Qm);
 #endif  /* defined (__cplusplus) */
 
 #endif
+
+#endif  /* defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64)*/

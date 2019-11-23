@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _THR_XTHREADS_H
 #define _THR_XTHREADS_H
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <limits.h>
 #include <thr/xtimec.h>
 
@@ -146,7 +147,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _THR_XTHREADS_H
 
 /*

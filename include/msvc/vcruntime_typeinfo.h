@@ -8,10 +8,10 @@
 #pragma once
 
 #include <vcruntime.h>
+#if _VCRT_COMPILER_PREPROCESSOR
 #include <vcruntime_exception.h>
 
 #pragma pack(push, _CRT_PACKING)
-#ifndef RC_INVOKED
 
 #if defined _M_CEE_MIXED && !defined _VCRT_BUILD
     // Provide a fake definition of __type_info_node to suppress linker warning
@@ -191,5 +191,5 @@ private:
 } // namespace std
 
 #endif // _HAS_EXCEPTIONS
-#endif // !RC_INVOKED
 #pragma pack(pop)
+#endif // _VCRT_COMPILER_PREPROCESSOR

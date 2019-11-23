@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _XKEYCHECK_H
 #define _XKEYCHECK_H
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #if !defined(_ALLOW_KEYWORD_MACROS) && !defined(__INTELLISENSE__)
 
@@ -71,6 +72,12 @@ Enable warning C4005 to find the forbidden define.
 Enable warning C4005 to find the forbidden define.
 #endif // char
 
+#if defined(char8_t) && _HAS_CXX20
+#define char8_t EMIT WARNING C4005
+#error The C++ Standard Library forbids macroizing the keyword "char8_t". \
+Enable warning C4005 to find the forbidden define.
+#endif // char8_t
+
 #if defined(char16_t)
 #define char16_t EMIT WARNING C4005
 #error The C++ Standard Library forbids macroizing the keyword "char16_t". \
@@ -101,6 +108,12 @@ Enable warning C4005 to find the forbidden define.
 Enable warning C4005 to find the forbidden define.
 #endif // const
 
+#if defined(consteval) && _HAS_CXX20
+#define consteval EMIT WARNING C4005
+#error The C++ Standard Library forbids macroizing the keyword "consteval". \
+Enable warning C4005 to find the forbidden define.
+#endif // consteval
+
 #if defined(constexpr)
 #define constexpr EMIT WARNING C4005
 #error The C++ Standard Library forbids macroizing the keyword "constexpr". \
@@ -118,6 +131,24 @@ Enable warning C4005 to find the forbidden define.
 #error The C++ Standard Library forbids macroizing the keyword "continue". \
 Enable warning C4005 to find the forbidden define.
 #endif // continue
+
+#if defined(co_await) && _HAS_CXX20
+#define co_await EMIT WARNING C4005
+#error The C++ Standard Library forbids macroizing the keyword "co_await". \
+Enable warning C4005 to find the forbidden define.
+#endif // co_await
+
+#if defined(co_return) && _HAS_CXX20
+#define co_return EMIT WARNING C4005
+#error The C++ Standard Library forbids macroizing the keyword "co_return". \
+Enable warning C4005 to find the forbidden define.
+#endif // co_return
+
+#if defined(co_yield) && _HAS_CXX20
+#define co_yield EMIT WARNING C4005
+#error The C++ Standard Library forbids macroizing the keyword "co_yield". \
+Enable warning C4005 to find the forbidden define.
+#endif // co_yield
 
 #if defined(decltype)
 #define decltype EMIT WARNING C4005
@@ -487,6 +518,18 @@ Enable warning C4005 to find the forbidden define.
 Enable warning C4005 to find the forbidden define.
 #endif // final
 
+#if defined(import) && _HAS_CXX20
+#define import EMIT WARNING C4005
+#error The C++ Standard Library forbids macroizing the contextual keyword "import". \
+Enable warning C4005 to find the forbidden define.
+#endif // import
+
+#if defined(module) && _HAS_CXX20
+#define module EMIT WARNING C4005
+#error The C++ Standard Library forbids macroizing the contextual keyword "module". \
+Enable warning C4005 to find the forbidden define.
+#endif // module
+
 #if defined(override)
 #define override EMIT WARNING C4005
 #error The C++ Standard Library forbids macroizing the contextual keyword "override". \
@@ -554,7 +597,7 @@ Enable warning C4005 to find the forbidden define.
 
 #endif // !defined(_ALLOW_KEYWORD_MACROS) && !defined(__INTELLISENSE__)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XKEYCHECK_H
 
 // Copyright (c) by P.J. Plauger. All rights reserved.

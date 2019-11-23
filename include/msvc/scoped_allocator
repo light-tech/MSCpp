@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _SCOPED_ALLOCATOR_
 #define _SCOPED_ALLOCATOR_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <xpolymorphic_allocator.h>
 
 #pragma pack(push, _CRT_PACKING)
@@ -14,8 +15,7 @@ _STL_DISABLE_CLANG_WARNINGS
 
 _STD_BEGIN
 // FUNCTION TEMPLATE _Scoped_outermost
-template <class _Alloc,
-    class = void>
+template <class _Alloc, class = void>
 struct _Scoped_outermost_helper { // gets the outermost allocator
     static decltype(auto) _Fn(_Alloc& _Al) { // gets the outermost allocator
         return _Al;
@@ -33,7 +33,7 @@ struct _Scoped_outermost_helper<_Alloc,
 };
 
 template <class _Alloc>
-inline decltype(auto) _Scoped_outermost(_Alloc& _Al) { // gets the outermost allocator
+decltype(auto) _Scoped_outermost(_Alloc& _Al) { // gets the outermost allocator
     return _Scoped_outermost_helper<_Alloc>::_Fn(_Al);
 }
 
@@ -173,8 +173,8 @@ public:
     template <class _Other, enable_if_t<is_constructible_v<_Outer, _Other>, int> = 0>
     scoped_allocator_adaptor(_Other&& _Other_arg, const _Inner&... _Inner_args) noexcept
         : _Mybase(_STD forward<_Other>(_Other_arg),
-              _Inner_args...) { // construct from (_Other, _Inner...)
-                                // also handles rebinding construction when sizeof...(_Inner) == 0
+            _Inner_args...) { // construct from (_Other, _Inner...)
+                              // also handles rebinding construction when sizeof...(_Inner) == 0
     }
 
     scoped_allocator_adaptor(const scoped_allocator_adaptor& _Right) noexcept
@@ -189,14 +189,14 @@ public:
         enable_if_t<_Enabled, int> = 0>
     scoped_allocator_adaptor(const scoped_allocator_adaptor<_Other, _Inner...>& _Right) noexcept
         : _Mybase(
-              _Right.outer_allocator(), _Right.inner_allocator()) { // construct from const adaptor<_Other, _Inner...>&
+            _Right.outer_allocator(), _Right.inner_allocator()) { // construct from const adaptor<_Other, _Inner...>&
     }
 
     template <class _Other, bool _Enabled = sizeof...(_Inner) != 0 && is_constructible_v<_Outer, _Other>,
         enable_if_t<_Enabled, int> = 0>
     scoped_allocator_adaptor(scoped_allocator_adaptor<_Other, _Inner...>&& _Right) noexcept
         : _Mybase(_STD move(_Right.outer_allocator()),
-              _STD move(_Right.inner_allocator())) { // construct from adaptor<_Other, _Inner...>&&
+            _STD move(_Right.inner_allocator())) { // construct from adaptor<_Other, _Inner...>&&
     }
 
     scoped_allocator_adaptor(_Secret_scoped_allocator_construct_tag, const outer_allocator_type& _Outer_arg,
@@ -260,20 +260,20 @@ scoped_allocator_adaptor(_Outer, _Inner...)->scoped_allocator_adaptor<_Outer, _I
 #endif // _HAS_CXX17
 
 template <class _Outer1, class _Outer2, class _Inner1, class... _Inner>
-_NODISCARD inline bool operator==(const scoped_allocator_adaptor<_Outer1, _Inner1, _Inner...>& _Left,
+_NODISCARD bool operator==(const scoped_allocator_adaptor<_Outer1, _Inner1, _Inner...>& _Left,
     const scoped_allocator_adaptor<_Outer2, _Inner1, _Inner...>&
         _Right) noexcept { // compare scoped_allocator_adaptors for equality
     return _Left.outer_allocator() == _Right.outer_allocator() && _Left.inner_allocator() == _Right.inner_allocator();
 }
 
 template <class _Outer1, class _Outer2>
-_NODISCARD inline bool operator==(const scoped_allocator_adaptor<_Outer1>& _Left,
+_NODISCARD bool operator==(const scoped_allocator_adaptor<_Outer1>& _Left,
     const scoped_allocator_adaptor<_Outer2>& _Right) noexcept { // compare scoped_allocator_adaptors for equality
     return _Left.outer_allocator() == _Right.outer_allocator();
 }
 
 template <class _Outer1, class _Outer2, class... _Inner>
-_NODISCARD inline bool operator!=(const scoped_allocator_adaptor<_Outer1, _Inner...>& _Left,
+_NODISCARD bool operator!=(const scoped_allocator_adaptor<_Outer1, _Inner...>& _Left,
     const scoped_allocator_adaptor<_Outer2, _Inner...>&
         _Right) noexcept { // compare scoped_allocator_adaptors for equality
     return !(_Left == _Right);
@@ -284,7 +284,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _SCOPED_ALLOCATOR_
 
 /*

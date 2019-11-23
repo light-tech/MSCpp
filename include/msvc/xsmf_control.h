@@ -3,8 +3,8 @@
 #pragma once
 #ifndef _XSMF_CONTROL_H
 #define _XSMF_CONTROL_H
-#ifndef RC_INVOKED
-#include <yvals.h>
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <type_traits>
 
@@ -151,5 +151,5 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XSMF_CONTROL_H

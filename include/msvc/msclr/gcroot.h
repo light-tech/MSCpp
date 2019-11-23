@@ -33,7 +33,8 @@
 
 #if !defined (_INC_MSCLR_GCROOT)
 #define _INC_MSCLR_GCROOT
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <stddef.h>
 
@@ -153,5 +154,5 @@ void swap( gcroot<T> & _left,
 #undef __VOIDPTR_TO_GCHANDLE
 #undef __NULLPTR
 
-#endif  /* RC_INVOKED */
-#endif  /* !defined (_INC_MSCLR_GCROOT) */
+#endif /* _STL_COMPILER_PREPROCESSOR */
+#endif /* !defined (_INC_MSCLR_GCROOT) */

@@ -20,6 +20,7 @@ enum ISA_AVAILABILITY
     __ISA_AVAILABLE_AVX   = 3,
     __ISA_AVAILABLE_ENFSTRG = 4,
     __ISA_AVAILABLE_AVX2 = 5,
+    __ISA_AVAILABLE_AVX512 = 6,
 
     __ISA_AVAILABLE_ARMNT   = 0,   // minimum Win8 ARM support (but w/o NEON)
     __ISA_AVAILABLE_NEON    = 1,   // support for 128-bit NEON instructions

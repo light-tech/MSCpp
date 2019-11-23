@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _ISTREAM_
 #define _ISTREAM_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <ostream>
 
 #pragma pack(push, _CRT_PACKING)
@@ -66,8 +67,7 @@ public:
     __CLR_OR_THIS_CALL basic_istream(const basic_istream&) = delete;
     basic_istream& __CLR_OR_THIS_CALL operator=(const basic_istream&) = delete;
 
-    virtual __CLR_OR_THIS_CALL ~basic_istream() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~basic_istream() noexcept {}
 
     using int_type = typename _Traits::int_type;
     using pos_type = typename _Traits::pos_type;
@@ -77,14 +77,16 @@ public:
     class _Sentry_base { // stores thread lock and reference to input stream
     public:
         __CLR_OR_THIS_CALL _Sentry_base(basic_istream& _Istr) : _Myistr(_Istr) { // lock the stream buffer, if there
-            if (_Myistr.rdbuf() != nullptr) {
-                _Myistr.rdbuf()->_Lock();
+            const auto _Rdbuf = _Myistr.rdbuf();
+            if (_Rdbuf) {
+                _Rdbuf->_Lock();
             }
         }
 
         __CLR_OR_THIS_CALL ~_Sentry_base() noexcept { // destroy after unlocking
-            if (_Myistr.rdbuf() != nullptr) {
-                _Myistr.rdbuf()->_Unlock();
+            const auto _Rdbuf = _Myistr.rdbuf();
+            if (_Rdbuf) {
+                _Rdbuf->_Unlock();
             }
         }
 
@@ -112,34 +114,40 @@ public:
     };
 
     bool __CLR_OR_THIS_CALL _Ipfx(bool _Noskip = false) { // test stream state and skip whitespace as needed
-        if (this->good()) { // state okay, flush tied stream and skip whitespace
-            if (_Myios::tie() != nullptr) {
-                _Myios::tie()->flush();
-            }
-
-            if (!_Noskip && this->flags() & ios_base::skipws) { // skip whitespace
-                const _Ctype& _Ctype_fac = _STD use_facet<_Ctype>(this->getloc());
-
-                _TRY_IO_BEGIN
-                int_type _Meta = _Myios::rdbuf()->sgetc();
-
-                for (;; _Meta = _Myios::rdbuf()->snextc()) {
-                    if (_Traits::eq_int_type(_Traits::eof(), _Meta)) { // end of file, quit
-                        _Myios::setstate(ios_base::eofbit);
-                        break;
-                    } else if (!_Ctype_fac.is(_Ctype::space, _Traits::to_char_type(_Meta))) {
-                        break; // not whitespace, quit
-                    }
-                }
-                _CATCH_IO_END
-            }
-
-            if (this->good()) {
-                return true;
-            }
+        if (!this->good()) {
+            _Myios::setstate(ios_base::failbit);
+            return false;
         }
-        _Myios::setstate(ios_base::failbit);
-        return false;
+
+        // state okay, flush tied stream and skip whitespace
+        const auto _Tied = _Myios::tie();
+        if (_Tied) {
+            _Tied->flush();
+        }
+
+        bool _Eof = false;
+        if (!_Noskip && this->flags() & ios_base::skipws) { // skip whitespace
+            const _Ctype& _Ctype_fac = _STD use_facet<_Ctype>(this->getloc());
+
+            _TRY_IO_BEGIN
+            int_type _Meta = _Myios::rdbuf()->sgetc();
+
+            for (;; _Meta = _Myios::rdbuf()->snextc()) {
+                if (_Traits::eq_int_type(_Traits::eof(), _Meta)) { // end of file, quit
+                    _Eof = true;
+                    break;
+                } else if (!_Ctype_fac.is(_Ctype::space, _Traits::to_char_type(_Meta))) {
+                    break; // not whitespace, quit
+                }
+            }
+            _CATCH_IO_END
+        }
+
+        if (_Eof) {
+            _Myios::setstate(ios_base::eofbit | ios_base::failbit);
+        }
+
+        return this->good();
     }
 
     bool __CLR_OR_THIS_CALL ipfx(bool _Noskip = false) { // test stream state and skip whitespace as needed (retained)
@@ -152,32 +160,32 @@ public:
 #ifdef _M_CEE_PURE
     basic_istream& __CLR_OR_THIS_CALL operator>>(
         basic_istream&(__clrcall* _Pfn)(basic_istream&) ) { // call basic_istream manipulator
-        return (*_Pfn)(*this);
+        return _Pfn(*this);
     }
 
     basic_istream& __CLR_OR_THIS_CALL operator>>(_Myios&(__clrcall* _Pfn)(_Myios&) ) { // call basic_ios manipulator
-        (*_Pfn)(*(_Myios*) this);
+        _Pfn(*this);
         return *this;
     }
 
     basic_istream& __CLR_OR_THIS_CALL operator>>(ios_base&(__clrcall* _Pfn)(ios_base&) ) { // call ios_base manipulator
-        (*_Pfn)(*(ios_base*) this);
+        _Pfn(*this);
         return *this;
     }
 #endif // _M_CEE_PURE
 
     basic_istream& __CLR_OR_THIS_CALL operator>>(
         basic_istream&(__cdecl* _Pfn)(basic_istream&) ) { // call basic_istream manipulator
-        return (*_Pfn)(*this);
+        return _Pfn(*this);
     }
 
     basic_istream& __CLR_OR_THIS_CALL operator>>(_Myios&(__cdecl* _Pfn)(_Myios&) ) { // call basic_ios manipulator
-        (*_Pfn)(*(_Myios*) this);
+        _Pfn(*this);
         return *this;
     }
 
     basic_istream& __CLR_OR_THIS_CALL operator>>(ios_base&(__cdecl* _Pfn)(ios_base&) ) { // call ios_base manipulator
-        (*_Pfn)(*(ios_base*) this);
+        _Pfn(*this);
         return *this;
     }
 
@@ -286,7 +294,7 @@ public:
         _Chcount = 0; // behaves as an unformatted input function
         const sentry _Ok(*this, true);
         ios_base::iostate _State = ios_base::goodbit;
-        if (_Ok && _Strbuf != nullptr) { // state okay, extract characters
+        if (_Ok && _Strbuf) { // state okay, extract characters
             _TRY_IO_BEGIN
             for (int_type _Meta = _Myios::rdbuf()->sgetc();; _Meta = _Myios::rdbuf()->snextc()) {
                 if (_Traits::eq_int_type(_Traits::eof(), _Meta)) { // end of file, quit
@@ -309,7 +317,7 @@ public:
         }
 
         if (_Chcount == 0) { // If the function inserts no characters, it calls setstate(failbit)
-            _State = ios_base::failbit;
+            _State |= ios_base::failbit;
         }
 
         _Myios::setstate(_State);
@@ -597,14 +605,21 @@ public:
     int __CLR_OR_THIS_CALL sync() { // synchronize with input source
         const sentry _Ok(*this, true);
 
-        if (_Myios::rdbuf() == nullptr) {
+        const auto _Rdbuf = _Myios::rdbuf();
+        if (!_Rdbuf) {
             return -1;
-        } else if (_Myios::rdbuf()->pubsync() == -1) { // sync failed
+        }
+
+        bool _Sync_failed = true; // sync fails if an exception is thrown
+        _TRY_IO_BEGIN
+        _Sync_failed = _Rdbuf->pubsync() == -1;
+        _CATCH_IO_END
+        if (_Sync_failed) {
             _Myios::setstate(ios_base::badbit);
             return -1;
-        } else {
-            return 0;
         }
+
+        return 0;
     }
 
     basic_istream& __CLR_OR_THIS_CALL seekg(pos_type _Pos) { // set input stream position to _Pos
@@ -613,7 +628,7 @@ public:
         _Myios::clear(_Oldstate & ~ios_base::eofbit);
         const sentry _Ok(*this, true);
 
-        if (!this->fail() && (off_type) _Myios::rdbuf()->pubseekpos(_Pos, ios_base::in) == -1) {
+        if (!this->fail() && static_cast<off_type>(_Myios::rdbuf()->pubseekpos(_Pos, ios_base::in)) == -1) {
             _Myios::setstate(_State | ios_base::failbit);
         }
 
@@ -627,7 +642,7 @@ public:
         _Myios::clear(_Oldstate & ~ios_base::eofbit);
         const sentry _Ok(*this, true);
 
-        if (!this->fail() && (off_type) _Myios::rdbuf()->pubseekoff(_Off, _Way, ios_base::in) == -1) {
+        if (!this->fail() && static_cast<off_type>(_Myios::rdbuf()->pubseekoff(_Off, _Way, ios_base::in)) == -1) {
             _Myios::setstate(_State | ios_base::failbit);
         }
 
@@ -652,7 +667,7 @@ private:
 
 #ifndef _NATIVE_WCHAR_T_DEFINED
 template <class _Elem, class _Traits>
-inline basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr, _Elem& _Ch);
+basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr, _Elem& _Ch);
 
 // NOTE:
 // If you are not using native wchar_t, the following explicit
@@ -721,8 +736,7 @@ public:
     __CLR_OR_THIS_CALL basic_iostream(const basic_iostream&) = delete;
     basic_iostream& __CLR_OR_THIS_CALL operator=(const basic_iostream&) = delete;
 
-    virtual __CLR_OR_THIS_CALL ~basic_iostream() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~basic_iostream() noexcept {}
 };
 
 #if defined(_DLL_CPPLIB)
@@ -740,43 +754,89 @@ template class _CRTIMP2_PURE_IMPORT basic_iostream<unsigned short, char_traits<u
 // EXTRACTORS
 
 template <class _Elem, class _Traits>
-inline basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr, _Elem* _Str) { // extract NTBS
-    using _Myis  = basic_istream<_Elem, _Traits>;
-    using _Ctype = ctype<_Elem>;
-
+basic_istream<_Elem, _Traits>& _Istream_extract_into_buffer(
+    basic_istream<_Elem, _Traits>& _Istr, size_t _Size, _Elem* _Str) {
+    using _Myis              = basic_istream<_Elem, _Traits>;
+    using _Ctype             = ctype<_Elem>;
     ios_base::iostate _State = ios_base::goodbit;
-    _Elem* _Str0             = _Str;
+    size_t _Current          = 0;
     const typename _Myis::sentry _Ok(_Istr);
 
     if (_Ok) { // state okay, extract characters
         const _Ctype& _Ctype_fac = _STD use_facet<_Ctype>(_Istr.getloc());
 
         _TRY_IO_BEGIN
-        streamsize _Count              = 0 < _Istr.width() ? _Istr.width() : (numeric_limits<streamsize>::max)();
+        size_t _Count       = _Size;
+        const size_t _Width = static_cast<size_t>(_Istr.width());
+        if (_Width > 0 && _Width < _Size) {
+            _Count = _Width;
+        }
+
         typename _Myis::int_type _Meta = _Istr.rdbuf()->sgetc();
         _Elem _Ch;
-        for (; 0 < --_Count; _Meta = _Istr.rdbuf()->snextc()) {
+
+        for (; _Current < _Count - 1; _Meta = _Istr.rdbuf()->snextc(), (void) ++_Current) {
             if (_Traits::eq_int_type(_Traits::eof(), _Meta)) { // end of file, quit
                 _State |= ios_base::eofbit;
                 break;
             } else if (_Ctype_fac.is(_Ctype::space, _Ch = _Traits::to_char_type(_Meta)) || _Ch == _Elem()) {
                 break; // whitespace or nul, quit
             } else {
-                *_Str++ = _Traits::to_char_type(_Meta); // add it to string
+                _Str[_Current] = _Traits::to_char_type(_Meta); // add it to string
             }
         }
         _CATCH_IO_(ios_base, _Istr)
     }
-
-    *_Str = _Elem(); // add terminating null character
+    __analysis_assume(static_cast<size_t>(_Current) < _Size); // TRANSITION, VSO#860375
+    _Str[_Current] = _Elem(); // add terminating null character
     _Istr.width(0);
-    _Istr.setstate(_Str == _Str0 ? _State | ios_base::failbit : _State);
+    if (_Current == 0) {
+        _State |= ios_base::failbit;
+    }
+    _Istr.setstate(_State);
     return _Istr;
 }
 
+#if _HAS_CXX20 // P0487R1 Fixing operator>>(basic_istream&, CharT*)
+#pragma warning(push)
+#pragma warning(disable : 6001) // Using uninitialized memory '_Str'.
+template <class _Elem, class _Traits, size_t _Size>
+basic_istream<_Elem, _Traits>& operator>>(
+    basic_istream<_Elem, _Traits>& _Istr, _Out_writes_z_(_Size) _Elem (&_Str)[_Size]) {
+    return _Istream_extract_into_buffer(_Istr, _Size, _Str);
+}
+
+template <class _Traits, size_t _Size>
+basic_istream<char, _Traits>& operator>>(
+    basic_istream<char, _Traits>& _Istr, _Out_writes_z_(_Size) signed char (&_Str)[_Size]) {
+    return _Istream_extract_into_buffer(_Istr, _Size, reinterpret_cast<char*>(_Str));
+}
+
+template <class _Traits, size_t _Size>
+basic_istream<char, _Traits>& operator>>(
+    basic_istream<char, _Traits>& _Istr, _Out_writes_z_(_Size) unsigned char (&_Str)[_Size]) {
+    return _Istream_extract_into_buffer(_Istr, _Size, reinterpret_cast<char*>(_Str));
+}
+#pragma warning(pop)
+#else // _HAS_CXX20
 template <class _Elem, class _Traits>
-inline basic_istream<_Elem, _Traits>& operator>>(
-    basic_istream<_Elem, _Traits>& _Istr, _Elem& _Ch) { // extract a character
+basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr, _Elem* _Str) {
+    return _Istream_extract_into_buffer(_Istr, SIZE_MAX, _Str);
+}
+
+template <class _Traits>
+basic_istream<char, _Traits>& operator>>(basic_istream<char, _Traits>& _Istr, signed char* _Str) {
+    return _Istream_extract_into_buffer(_Istr, SIZE_MAX, reinterpret_cast<char*>(_Str));
+}
+
+template <class _Traits>
+basic_istream<char, _Traits>& operator>>(basic_istream<char, _Traits>& _Istr, unsigned char* _Str) {
+    return _Istream_extract_into_buffer(_Istr, SIZE_MAX, reinterpret_cast<char*>(_Str));
+}
+#endif // _HAS_CXX20
+
+template <class _Elem, class _Traits>
+basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr, _Elem& _Ch) { // extract a character
     using _Myis = basic_istream<_Elem, _Traits>;
 
     typename _Myis::int_type _Meta;
@@ -799,27 +859,15 @@ inline basic_istream<_Elem, _Traits>& operator>>(
 }
 
 template <class _Traits>
-inline basic_istream<char, _Traits>& operator>>(
-    basic_istream<char, _Traits>& _Istr, signed char* _Str) { // extract a signed char NTBS
-    return _Istr >> (char*) _Str;
-}
-
-template <class _Traits>
-inline basic_istream<char, _Traits>& operator>>(
+basic_istream<char, _Traits>& operator>>(
     basic_istream<char, _Traits>& _Istr, signed char& _Ch) { // extract a signed char
-    return _Istr >> (char&) _Ch;
+    return _Istr >> reinterpret_cast<char&>(_Ch);
 }
 
 template <class _Traits>
-inline basic_istream<char, _Traits>& operator>>(
-    basic_istream<char, _Traits>& _Istr, unsigned char* _Str) { // extract an unsigned char NTBS
-    return _Istr >> (char*) _Str;
-}
-
-template <class _Traits>
-inline basic_istream<char, _Traits>& operator>>(
+basic_istream<char, _Traits>& operator>>(
     basic_istream<char, _Traits>& _Istr, unsigned char& _Ch) { // extract an unsigned char
-    return _Istr >> (char&) _Ch;
+    return _Istr >> reinterpret_cast<char&>(_Ch);
 }
 
 template <class _Istr, class _Ty, class = void>
@@ -832,15 +880,14 @@ template <class _Istr, class _Ty,
     enable_if_t<conjunction_v< // avoid infinite recursion
                     negation<is_lvalue_reference<_Istr>>, is_base_of<ios_base, _Istr>, _Can_stream_in<_Istr, _Ty>>,
         int> = 0>
-inline _Istr&& operator>>(_Istr&& _Is, _Ty&& _Val) { // extract from rvalue stream
+_Istr&& operator>>(_Istr&& _Is, _Ty&& _Val) { // extract from rvalue stream
     _Is >> _STD forward<_Ty>(_Val);
     return _STD move(_Is);
 }
 
 // MANIPULATORS
 template <class _Elem, class _Traits>
-inline basic_istream<_Elem, _Traits>& __CLRCALL_OR_CDECL ws(
-    basic_istream<_Elem, _Traits>& _Istr) { // consume whitespace
+basic_istream<_Elem, _Traits>& __CLRCALL_OR_CDECL ws(basic_istream<_Elem, _Traits>& _Istr) { // consume whitespace
     const typename basic_istream<_Elem, _Traits>::sentry _Ok(_Istr, true);
 
     if (_Ok) { // state okay, extract characters
@@ -868,7 +915,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _ISTREAM_
 
 /*

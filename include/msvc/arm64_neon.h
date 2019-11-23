@@ -465,8 +465,12 @@ __int16 neon_smov16  (__n64, const __int32);
 __int16 neon_smovq16 (__n128, const __int32);
 __int64 neon_smov64_16  (__n64, const __int32);
 __int64 neon_smov64_q16 (__n128, const __int32);
+__int32 neon_smov32  (__n64, const __int32);
+__int32 neon_smovq32 (__n128, const __int32);
 __int64 neon_smov64_32  (__n64, const __int32);
 __int64 neon_smov64_q32 (__n128, const __int32);
+__int64 neon_smov64  (__n64, const __int32);
+__int64 neon_smovq64 (__n128, const __int32);
 unsigned __int8  neon_umov8   (__n64, const __int32);
 unsigned __int8  neon_umovq8  (__n128, const __int32);
 unsigned __int16 neon_umov16  (__n64, const __int32);
@@ -481,10 +485,9 @@ unsigned __int64 neon_umovq64 (__n128, const __int32);
 #define vget_lane_p16(Dm, lane)  neon_smov16(Dm, lane)
 #define vget_lane_s16(Dm, lane)  neon_smov16(Dm, lane)
 #define vget_lane_u16(Dm, lane)  neon_umov16(Dm, lane)
-#define vget_lane_s32(Dm, lane)  neon_umov32(Dm, lane)  // there's no smov32 into 32bit core reg (only into 64bit core reg)
-                                                        // umov32 is equivalent though because src/dst type size is the same
-#define vget_lane_s64(Dm, lane)  neon_umov64(Dm, lane)  // there's no smov64, umov64 is equivalent though because src/dst type size is the same
+#define vget_lane_s32(Dm, lane)  neon_smov32(Dm, lane)
 #define vget_lane_u32(Dm, lane)  neon_umov32(Dm, lane)
+#define vget_lane_s64(Dm, lane)  neon_smov64(Dm, lane)
 #define vget_lane_u64(Dm, lane)  neon_umov64(Dm, lane)
 #define vgetq_lane_p8(Dm, lane)  neon_smovq8(Dm, lane)
 #define vgetq_lane_s8(Dm, lane)  neon_smovq8(Dm, lane)
@@ -492,10 +495,9 @@ unsigned __int64 neon_umovq64 (__n128, const __int32);
 #define vgetq_lane_p16(Dm, lane) neon_smovq16(Dm, lane)
 #define vgetq_lane_s16(Dm, lane) neon_smovq16(Dm, lane)
 #define vgetq_lane_u16(Dm, lane) neon_umovq16(Dm, lane)
-#define vgetq_lane_s32(Dm, lane) neon_umovq32(Dm, lane)  // there's no smov32 into 32bit core reg (only into 64bit core reg)
-                                                         // umov32 is equivalent though because src/dst type size is the same
-#define vgetq_lane_s64(Dm, lane) neon_umovq64(Dm, lane)  // there's no smov64, umov64 is equivalent though because src/dst type size is the same
+#define vgetq_lane_s32(Dm, lane) neon_smovq32(Dm, lane)
 #define vgetq_lane_u32(Dm, lane) neon_umovq32(Dm, lane)
+#define vgetq_lane_s64(Dm, lane) neon_smovq64(Dm, lane)
 #define vgetq_lane_u64(Dm, lane) neon_umovq64(Dm, lane)
 
 // INS register
@@ -1211,6 +1213,12 @@ __n64 neon_rev64_16(__n64);
 __n128 neon_rev64q_16(__n128);
 __n64 neon_rev64_32(__n64);
 __n128 neon_rev64q_32(__n128);
+#define vrbit_p8(src)   neon_rbit(src)
+#define vrbit_s8(src)   neon_rbit(src)
+#define vrbit_u8(src)   neon_rbit(src)
+#define vrbitq_p8(src)  neon_rbitq(src)
+#define vrbitq_s8(src)  neon_rbitq(src)
+#define vrbitq_u8(src)  neon_rbitq(src)
 #define vrev16_p8(src)  neon_rev16(src)
 #define vrev16_s8(src)  neon_rev16(src)
 #define vrev16_u8(src)  neon_rev16(src)
@@ -3468,35 +3476,35 @@ __n128 neon_tbl2_qq8(__n128x2 reglist, __n128 src2);
 __n64  neon_tbl1_q8(__n128 reglist, __n64 src2);
 __n64  neon_tbl1_q8_2(__n64 src1, __n64 src2);
 __n128 neon_tbl1_qq8(__n128 reglist, __n128 src2);
-#define neon_tbx4_8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0), vget_lane_s64(src2.val[2], 0), vget_lane_s64(src2.val[3], 0)}, src3)
-#define neon_tbx3_8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0), vget_lane_s64(src2.val[2], 0), 0}, src3)
-#define neon_tbx2_8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0)}, src3)
-#define neon_tbx1_8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_s64(src2, 0), 0}, src3)
-#define neon_tbl4_8(src1, src2) neon_tbl2_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0), vget_lane_s64(src1.val[2], 0), vget_lane_s64(src1.val[3], 0)}, src2)
-#define neon_tbl3_8(src1, src2) neon_tbl2_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0), vget_lane_s64(src1.val[2], 0), 0}, src2)
-#define neon_tbl2_8(src1, src2) neon_tbl1_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0)}, src2)
+#define neon_tbx4_8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0), vget_lane_u64(src2.val[2], 0), vget_lane_u64(src2.val[3], 0)}, src3)
+#define neon_tbx3_8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0), vget_lane_u64(src2.val[2], 0), 0}, src3)
+#define neon_tbx2_8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0)}, src3)
+#define neon_tbx1_8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_u64(src2, 0), 0}, src3)
+#define neon_tbl4_8(src1, src2) neon_tbl2_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0), vget_lane_u64(src1.val[2], 0), vget_lane_u64(src1.val[3], 0)}, src2)
+#define neon_tbl3_8(src1, src2) neon_tbl2_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0), vget_lane_u64(src1.val[2], 0), 0}, src2)
+#define neon_tbl2_8(src1, src2) neon_tbl1_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0)}, src2)
 #define neon_tbl1_8(src1, src2) neon_tbl1_q8_2(src1, src2)
-#define vtbx4_p8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0), vget_lane_s64(src2.val[2], 0), vget_lane_s64(src2.val[3], 0)}, src3)
-#define vtbx4_s8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0), vget_lane_s64(src2.val[2], 0), vget_lane_s64(src2.val[3], 0)}, src3)
-#define vtbx4_u8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0), vget_lane_s64(src2.val[2], 0), vget_lane_s64(src2.val[3], 0)}, src3)
-#define vtbx3_p8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0), vget_lane_s64(src2.val[2], 0), 0}, src3)
-#define vtbx3_s8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0), vget_lane_s64(src2.val[2], 0), 0}, src3)
-#define vtbx3_u8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0), vget_lane_s64(src2.val[2], 0), 0}, src3)
-#define vtbx2_p8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0)}, src3)
-#define vtbx2_s8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0)}, src3)
-#define vtbx2_u8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_s64(src2.val[0], 0), vget_lane_s64(src2.val[1], 0)}, src3)
-#define vtbx1_p8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_s64(src2, 0), 0}, src3)
-#define vtbx1_s8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_s64(src2, 0), 0}, src3)
+#define vtbx4_p8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0), vget_lane_u64(src2.val[2], 0), vget_lane_u64(src2.val[3], 0)}, src3)
+#define vtbx4_s8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0), vget_lane_u64(src2.val[2], 0), vget_lane_u64(src2.val[3], 0)}, src3)
+#define vtbx4_u8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0), vget_lane_u64(src2.val[2], 0), vget_lane_u64(src2.val[3], 0)}, src3)
+#define vtbx3_p8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0), vget_lane_u64(src2.val[2], 0), 0}, src3)
+#define vtbx3_s8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0), vget_lane_u64(src2.val[2], 0), 0}, src3)
+#define vtbx3_u8(src1, src2, src3) neon_tbx2_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0), vget_lane_u64(src2.val[2], 0), 0}, src3)
+#define vtbx2_p8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0)}, src3)
+#define vtbx2_s8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0)}, src3)
+#define vtbx2_u8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_u64(src2.val[0], 0), vget_lane_u64(src2.val[1], 0)}, src3)
+#define vtbx1_p8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_u64(src2, 0), 0}, src3)
+#define vtbx1_s8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_u64(src2, 0), 0}, src3)
 #define vtbx1_u8(src1, src2, src3) neon_tbx1_q8(src1, {vget_lane_u64(src2, 0), 0}, src3)
-#define vtbl4_p8(src1, src2) neon_tbl2_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0), vget_lane_s64(src1.val[2], 0), vget_lane_s64(src1.val[3], 0)}, src2)
-#define vtbl4_s8(src1, src2) neon_tbl2_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0), vget_lane_s64(src1.val[2], 0), vget_lane_s64(src1.val[3], 0)}, src2)
-#define vtbl4_u8(src1, src2) neon_tbl2_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0), vget_lane_s64(src1.val[2], 0), vget_lane_s64(src1.val[3], 0)}, src2)
-#define vtbl3_p8(src1, src2) neon_tbl2_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0), vget_lane_s64(src1.val[2], 0), 0}, src2)
-#define vtbl3_s8(src1, src2) neon_tbl2_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0), vget_lane_s64(src1.val[2], 0), 0}, src2)
-#define vtbl3_u8(src1, src2) neon_tbl2_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0), vget_lane_s64(src1.val[2], 0), 0}, src2)
-#define vtbl2_p8(src1, src2) neon_tbl1_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0)}, src2)
-#define vtbl2_s8(src1, src2) neon_tbl1_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0)}, src2)
-#define vtbl2_u8(src1, src2) neon_tbl1_q8({vget_lane_s64(src1.val[0], 0), vget_lane_s64(src1.val[1], 0)}, src2)
+#define vtbl4_p8(src1, src2) neon_tbl2_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0), vget_lane_u64(src1.val[2], 0), vget_lane_u64(src1.val[3], 0)}, src2)
+#define vtbl4_s8(src1, src2) neon_tbl2_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0), vget_lane_u64(src1.val[2], 0), vget_lane_u64(src1.val[3], 0)}, src2)
+#define vtbl4_u8(src1, src2) neon_tbl2_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0), vget_lane_u64(src1.val[2], 0), vget_lane_u64(src1.val[3], 0)}, src2)
+#define vtbl3_p8(src1, src2) neon_tbl2_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0), vget_lane_u64(src1.val[2], 0), 0}, src2)
+#define vtbl3_s8(src1, src2) neon_tbl2_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0), vget_lane_u64(src1.val[2], 0), 0}, src2)
+#define vtbl3_u8(src1, src2) neon_tbl2_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0), vget_lane_u64(src1.val[2], 0), 0}, src2)
+#define vtbl2_p8(src1, src2) neon_tbl1_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0)}, src2)
+#define vtbl2_s8(src1, src2) neon_tbl1_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0)}, src2)
+#define vtbl2_u8(src1, src2) neon_tbl1_q8({vget_lane_u64(src1.val[0], 0), vget_lane_u64(src1.val[1], 0)}, src2)
 #define vtbl1_p8(src1, src2) neon_tbl1_q8_2(src1, src2)
 #define vtbl1_s8(src1, src2) neon_tbl1_q8_2(src1, src2)
 #define vtbl1_u8(src1, src2) neon_tbl1_q8_2(src1, src2)

@@ -2,13 +2,18 @@
 #pragma once
 #ifndef _RANDOM_
 #define _RANDOM_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <algorithm>
 #include <cmath>
 #include <iosfwd>
 #include <stdint.h>
 #include <vector>
 #include <xstring>
+
+#ifdef __cpp_lib_concepts
+#include <concepts>
+#endif // __cpp_lib_concepts
 
 #pragma pack(push, _CRT_PACKING)
 #pragma warning(push, _STL_WARNING_LEVEL)
@@ -23,7 +28,7 @@ _STD_BEGIN
 // TYPE ASSERT MACROS
 #define _RNG_PROHIBIT_CHAR(_CheckedType)               \
     static_assert(!_Is_character<_CheckedType>::value, \
-        "note: char, signed char, unsigned char, int8_t, and uint8_t are not allowed")
+        "note: char, signed char, unsigned char, char8_t, int8_t, and uint8_t are not allowed")
 
 #define _RNG_REQUIRE_REALTYPE(_RandType, _CheckedType)                                                     \
     static_assert(_Is_any_of_v<_CheckedType, float, double, long double>,                                  \
@@ -43,6 +48,31 @@ _STD_BEGIN
         "unsigned short, unsigned int, unsigned long, or unsigned long long");                                 \
     _RNG_PROHIBIT_CHAR(_CheckedType)
 
+
+#ifdef __cpp_lib_concepts
+// STRUCT TEMPLATE _Require_constant
+template <auto>
+struct _Require_constant; // not defined; _Require_constant<E> is a valid type if E is a constant expression
+
+// CONCEPT uniform_random_bit_generator
+// clang-format off
+template <class _Ty>
+concept uniform_random_bit_generator = invocable<_Ty&> && unsigned_integral<invoke_result_t<_Ty&>> && requires {
+#if _HAS_EXACT_COMPOUND_REQUIREMENT
+    { (_Ty::min)() } -> same_as<invoke_result_t<_Ty&>>;
+    { (_Ty::max)() } -> same_as<invoke_result_t<_Ty&>>;
+#else // ^^^ _HAS_EXACT_COMPOUND_REQUIREMENT / !_HAS_EXACT_COMPOUND_REQUIREMENT vvv
+    (_Ty::min)(); requires same_as<decltype((_Ty::min)()), invoke_result_t<_Ty&>>;
+    (_Ty::max)(); requires same_as<decltype((_Ty::max)()), invoke_result_t<_Ty&>>;
+#endif // _HAS_EXACT_COMPOUND_REQUIREMENT
+#if 1 // Implement the PR for LWG 3150
+    typename _Require_constant<(_Ty::min)()>;
+    typename _Require_constant<(_Ty::max)()>;
+    requires (_Ty::min)() < (_Ty::max)();
+#endif // LWG 3150
+};
+// clang-format on
+#endif // __cpp_lib_concepts
 
 // ALIAS TEMPLATE _Enable_if_seed_seq_t
 template <class _Seed_seq, class _Self, class _Engine = _Self>
@@ -73,7 +103,7 @@ basic_ostream<_Elem, _Traits>& _Write(
     long double _Frac = _CSTD frexpl(_Dx, &_Ex);
     for (int _Nw = 0; _Nw < _Nwords; ++_Nw) { // break into 31-bit words
         _Frac *= _Two31;
-        long _Digits = (long) _Frac;
+        long _Digits = static_cast<long>(_Frac);
         _Frac -= _Digits;
         _Os << ' ' << _Digits;
     }
@@ -106,7 +136,7 @@ basic_istream<_Elem, _Traits>& _In(basic_istream<_Elem, _Traits>& _Is, _Ty& _Dx)
     _Ty _Max = (numeric_limits<_Ty>::max)();
     _Read(_Is, _Vx);
     if (_CSTD fabsl(_Vx) <= _Max) {
-        _Dx = (_Ty) _Vx;
+        _Dx = static_cast<_Ty>(_Vx);
     } else if (_Vx < 0) {
         _Dx = -_Max;
     } else {
@@ -121,8 +151,7 @@ basic_ostream<_Elem, _Traits>& _Out(basic_ostream<_Elem, _Traits>& _Os, _Ty _Dx)
     return _Write(_Os, _Dx);
 }
 
-template <class _Elem, class _Traits,
-    class _Ty>
+template <class _Elem, class _Traits, class _Ty>
 class _Wrap_istream { // wrap input stream as function object
 public:
     _Wrap_istream(basic_istream<_Elem, _Traits>& _Is) : _Str(_Is) { // construct
@@ -149,16 +178,15 @@ class seed_seq { // standard sequence of seed values
 public:
     using result_type = unsigned int;
 
-    seed_seq() { // default constructor
-    }
+    seed_seq() {}
 
     template <class _Ty>
-    seed_seq(initializer_list<_Ty> _Ilist) { // construct from [_First, _Last)
+    seed_seq(initializer_list<_Ty> _Ilist) {
         _Construct(_Ilist.begin(), _Ilist.end());
     }
 
     template <class _InIt>
-    seed_seq(_InIt _First, _InIt _Last) { // construct from [_First, _Last)
+    seed_seq(_InIt _First, _InIt _Last) {
         _Construct(_First, _Last);
     }
 
@@ -187,7 +215,7 @@ public:
             for (_Kx = 0; _Kx < _Mx; ++_Kx) { // scramble and add any vector contributions
                 result_type _R1 =
                     1664525 * _Xor27(_UFirst[_Kx % _Nx] ^ _UFirst[(_Kx + _Px) % _Nx] ^ _UFirst[(_Kx - 1) % _Nx]);
-                result_type _R2 = (result_type)(
+                result_type _R2 = static_cast<result_type>(
                     (_R1 + (_Kx == 0 ? _Sx : _Kx <= _Sx ? _Kx % _Nx + _Myvec[(_Kx - 1) % _Sx] : _Kx % _Nx)) & _Mask);
 
                 _UFirst[(_Kx + _Px) % _Nx] = (_UFirst[(_Kx + _Px) % _Nx] + _R1) & _Mask;
@@ -197,7 +225,7 @@ public:
             for (; _Kx < _Mx + _Nx; ++_Kx) { // rescramble
                 result_type _R3 =
                     1566083941 * _Xor27(_UFirst[_Kx % _Nx] + _UFirst[(_Kx + _Px) % _Nx] + _UFirst[(_Kx - 1) % _Nx]);
-                result_type _R4 = (result_type)((_R3 - _Kx % _Nx) & _Mask);
+                result_type _R4 = static_cast<result_type>((_R3 - _Kx % _Nx) & _Mask);
 
                 _UFirst[(_Kx + _Px) % _Nx] = (_UFirst[(_Kx + _Px) % _Nx] ^ _R3) & _Mask;
                 _UFirst[(_Kx + _Qx) % _Nx] = (_UFirst[(_Kx + _Qx) % _Nx] ^ _R4) & _Mask;
@@ -220,9 +248,9 @@ public:
 
 private:
     template <class _InIt>
-    void _Construct(_InIt _First, _InIt _Last) { // construct from [_First, _Last)
+    void _Construct(_InIt _First, _InIt _Last) {
         for (; _First != _Last; ++_First) {
-            _Myvec.push_back((unsigned int) *_First);
+            _Myvec.push_back(static_cast<unsigned int>(*_First));
         }
     }
 
@@ -234,8 +262,7 @@ private:
 };
 
 // FUNCTION TEMPLATE generate_canonical
-template <class _Real, size_t _Bits,
-    class _Gen>
+template <class _Real, size_t _Bits, class _Gen>
 _NODISCARD _Real generate_canonical(_Gen& _Gx) { // build a floating-point value from random sequence
     _RNG_REQUIRE_REALTYPE(generate_canonical, _Real);
 
@@ -244,13 +271,13 @@ _NODISCARD _Real generate_canonical(_Gen& _Gx) { // build a floating-point value
 
     const _Real _Gxmin = static_cast<_Real>((_Gx.min)());
     const _Real _Gxmax = static_cast<_Real>((_Gx.max)());
-    const _Real _Rx    = (_Gxmax - _Gxmin) + static_cast<_Real>(1);
+    const _Real _Rx    = (_Gxmax - _Gxmin) + _Real{1};
 
     const int _Ceil = static_cast<int>(_STD ceil(static_cast<_Real>(_Minbits) / _STD log2(_Rx)));
     const int _Kx   = _Ceil < 1 ? 1 : _Ceil;
 
-    _Real _Ans    = static_cast<_Real>(0);
-    _Real _Factor = static_cast<_Real>(1);
+    _Real _Ans{0};
+    _Real _Factor{1};
 
     for (int _Idx = 0; _Idx < _Kx; ++_Idx) { // add in another set of bits
         _Ans += (static_cast<_Real>(_Gx()) - _Gxmin) * _Factor;
@@ -278,7 +305,7 @@ _CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL _MP_Rem(_MP_arr, uint64_t) noexcept;
 #endif // !_HAS_IF_CONSTEXPR
 
 template <class _Uint, _Uint _Ax, _Uint _Cx, _Uint _Mx>
-_NODISCARD inline _Uint _Next_linear_congruential_value(_Uint _Prev) noexcept {
+_NODISCARD _Uint _Next_linear_congruential_value(_Uint _Prev) noexcept {
     // Choose intermediate type:
     // To use type T for the intermediate calculation, we must show
     //  _Ax * (_Mx - 1) + _Cx <= numeric_limits<T>::max()
@@ -352,8 +379,7 @@ _NODISCARD constexpr unsigned long long _Seed_seq_to_ull(_Seed_seq& _Seq) {
 #pragma warning(disable : 4724) // potential mod by 0
 #endif // !_HAS_IF_CONSTEXPR
 
-template <class _Uint, _Uint _Cx,
-    _Uint _Mx>
+template <class _Uint, _Uint _Cx, _Uint _Mx>
 _NODISCARD constexpr _Uint _Get_linear_congruential_seed(_Uint _Sx) noexcept { // N4741 [rand.eng.lcong]/5
     if
         _CONSTEXPR_IF(_Mx != 0) {
@@ -363,16 +389,15 @@ _NODISCARD constexpr _Uint _Get_linear_congruential_seed(_Uint _Sx) noexcept { /
     if
         _CONSTEXPR_IF(_Cx == 0) {
             if (_Sx == 0) {
-                _Sx = static_cast<_Uint>(1);
+                _Sx = _Uint{1};
             }
         }
 
     return _Sx;
 }
 
-template <class _Uint, _Uint _Cx, _Uint _Mx,
-    class _Seed_seq>
-_NODISCARD inline _Uint _Get_linear_congruential_seed_from_seq(_Seed_seq& _Seq) { // N4741 [rand.eng.lcong]/6
+template <class _Uint, _Uint _Cx, _Uint _Mx, class _Seed_seq>
+_NODISCARD _Uint _Get_linear_congruential_seed_from_seq(_Seed_seq& _Seq) { // N4741 [rand.eng.lcong]/6
     _Uint _Sx;
     if
         _CONSTEXPR_IF(_Mx == 0) {
@@ -399,8 +424,7 @@ _NODISCARD inline _Uint _Get_linear_congruential_seed_from_seq(_Seed_seq& _Seq) 
 #pragma warning(pop)
 #endif // !_HAS_IF_CONSTEXPR
 
-template <class _Uint, _Uint _Ax, _Uint _Cx,
-    _Uint _Mx>
+template <class _Uint, _Uint _Ax, _Uint _Cx, _Uint _Mx>
 class linear_congruential_engine { // a linear congruential generator random engine
 public:
     _RNG_REQUIRE_UINTTYPE(linear_congruential_engine, _Uint);
@@ -412,14 +436,14 @@ public:
     static constexpr result_type increment  = _Cx;
     static constexpr result_type modulus    = _Mx;
 
-    _NODISCARD static constexpr result_type(min)() noexcept { // Strengthened
+    _NODISCARD static constexpr result_type(min)() noexcept { // strengthened
         // return minimum possible generated value
         return _Cx == 0;
     }
 
 #pragma warning(push)
 #pragma warning(disable : 4309) // truncation of constant value
-    _NODISCARD static constexpr result_type(max)() noexcept { // Strengthened
+    _NODISCARD static constexpr result_type(max)() noexcept { // strengthened
         // return maximum possible generated value
         return static_cast<result_type>(_Mx - 1u); // note 0 wraps around to max
     }
@@ -427,7 +451,7 @@ public:
 
     static constexpr result_type default_seed = 1u;
 
-    explicit linear_congruential_engine(result_type _Sx = default_seed) noexcept // Strengthened
+    explicit linear_congruential_engine(result_type _Sx = default_seed) noexcept // strengthened
         : _Prev(_Get_linear_congruential_seed<result_type, _Cx, _Mx>(_Sx)) { // construct from initial value
     }
 
@@ -436,7 +460,7 @@ public:
         : _Prev(_Get_linear_congruential_seed_from_seq<result_type, _Cx, _Mx>(_Seq)) { // construct from seed sequence
     }
 
-    void seed(result_type _Sx = default_seed) noexcept { // Strengthened
+    void seed(result_type _Sx = default_seed) noexcept { // strengthened
         // reset sequence from numeric value
         _Prev = _Get_linear_congruential_seed<result_type, _Cx, _Mx>(_Sx);
     }
@@ -451,7 +475,7 @@ public:
         return _Prev;
     }
 
-    void discard(unsigned long long _Nskip) noexcept { // Strengthened
+    void discard(unsigned long long _Nskip) noexcept { // strengthened
         // discard _Nskip elements
         auto _Temp = _Prev;
         for (; 0 < _Nskip; --_Nskip) {
@@ -465,7 +489,7 @@ public:
     _NODISCARD
 #endif // __EDG__
     friend bool operator==(
-        const linear_congruential_engine& _Lhs, const linear_congruential_engine& _Rhs) noexcept { // Strengthened
+        const linear_congruential_engine& _Lhs, const linear_congruential_engine& _Rhs) noexcept { // strengthened
         return _Lhs._Prev == _Rhs._Prev;
     }
 
@@ -473,7 +497,7 @@ public:
     _NODISCARD
 #endif // __EDG__
     friend bool operator!=(
-        const linear_congruential_engine& _Lhs, const linear_congruential_engine& _Rhs) noexcept { // Strengthened
+        const linear_congruential_engine& _Lhs, const linear_congruential_engine& _Rhs) noexcept { // strengthened
         return _Lhs._Prev != _Rhs._Prev;
     }
 
@@ -494,8 +518,7 @@ private:
 };
 
 // CLASS TEMPLATE linear_congruential
-template <class _Uint, _Uint _Ax, _Uint _Cx,
-    _Uint _Mx>
+template <class _Uint, _Uint _Ax, _Uint _Cx, _Uint _Mx>
 class linear_congruential { // linear congruential random engine
 public:
     _RNG_REQUIRE_UINTTYPE(linear_congruential, _Uint);
@@ -508,7 +531,7 @@ public:
     static constexpr _Uint increment  = _Cx;
     static constexpr _Uint modulus    = _Mx;
 
-    explicit linear_congruential(_Uint _X0 = 1u) noexcept // Strengthened
+    explicit linear_congruential(_Uint _X0 = 1u) noexcept // strengthened
         : _Prev(_Get_linear_congruential_seed<_Uint, _Cx, _Mx>(_X0)) { // construct from initial value
     }
 
@@ -517,7 +540,7 @@ public:
         : _Prev(_Get_linear_congruential_seed<_Uint, _Cx, _Mx>(_Seq())) { // construct from seed sequence
     }
 
-    void seed(_Uint _X0 = 1u) noexcept { // Strengthened
+    void seed(_Uint _X0 = 1u) noexcept { // strengthened
         // reset sequence from numeric value
         _Prev = _Get_linear_congruential_seed<_Uint, _Cx, _Mx>(_X0);
     }
@@ -527,26 +550,26 @@ public:
         _Prev = _Get_linear_congruential_seed<_Uint, _Cx, _Mx>(_Seq());
     }
 
-    _NODISCARD _Uint(min)() const noexcept { // Strengthened
+    _NODISCARD _Uint(min)() const noexcept { // strengthened
         // return minimum possible generated value
         return _Cx == 0;
     }
 
 #pragma warning(push)
 #pragma warning(disable : 4309) // truncation of constant value
-    _NODISCARD _Uint(max)() const noexcept { // Strengthened
+    _NODISCARD _Uint(max)() const noexcept { // strengthened
         // return maximum possible generated value
         return static_cast<_Uint>(_Mx - 1u); // note 0 wraps around to max
     }
 #pragma warning(pop)
 
-    _NODISCARD _Uint operator()() noexcept { // Strengthened
+    _NODISCARD _Uint operator()() noexcept { // strengthened
         // return next value
         _Prev = _Next_linear_congruential_value<_Uint, _Ax, _Cx, _Mx>(_Prev);
         return _Prev;
     }
 
-    void discard(unsigned long long _Nskip) noexcept { // Strengthened
+    void discard(unsigned long long _Nskip) noexcept { // strengthened
         // discard _Nskip elements
         auto _Temp = _Prev;
         for (; 0 < _Nskip; --_Nskip) {
@@ -559,14 +582,14 @@ public:
 #ifndef __EDG__ // TRANSITION, VSO#568006
     _NODISCARD
 #endif // __EDG__
-    friend bool operator==(const linear_congruential& _Lhs, const linear_congruential& _Rhs) noexcept { // Strengthened
+    friend bool operator==(const linear_congruential& _Lhs, const linear_congruential& _Rhs) noexcept { // strengthened
         return _Lhs._Prev == _Rhs._Prev;
     }
 
 #ifndef __EDG__ // TRANSITION, VSO#568006
     _NODISCARD
 #endif // __EDG__
-    friend bool operator!=(const linear_congruential& _Lhs, const linear_congruential& _Rhs) noexcept { // Strengthened
+    friend bool operator!=(const linear_congruential& _Lhs, const linear_congruential& _Rhs) noexcept { // strengthened
         return _Lhs._Prev != _Rhs._Prev;
     }
 
@@ -585,10 +608,8 @@ private:
     _Uint _Prev;
 };
 
-// CLASS TEMPLATE _Circ_buf FOR subtract_with_carry,
-// subtract_with_carry_01, and mersenne_twister
-template <class _Ty,
-    size_t _Nw>
+// CLASS TEMPLATE _Circ_buf FOR subtract_with_carry, subtract_with_carry_01, AND mersenne_twister
+template <class _Ty, size_t _Nw>
 struct _Circ_buf { // holds historical values for generators
     _Ty _At(int _Ix) const { // return value at current position plus _Ix
         return _Ax[_Base(_Ix)];
@@ -793,8 +814,7 @@ template <class _Ty, size_t _Sx, size_t _Rx, class _Swc_Traits>
 const size_t _Swc_base<_Ty, _Sx, _Rx, _Swc_Traits>::long_lag;
 
 // STRUCT TEMPLATE _Swc_traits
-template <class _Ty, _Ty _Mx,
-    size_t _Nw>
+template <class _Ty, _Ty _Mx, size_t _Nw>
 struct _Swc_traits { // traits for subtract_with_carry generator
     using _Cy_t   = int;
     using _UCy_t  = unsigned int;
@@ -831,7 +851,7 @@ struct _Swc_traits { // traits for subtract_with_carry generator
         for (int _Ix = 0; _Ix < _Nw; ++_Ix) { // pack _Kx words
             _Ax[_Ix] = _Gx();
             for (int _Jx = 0; ++_Jx < _Kx;) {
-                _Ax[_Ix] |= (_Ty) _Gx() << (32 * _Jx);
+                _Ax[_Ix] |= static_cast<_Ty>(_Gx()) << (32 * _Jx);
             }
         }
 
@@ -839,10 +859,7 @@ struct _Swc_traits { // traits for subtract_with_carry generator
         if (!_Readcy) {
             return _Ans;
         } else {
-#pragma warning(push)
-#pragma warning(disable : 4244 4365) // TRANSITION, conversion from 'X' to 'Y', possible loss of data
-            return _Gx();
-#pragma warning(pop)
+            return static_cast<_Cy_t>(_Gx()); // TRANSITION, investigate this conversion
         }
     }
 
@@ -867,7 +884,7 @@ struct _Swc_traits { // traits for subtract_with_carry generator
 
         for (int _Ix = 0; _Ix < _Nw; ++_Ix) {
             for (int _Jx = 1; _Jx <= _Kx; ++_Jx) { // unpack into _Kx words
-                unsigned int _Word = (unsigned int) (_Buf._At(_Ix) >> ((_Kx - _Jx) * 32));
+                unsigned int _Word = static_cast<unsigned int>(_Buf._At(_Ix) >> ((_Kx - _Jx) * 32));
                 _Ostr << _Word << ' ';
             }
         }
@@ -897,15 +914,15 @@ public:
 
 // CLASS TEMPLATE subtract_with_carry_engine
 template <class _Ty, size_t _Wx, size_t _Sx, size_t _Rx>
-class subtract_with_carry_engine
-    : public subtract_with_carry<_Ty, (_Ty(1) << (_Wx - 1)) << 1, _Sx, _Rx> { // subtract_with_carry generator
+class subtract_with_carry_engine : public subtract_with_carry<_Ty, (_Ty{1} << (_Wx - 1)) << 1, _Sx, _Rx> {
+    // subtract_with_carry generator
 public:
     _RNG_REQUIRE_UINTTYPE(subtract_with_carry_engine, _Ty);
 
     static_assert(0U < _Sx && _Sx < _Rx && 0 < _Wx && _Wx <= numeric_limits<_Ty>::digits,
         "invalid template argument for subtract_with_carry_engine");
 
-    static constexpr _Ty _Mx          = (_Ty(1) << (_Wx - 1)) << 1;
+    static constexpr _Ty _Mx          = (_Ty{1} << (_Wx - 1)) << 1;
     static constexpr size_t word_size = _Wx;
     static constexpr size_t short_lag = _Sx;
     static constexpr size_t long_lag  = _Rx;
@@ -939,7 +956,7 @@ public:
         for (int _Ix = 0; _Ix < _Rx; ++_Ix, _Idx0 += _Kx) { // pack _Kx words
             this->_Ax[_Ix] = _Arr[_Idx0];
             for (int _Jx = 0; ++_Jx < _Kx;) {
-                this->_Ax[_Ix] |= (_Ty) _Arr[_Idx0 + _Jx] << (32 * _Jx);
+                this->_Ax[_Ix] |= static_cast<_Ty>(_Arr[_Idx0 + _Jx]) << (32 * _Jx);
             }
 
             constexpr bool _Mod_non_zero = _Traits::_Mod != 0;
@@ -964,8 +981,7 @@ public:
 
 #if _HAS_TR1_NAMESPACE
 // STRUCT TEMPLATE _Swc_01_traits
-template <class _Ty, size_t _Wx,
-    size_t _Rx>
+template <class _Ty, size_t _Wx, size_t _Rx>
 struct _Swc_01_traits { // traits for subtract_with_carry_01 generator
     using _Cy_t   = _Ty;
     using _UCy_t  = _Ty;
@@ -985,11 +1001,11 @@ struct _Swc_01_traits { // traits for subtract_with_carry_01 generator
             _Ty _Factor = 1;
             _Ty _Val    = 0;
             for (int _Jx = 0; _Jx < _Nwords - 1; ++_Jx) { // read components of value
-                _Factor /= (_Ty) _Two32;
+                _Factor /= static_cast<_Ty>(_Two32);
                 _Val += _Gx() * _Factor;
             }
-            _Ty _Temp = ((unsigned long) _Gx() & _Mask) / _Scale1;
-            _Val += (_Temp - (unsigned long) _Temp) * _Factor;
+            _Ty _Temp = (static_cast<unsigned long>(_Gx()) & _Mask) / _Scale1;
+            _Val += (_Temp - static_cast<unsigned long>(_Temp)) * _Factor;
             _Ax[_Ix] = _Val;
         }
         if (!_Readcy) {
@@ -1006,12 +1022,12 @@ struct _Swc_01_traits { // traits for subtract_with_carry_01 generator
             _Ty _Val = _Buf._At(_Ix);
             unsigned long _Temp;
             for (int _Jx = 0; _Jx < _Nwords - 1; ++_Jx) { // write components of value
-                _Val *= (_Ty) _Two32;
-                _Temp = (unsigned long) _Val;
+                _Val *= static_cast<_Ty>(_Two32);
+                _Temp = static_cast<unsigned long>(_Val);
                 _Val -= _Temp;
                 _Ostr << _Temp << ' ';
             }
-            _Temp = (unsigned long) (_Val * _Scale1);
+            _Temp = static_cast<unsigned long>(_Val * _Scale1);
             _Ostr << _Temp << ' ';
         }
         _Ostr << (_Cy ? 1 : 0);
@@ -1024,8 +1040,8 @@ private:
 
 template <class _Ty, size_t _Wx, size_t _Rx>
 const typename _Swc_01_traits<_Ty, _Wx, _Rx>::_Cy_t
-    _Swc_01_traits<_Ty, _Wx, _Rx>::_Cy = (typename _Swc_01_traits<_Ty, _Wx, _Rx>::_Cy_t) _CSTD
-    ldexp(1.0, int(-ptrdiff_t(_Wx)));
+    _Swc_01_traits<_Ty, _Wx, _Rx>::_Cy = static_cast<typename _Swc_01_traits<_Ty, _Wx, _Rx>::_Cy_t>(
+        _CSTD ldexp(1.0, static_cast<int>(-static_cast<ptrdiff_t>(_Wx))));
 
 template <class _Ty, size_t _Wx, size_t _Rx>
 const typename _Swc_01_traits<_Ty, _Wx, _Rx>::_Mod_t _Swc_01_traits<_Ty, _Wx, _Rx>::_Mod = 1;
@@ -1034,7 +1050,7 @@ template <class _Ty, size_t _Wx, size_t _Rx>
 const _Ty _Swc_01_traits<_Ty, _Wx, _Rx>::_Max = 1;
 
 template <class _Ty, size_t _Wx, size_t _Rx>
-const _Ty _Swc_01_traits<_Ty, _Wx, _Rx>::_Scale1 = (_Ty) _CSTD ldexp(1.0, _Wx % 32);
+const _Ty _Swc_01_traits<_Ty, _Wx, _Rx>::_Scale1 = static_cast<_Ty>(_CSTD ldexp(1.0, _Wx % 32));
 
 // CLASS TEMPLATE subtract_with_carry_01
 template <class _Ty, size_t _Wx, size_t _Sx, size_t _Rx>
@@ -1085,8 +1101,7 @@ public:
 
     static constexpr _Ty default_seed = 5489U;
 
-    explicit mersenne_twister(_Ty _X0 = default_seed, _Ty _Dxarg = _WMSK,
-        _Ty _Fxarg = (_Ty) 1812433253)
+    explicit mersenne_twister(_Ty _X0 = default_seed, _Ty _Dxarg = _WMSK, _Ty _Fxarg = static_cast<_Ty>(1812433253))
         : _Dxval(_Dxarg) { // construct with specified seed
         seed(_X0, _Fxarg);
     }
@@ -1096,8 +1111,8 @@ public:
         seed(_Gx);
     }
 
-    void seed(_Ty _X0 = default_seed,
-        _Ty _Fx       = (_Ty) 1812433253) { // set initial values from specified value
+    void seed(_Ty _X0 = default_seed, _Ty _Fx = static_cast<_Ty>(1812433253)) {
+        // set initial values from specified value
         _Ty _Prev = this->_Ax[0] = _X0 & _WMSK;
         for (int _Ix = 1; _Ix < _Nx; ++_Ix) {
             _Prev = this->_Ax[_Ix] = (_Ix + _Fx * (_Prev ^ (_Prev >> (_Wx - 2)))) & _WMSK;
@@ -1183,7 +1198,7 @@ protected:
 
     _Ty _Dxval;
 
-    static constexpr _Ty _WMSK = ~((~_Ty(0) << (_Wx - 1)) << 1);
+    static constexpr _Ty _WMSK = ~((~_Ty{0} << (_Wx - 1)) << 1);
     static constexpr _Ty _HMSK = (_WMSK << _Rx) & _WMSK;
     static constexpr _Ty _LMSK = ~_HMSK & _WMSK;
 };
@@ -1219,12 +1234,9 @@ basic_ostream<_Elem, _S_Traits>& operator<<(basic_ostream<_Elem, _S_Traits>& _Os
 }
 
 // CLASS TEMPLATE mersenne_twister_engine
-template <class _Ty, size_t _Wx, size_t _Nx, size_t _Mx, size_t _Rx, _Ty _Px, size_t _Ux,
-    _Ty _Dx, // added
-    size_t _Sx, _Ty _Bx, size_t _Tx, _Ty _Cx, size_t _Lx,
-    _Ty _Fx> // added
-class mersenne_twister_engine : public mersenne_twister<_Ty, _Wx, _Nx, _Mx, _Rx, _Px, _Ux, _Sx, _Bx, _Tx, _Cx,
-                                    _Lx> { // mersenne twister generator
+template <class _Ty, size_t _Wx, size_t _Nx, size_t _Mx, size_t _Rx, _Ty _Px, size_t _Ux, _Ty _Dx, size_t _Sx, _Ty _Bx,
+    size_t _Tx, _Ty _Cx, size_t _Lx, _Ty _Fx>
+class mersenne_twister_engine : public mersenne_twister<_Ty, _Wx, _Nx, _Mx, _Rx, _Px, _Ux, _Sx, _Bx, _Tx, _Cx, _Lx> {
 public:
     static constexpr unsigned long long _Max = (((1ULL << (_Wx - 1)) - 1) << 1) + 1;
 
@@ -1270,7 +1282,7 @@ public:
 
     template <class _Seed_seq, _Enable_if_seed_seq_t<_Seed_seq, mersenne_twister_engine> = 0>
     void seed(_Seed_seq& _Seq) { // reset sequence from seed sequence
-        static constexpr int _Kx = (_Wx + 31) / 32;
+        constexpr int _Kx = (_Wx + 31) / 32;
         unsigned long _Arr[_Kx * _Nx];
         _Seq.generate(&_Arr[0], &_Arr[_Kx * _Nx]);
 
@@ -1279,7 +1291,7 @@ public:
         for (int _Ix = 0; _Ix < _Nx; ++_Ix, _Idx0 += _Kx) { // pack _Kx words
             this->_Ax[_Ix] = _Arr[_Idx0];
             for (int _Jx = 0; ++_Jx < _Kx;) {
-                this->_Ax[_Ix] |= (_Ty) _Arr[_Idx0 + _Jx] << (32 * _Jx);
+                this->_Ax[_Ix] |= static_cast<_Ty>(_Arr[_Idx0 + _Jx]) << (32 * _Jx);
             }
 
             this->_Ax[_Ix] &= this->_WMSK;
@@ -1308,8 +1320,7 @@ public:
 };
 
 // CLASS TEMPLATE discard_block
-template <class _Engine, int _Px,
-    int _Rx>
+template <class _Engine, int _Px, int _Rx>
 class discard_block { // discard_block compound engine
 public:
     using base_type   = _Engine;
@@ -1435,8 +1446,7 @@ public:
     using _Mybase     = discard_block<_Engine, _Px, _Rx>;
     using result_type = typename _Engine::result_type;
 
-    discard_block_engine() : _Mybase() { // default construct
-    }
+    discard_block_engine() : _Mybase() {}
 
     explicit discard_block_engine(const _Engine& _Ex) : _Mybase(_Ex) { // construct with engine initializer _Ex
     }
@@ -1461,8 +1471,7 @@ public:
 };
 
 // CLASS TEMPLATE independent_bits_engine
-template <class _Engine, size_t _Wx,
-    class _UIntType>
+template <class _Engine, size_t _Wx, class _UIntType>
 class independent_bits_engine { // independent_bits_engine compound engine
 public:
     _RNG_REQUIRE_UINTTYPE(independent_bits_engine, _UIntType);
@@ -1518,13 +1527,13 @@ public:
     }
 
     _NODISCARD static constexpr result_type(max)() { // return maximum possible generated value
-        return (((result_type) 1 << (_Wx - 1)) << 1) - 1;
+        return ((result_type{1} << (_Wx - 1)) << 1) - 1;
     }
 
     _NODISCARD result_type operator()() { // return next value
         size_t _Idx       = 0;
         result_type _Res  = 0;
-        result_type _Mask = (((result_type) 1 << (_W0 - 1)) << 1) - 1;
+        result_type _Mask = ((result_type{1} << (_W0 - 1)) << 1) - 1;
         _Eres _Val;
 
         for (; _Idx < _N0; ++_Idx) { // pack _W0-bit values
@@ -1629,8 +1638,7 @@ basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
 }
 
 // CLASS TEMPLATE shuffle_order_engine
-template <class _Engine,
-    size_t _Kx>
+template <class _Engine, size_t _Kx>
 class shuffle_order_engine { // shuffle_order_engine compound engine
 public:
     static_assert(0 < _Kx, "invalid template argument for shuffle_order_engine");
@@ -1690,7 +1698,7 @@ public:
     }
 
     _NODISCARD result_type operator()() { // return next value
-        size_t _Idx = (size_t)((double) (_Yx - (_Eng.min)()) * _Scale);
+        size_t _Idx = static_cast<size_t>(static_cast<double>(_Yx - (_Eng.min)()) * _Scale);
 
         _Yx        = _Arr[_Idx];
         _Arr[_Idx] = _Eng();
@@ -1729,8 +1737,9 @@ private:
             _Arr[_Idx] = _Eng();
         }
 
-        _Yx    = _Eng();
-        _Scale = (double) _Kx / ((double) (_Eng.max)() - (double) (_Eng.min)() + 1.0);
+        _Yx = _Eng();
+        _Scale =
+            static_cast<double>(_Kx) / (static_cast<double>((_Eng.max)()) - static_cast<double>((_Eng.min)()) + 1.0);
     }
 
     _Engine _Eng; // the stored engine
@@ -1884,7 +1893,7 @@ private:
             _Uret = static_cast<_Uty>(_Rng(static_cast<_Uty>(_Umax - _Umin + 1)));
         }
 
-        return _Ty(_Adjust(static_cast<_Uty>(_Uret + _Umin)));
+        return static_cast<_Ty>(_Adjust(static_cast<_Uty>(_Uret + _Umin)));
     }
 
     static _Uty _Adjust(_Uty _Uval) { // convert signed ranges to unsigned ranges and vice versa
@@ -2175,7 +2184,7 @@ public:
 private:
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
-        return (_Ty)(_CSTD log(_NRAND(_Eng, _Ty1)) / _Par0._Log_1_p);
+        return static_cast<_Ty>(_CSTD log(_NRAND(_Eng, _Ty1)) / _Par0._Log_1_p);
     }
 
     param_type _Par;
@@ -2343,9 +2352,9 @@ private:
             _Ty _Res;
             _Ty1 _Yx;
             for (;;) { // generate a tentative value
-                _Yx  = (_Ty1) _CSTD tan(_Pi * _NRAND(_Eng, _Ty1));
-                _Res = (_Ty)(_Par0._Sqrt * _Yx + _Par0._Mean);
-                if (static_cast<_Ty>(0) <= _Res) {
+                _Yx  = static_cast<_Ty1>(_CSTD tan(_Pi * _NRAND(_Eng, _Ty1)));
+                _Res = static_cast<_Ty>(_Par0._Sqrt * _Yx + _Par0._Mean);
+                if (_Ty{0} <= _Res) {
                     break;
                 }
             }
@@ -2526,9 +2535,9 @@ private:
             for (;;) { // generate and reject
                 _Ty1 _Yx;
                 for (;;) { // generate a tentative value
-                    _Yx  = (_Ty1) _CSTD tan(_Pi * _NRAND(_Eng, _Ty1));
-                    _Res = (_Ty)(_Par0._Sqrt * _Yx + _Par0._Mean);
-                    if (static_cast<_Ty>(0) <= _Res && _Res <= _Par0._Tx) {
+                    _Yx  = static_cast<_Ty1>(_CSTD tan(_Pi * _NRAND(_Eng, _Ty1)));
+                    _Res = static_cast<_Ty>(_Par0._Sqrt * _Yx + _Par0._Mean);
+                    if (_Ty{0} <= _Res && _Res <= _Par0._Tx) {
                         break;
                     }
                 }
@@ -2579,8 +2588,7 @@ public:
     struct param_type { // parameter package
         using distribution_type = uniform_real;
 
-        explicit param_type(_Ty _Min0 = _Ty(0),
-            _Ty _Max0                 = _Ty(1)) { // construct from parameters
+        explicit param_type(_Ty _Min0 = _Ty{0}, _Ty _Max0 = _Ty{1}) { // construct from parameters
             _Init(_Min0, _Max0);
         }
 
@@ -2611,7 +2619,7 @@ public:
         result_type _Max;
     };
 
-    explicit uniform_real(_Ty _Min0 = _Ty(0), _Ty _Max0 = _Ty(1)) : _Par(_Min0, _Max0) { // construct
+    explicit uniform_real(_Ty _Min0 = _Ty{0}, _Ty _Max0 = _Ty{1}) : _Par(_Min0, _Max0) { // construct
     }
 
     explicit uniform_real(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
@@ -2706,7 +2714,7 @@ public:
     struct param_type : public _Mypbase { // parameter package
         using distribution_type = uniform_real_distribution;
 
-        explicit param_type(_Ty _Min0 = _Ty(0), _Ty _Max0 = _Ty(1))
+        explicit param_type(_Ty _Min0 = _Ty{0}, _Ty _Max0 = _Ty{1})
             : _Mypbase(_Min0, _Max0) { // construct from parameters
         }
 
@@ -2714,7 +2722,7 @@ public:
         }
     };
 
-    explicit uniform_real_distribution(_Ty _Min0 = _Ty(0), _Ty _Max0 = _Ty(1))
+    explicit uniform_real_distribution(_Ty _Min0 = _Ty{0}, _Ty _Max0 = _Ty{1})
         : _Mybase(_Min0, _Max0) { // construct from parameters
     }
 
@@ -2745,7 +2753,7 @@ public:
     struct param_type { // parameter package
         using distribution_type = exponential_distribution;
 
-        explicit param_type(_Ty _Lambda0 = _Ty(1)) { // construct from parameters
+        explicit param_type(_Ty _Lambda0 = _Ty{1}) { // construct from parameters
             _Init(_Lambda0);
         }
 
@@ -2769,7 +2777,7 @@ public:
         _Ty _Lambda;
     };
 
-    explicit exponential_distribution(_Ty _Lambda0 = _Ty(1)) : _Par(_Lambda0) { // construct
+    explicit exponential_distribution(_Ty _Lambda0 = _Ty{1}) : _Par(_Lambda0) { // construct
     }
 
     explicit exponential_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
@@ -2826,7 +2834,7 @@ public:
 private:
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
-        return -_CSTD log(_Ty(1) - _NRAND(_Eng, _Ty)) / _Par0._Lambda;
+        return -_CSTD log(_Ty{1} - _NRAND(_Eng, _Ty)) / _Par0._Lambda;
     }
 
     param_type _Par;
@@ -2987,7 +2995,9 @@ private:
             _Res   = _X2;
             _Valid = false;
         } else { // generate two values, store one, return one
-            _Ty _V1, _V2, _Sx;
+            _Ty _V1;
+            _Ty _V2;
+            _Ty _Sx;
             for (;;) { // reject bad values
                 _V1 = 2 * _NRAND(_Eng, _Ty) - 1;
                 _V2 = 2 * _NRAND(_Eng, _Ty) - 1;
@@ -3046,7 +3056,7 @@ public:
     struct param_type { // parameter package
         using distribution_type = gamma_distribution;
 
-        explicit param_type(_Ty _Alpha0 = _Ty(1), _Ty _Beta0 = _Ty(1)) { // construct from parameters
+        explicit param_type(_Ty _Alpha0 = _Ty{1}, _Ty _Beta0 = _Ty{1}) { // construct from parameters
             _Init(_Alpha0, _Beta0);
         }
 
@@ -3071,7 +3081,7 @@ public:
             _STL_ASSERT(0.0 < _Beta0, "invalid beta argument for gamma_distribution");
             _Alpha = _Alpha0;
             _Beta  = _Beta0;
-            _Px    = (_Ty)(_Exp1 / (_Alpha + _Exp1));
+            _Px    = static_cast<_Ty>(_Exp1 / (_Alpha + _Exp1));
             _Sqrt  = _CSTD sqrt(2 * _Alpha - 1);
         }
 
@@ -3082,7 +3092,7 @@ public:
         exponential_distribution<_Ty> _Exp;
     };
 
-    explicit gamma_distribution(_Ty _Alpha0 = _Ty(1), _Ty _Beta0 = _Ty(1)) : _Par(_Alpha0, _Beta0) { // construct
+    explicit gamma_distribution(_Ty _Alpha0 = _Ty{1}, _Ty _Beta0 = _Ty{1}) : _Par(_Alpha0, _Beta0) { // construct
     }
 
     explicit gamma_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
@@ -3146,8 +3156,11 @@ public:
 private:
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, param_type _Par0) const { // return next value
-        _Ty _Ux, _Vx;
-        _Ty _Xx, _Yx, _Qx;
+        _Ty _Ux;
+        _Ty _Vx;
+        _Ty _Xx;
+        _Ty _Yx;
+        _Ty _Qx;
         int _Count;
         if (_Par0._Alpha < 1) { // small values of alpha
                                 // from Knuth
@@ -3158,7 +3171,7 @@ private:
                 } while (_Vx == 0);
 
                 if (_Ux < _Par0._Px) { // small _Ux
-                    _Xx = _CSTD pow(_Vx, _Ty(1) / _Par0._Alpha);
+                    _Xx = _CSTD pow(_Vx, _Ty{1} / _Par0._Alpha);
                     _Qx = _CSTD exp(-_Xx);
                 } else { // large _Ux
                     _Xx = 1 - _CSTD log(_Vx);
@@ -3175,7 +3188,8 @@ private:
             return _Par0._Beta * _Par0._Exp(_Eng);
         }
 
-        if ((_Count = (int) _Par0._Alpha) == _Par0._Alpha && _Count < 20) { // _Alpha is small integer, compute directly
+        if ((_Count = static_cast<int>(_Par0._Alpha)) == _Par0._Alpha && _Count < 20) {
+            // _Alpha is small integer, compute directly
             _Yx = _NRAND(_Eng, _Ty);
             while (--_Count) { // adjust result
                 do {
@@ -3189,7 +3203,7 @@ private:
 
         // no shortcuts
         for (;;) { // generate and reject
-            _Yx = (_Ty) _CSTD tan(_Pi * _NRAND(_Eng, _Ty));
+            _Yx = static_cast<_Ty>(_CSTD tan(_Pi * _NRAND(_Eng, _Ty)));
             _Xx = _Par0._Sqrt * _Yx + _Par0._Alpha - 1;
             if (0 < _Xx
                 && _NRAND(_Eng, _Ty) <= (1 + _Yx * _Yx)
@@ -3238,8 +3252,7 @@ public:
     struct param_type { // parameter package
         using distribution_type = weibull_distribution;
 
-        explicit param_type(_Ty _A0 = _Ty(1),
-            _Ty _B0                 = _Ty(1)) { // construct from parameters
+        explicit param_type(_Ty _A0 = _Ty{1}, _Ty _B0 = _Ty{1}) { // construct from parameters
             _Init(_A0, _B0);
         }
 
@@ -3270,7 +3283,7 @@ public:
         _Ty _Bx;
     };
 
-    explicit weibull_distribution(_Ty _A0 = _Ty(1), _Ty _B0 = _Ty(1)) : _Par(_A0, _B0) { // construct
+    explicit weibull_distribution(_Ty _A0 = _Ty{1}, _Ty _B0 = _Ty{1}) : _Par(_A0, _B0) { // construct
     }
 
     explicit weibull_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
@@ -3334,8 +3347,8 @@ public:
 private:
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // generate pseudo-random value
-        _Ty _Px = (_Ty(1) - _NRAND(_Eng, _Ty));
-        return _Par0._Bx * _CSTD pow(-_CSTD log(_Px), _Ty(1) / _Par0._Ax);
+        _Ty _Px = (_Ty{1} - _NRAND(_Eng, _Ty));
+        return _Par0._Bx * _CSTD pow(-_CSTD log(_Px), _Ty{1} / _Par0._Ax);
     }
 
     param_type _Par;
@@ -3376,8 +3389,7 @@ public:
     struct param_type { // parameter package
         using distribution_type = extreme_value_distribution;
 
-        explicit param_type(_Ty _A0 = _Ty(0),
-            _Ty _B0                 = _Ty(1)) { // construct from parameters
+        explicit param_type(_Ty _A0 = _Ty{0}, _Ty _B0 = _Ty{1}) { // construct from parameters
             _Init(_A0, _B0);
         }
 
@@ -3407,7 +3419,7 @@ public:
         _Ty _Bx;
     };
 
-    explicit extreme_value_distribution(_Ty _A0 = _Ty(0), _Ty _B0 = _Ty(1)) : _Par(_A0, _B0) { // construct
+    explicit extreme_value_distribution(_Ty _A0 = _Ty{0}, _Ty _B0 = _Ty{1}) : _Par(_A0, _B0) { // construct
     }
 
     explicit extreme_value_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
@@ -3513,8 +3525,7 @@ public:
     struct param_type { // parameter package
         using distribution_type = lognormal_distribution;
 
-        explicit param_type(_Ty _M0 = _Ty(0),
-            _Ty _S0                 = _Ty(1)) { // construct from parameters
+        explicit param_type(_Ty _M0 = _Ty{0}, _Ty _S0 = _Ty{1}) { // construct from parameters
             _Init(_M0, _S0);
         }
 
@@ -3544,7 +3555,7 @@ public:
         _Ty _Sx;
     };
 
-    explicit lognormal_distribution(_Ty _M0 = _Ty(0), _Ty _S0 = _Ty(1)) : _Par(_M0, _S0) { // construct
+    explicit lognormal_distribution(_Ty _M0 = _Ty{0}, _Ty _S0 = _Ty{1}) : _Par(_M0, _S0) { // construct
     }
 
     explicit lognormal_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
@@ -3650,7 +3661,7 @@ public:
     struct param_type { // parameter package
         using distribution_type = chi_squared_distribution;
 
-        explicit param_type(_Ty _N0 = _Ty(1)) { // construct from parameters
+        explicit param_type(_Ty _N0 = _Ty{1}) { // construct from parameters
             _Init(_N0);
         }
 
@@ -3674,7 +3685,7 @@ public:
         _Ty _Nx;
     };
 
-    explicit chi_squared_distribution(_Ty _N0 = _Ty(1)) : _Par(_N0) { // construct
+    explicit chi_squared_distribution(_Ty _N0 = _Ty{1}) : _Par(_N0) { // construct
     }
 
     explicit chi_squared_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
@@ -3730,7 +3741,7 @@ public:
 private:
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return pseudo-random value
-        gamma_distribution<_Ty> _Dist((_Ty) _Par0._Nx * _Ty(0.5), _Ty(2));
+        gamma_distribution<_Ty> _Dist(static_cast<_Ty>(_Par0._Nx) * static_cast<_Ty>(0.5), _Ty{2});
         return _Dist(_Eng);
     }
 
@@ -3772,8 +3783,7 @@ public:
     struct param_type { // parameter package
         using distribution_type = cauchy_distribution;
 
-        explicit param_type(_Ty _A0 = _Ty(0),
-            _Ty _B0                 = _Ty(1)) { // construct from parameters
+        explicit param_type(_Ty _A0 = _Ty{0}, _Ty _B0 = _Ty{1}) { // construct from parameters
             _Init(_A0, _B0);
         }
 
@@ -3803,7 +3813,7 @@ public:
         _Ty _Bx;
     };
 
-    explicit cauchy_distribution(_Ty _A0 = _Ty(0), _Ty _B0 = _Ty(1)) : _Par(_A0, _B0) { // construct
+    explicit cauchy_distribution(_Ty _A0 = _Ty{0}, _Ty _B0 = _Ty{1}) : _Par(_A0, _B0) { // construct
     }
 
     explicit cauchy_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
@@ -3868,7 +3878,7 @@ private:
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // generate pseudo-random value
         _Ty Px = _NRAND(_Eng, _Ty);
-        return (_Ty)(_Par0._Ax + _Par0._Bx * _CSTD tan(_Pi * (Px - _Ty(0.5))));
+        return static_cast<_Ty>(_Par0._Ax + _Par0._Bx * _CSTD tan(_Pi * (Px - static_cast<_Ty>(0.5))));
     }
 
     param_type _Par;
@@ -3904,28 +3914,30 @@ class _Beta_distribution { // beta distribution
 public:
     using result_type = _Ty;
 
-    explicit _Beta_distribution(const _Ty& _A0 = _Ty(1),
-        const _Ty& _B0                         = _Ty(1)) { // construct
+    explicit _Beta_distribution(const _Ty& _A0 = _Ty{1}, const _Ty& _B0 = _Ty{1}) { // construct
         _Init(_A0, _B0);
     }
 
     template <class _Engine>
     _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
-        if (_Ax < _Ty(1) && _Bx < _Ty(1)) { // look for a good value
-            _Ty _Wx, _P1, _P2;
+        if (_Ax < _Ty{1} && _Bx < _Ty{1}) { // look for a good value
+            _Ty _Wx;
+            _Ty _P1;
+            _Ty _P2;
             for (;;) { // reject large values
                 _P1 = _NRAND(_Eng, _Ty);
                 _P2 = _NRAND(_Eng, _Ty);
-                _P1 = _CSTD pow(_P1, _Ty(1) / _Ax);
-                _P2 = _CSTD pow(_P2, _Ty(1) / _Bx);
+                _P1 = _CSTD pow(_P1, _Ty{1} / _Ax);
+                _P2 = _CSTD pow(_P2, _Ty{1} / _Bx);
                 _Wx = _P1 + _P2;
-                if (_Wx <= _Ty(1)) {
+                if (_Wx <= _Ty{1}) {
                     break;
                 }
             }
             return _P1 / _Wx;
         } else { // use gamma distributions instead
-            _Ty _P1, _P2;
+            _Ty _P1;
+            _Ty _P2;
             gamma_distribution<_Ty> _Dist1(_Ax, 1);
             gamma_distribution<_Ty> _Dist2(_Bx, 1);
             _P1 = _Dist1(_Eng);
@@ -3957,7 +3969,7 @@ public:
     struct param_type { // parameter package
         using distribution_type = fisher_f_distribution;
 
-        explicit param_type(_Ty _M0 = _Ty(1), _Ty _N0 = _Ty(1)) { // construct from parameters
+        explicit param_type(_Ty _M0 = _Ty{1}, _Ty _N0 = _Ty{1}) { // construct from parameters
             _Init(_M0, _N0);
         }
 
@@ -3988,7 +4000,7 @@ public:
         _Ty _Nx;
     };
 
-    explicit fisher_f_distribution(_Ty _M0 = _Ty(1), _Ty _N0 = _Ty(1)) : _Par(_M0, _N0) { // construct
+    explicit fisher_f_distribution(_Ty _M0 = _Ty{1}, _Ty _N0 = _Ty{1}) : _Par(_M0, _N0) { // construct
     }
 
     explicit fisher_f_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
@@ -4050,13 +4062,15 @@ public:
 private:
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
-        _Ty _Px, _V1, _V2;
-        _V1 = (_Ty) _Par0._Mx * _Ty(0.5);
-        _V2 = (_Ty) _Par0._Nx * _Ty(0.5);
+        _Ty _Px;
+        _Ty _V1;
+        _Ty _V2;
+        _V1 = static_cast<_Ty>(_Par0._Mx) * static_cast<_Ty>(0.5);
+        _V2 = static_cast<_Ty>(_Par0._Nx) * static_cast<_Ty>(0.5);
         _Beta_distribution<_Ty> _Dist(_V1, _V2);
         _Px = _Dist(_Eng);
 
-        return (_V2 / _V1) * (_Px / (_Ty(1) - _Px));
+        return (_V2 / _V1) * (_Px / (_Ty{1} - _Px));
     }
 
     param_type _Par;
@@ -4097,7 +4111,7 @@ public:
     struct param_type { // parameter package
         using distribution_type = student_t_distribution;
 
-        explicit param_type(_Ty _N0 = _Ty(1)) { // construct from parameters
+        explicit param_type(_Ty _N0 = _Ty{1}) { // construct from parameters
             _Init(_N0);
         }
 
@@ -4121,7 +4135,7 @@ public:
         _Ty _Nx;
     };
 
-    explicit student_t_distribution(_Ty _N0 = _Ty(1)) : _Par(_N0) { // construct
+    explicit student_t_distribution(_Ty _N0 = _Ty{1}) : _Par(_N0) { // construct
     }
 
     explicit student_t_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
@@ -4177,20 +4191,23 @@ public:
 private:
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
-        _Ty _V1, _V2, _R, _Rs;
+        _Ty _V1;
+        _Ty _V2;
+        _Ty _R0;
+        _Ty _Rs;
         uniform_real<_Ty> _Dist(-1, 1);
         for (;;) { // get a point inside unit circle
             _V1 = _Dist(_Eng);
             _V2 = _Dist(_Eng);
             _Rs = _V1 * _V1 + _V2 * _V2;
 
-            if (_Rs < _Ty(1)) {
+            if (_Rs < _Ty{1}) {
                 break;
             }
         }
-        _R = _CSTD sqrt(_Rs);
+        _R0 = _CSTD sqrt(_Rs);
 
-        return _V1 * _CSTD sqrt(_Par0._Nx * (_CSTD pow(_R, -_Ty(4) / _Par0._Nx) - _Ty(1)) / _Rs);
+        return _V1 * _CSTD sqrt(_Par0._Nx * (_CSTD pow(_R0, -_Ty{4} / _Par0._Nx) - _Ty{1}) / _Rs);
     }
 
     param_type _Par;
@@ -4331,7 +4348,7 @@ private:
     result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return pseudo-random value
         double _V1;
         gamma_distribution<double> dist1(
-            static_cast<double>(_Par0._Kx), static_cast<double>((static_cast<_Ty>(1) - _Par0._Px) / _Par0._Px));
+            static_cast<double>(_Par0._Kx), static_cast<double>((_Ty{1} - _Par0._Px) / _Par0._Px));
         _V1 = dist1(_Eng);
         poisson_distribution<_Ty> dist2(_V1);
 
@@ -4382,7 +4399,7 @@ public:
         param_type(_Noinit) { // do-nothing constructor for derived classes
         }
 
-        param_type() { // default constructor
+        param_type() {
             _Init();
         }
 
@@ -4404,7 +4421,7 @@ public:
                 _Count = 1;
             }
 
-            _Range /= (double) _Count;
+            _Range /= static_cast<double>(_Count);
             _Low += 0.5 * _Range; // evaluate in center of each interval
             for (size_t _Idx = 0; _Idx < _Count; ++_Idx) {
                 _Pvec.push_back(_Func(_Low + _Idx * _Range));
@@ -4459,8 +4476,7 @@ public:
         _Myvec _Pcdf;
     };
 
-    discrete_distribution() { // default constructor
-    }
+    discrete_distribution() {}
 
     template <class _InIt>
     discrete_distribution(_InIt _First, _InIt _Last) : _Par(_First, _Last) { // construct from [_First, _Last)
@@ -4494,7 +4510,7 @@ public:
     }
 
     _NODISCARD result_type(max)() const { // return maximum possible generated value
-        return (result_type)(_Par._Pvec.size() - 1);
+        return static_cast<result_type>(_Par._Pvec.size() - 1);
     }
 
     void reset() { // clear internal state
@@ -4591,7 +4607,7 @@ public:
     struct param_type : public _Mypbase { // parameter package
         using distribution_type = piecewise_constant_distribution;
 
-        param_type() { // default constructor
+        param_type() {
             _Bvec.push_back(0);
             _Bvec.push_back(1);
         }
@@ -4623,7 +4639,7 @@ public:
             _Ty _Range    = _Bvec.back() - _Low;
             size_t _Count = _Bvec.size() - 1;
 
-            _Range /= (_Ty) _Count;
+            _Range /= static_cast<_Ty>(_Count);
             for (size_t _Idx = 0; _Idx < _Count; ++_Idx) {
                 _Pvec.push_back(_Func(_Low + _Idx * _Range));
             }
@@ -4639,14 +4655,14 @@ public:
                 _Count = 1;
             }
 
-            _Range /= (_Ty) _Count;
+            _Range /= static_cast<_Ty>(_Count);
             for (size_t _Idx = 0; _Idx <= _Count; ++_Idx) {
                 _Bvec.push_back(_Low + _Idx * _Range);
             }
         }
 
         _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
-            return *(_Mypbase*) this == *(_Mypbase*) &_Right && _Bvec == _Right._Bvec;
+            return static_cast<const _Mypbase&>(*this) == static_cast<const _Mypbase&>(_Right) && _Bvec == _Right._Bvec;
         }
 
         _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
@@ -4668,14 +4684,13 @@ public:
         }
 
         void _Init() { // initialize
-            ((_Mypbase*) this)->_Init();
+            _Mypbase::_Init();
         }
 
         vector<_Ty> _Bvec;
     };
 
-    piecewise_constant_distribution() { // default constructor
-    }
+    piecewise_constant_distribution() {}
 
     template <class _InIt1, class _InIt2>
     piecewise_constant_distribution(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2)
@@ -4760,7 +4775,7 @@ public:
 
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
-        size_t _Px = (*(_Mybase*) this)(_Eng, _Par0);
+        size_t _Px = _Mybase::operator()(_Eng, _Par0);
         uniform_real<_Ty> _Dist(_Par0._Bvec[_Px], _Par0._Bvec[_Px + 1]);
         return _Dist(_Eng);
     }
@@ -4807,7 +4822,7 @@ public:
     struct param_type : public _Mypbase { // parameter package
         using distribution_type = piecewise_linear_distribution;
 
-        param_type() { // default constructor
+        param_type() {
             _Bvec.push_back(0);
             _Bvec.push_back(1);
         }
@@ -4839,7 +4854,7 @@ public:
             _Ty _Range    = _Bvec.back() - _Low;
             size_t _Count = _Bvec.size();
 
-            _Range /= (_Ty) _Count;
+            _Range /= static_cast<_Ty>(_Count);
             for (size_t _Idx = 0; _Idx < _Count; ++_Idx) {
                 this->_Pvec.push_back(_Func(_Low + _Idx * _Range));
             }
@@ -4851,12 +4866,12 @@ public:
         param_type(size_t _Count, _Ty _Low, _Ty _High, _Fn _Func)
             : _Mypbase(_Noinit()) { // construct from value range and function
             _Ty _Range = _High - _Low;
-            _STL_ASSERT(_Ty(0) < _Range, "invalid range for piecewise_linear_distribution");
+            _STL_ASSERT(_Ty{0} < _Range, "invalid range for piecewise_linear_distribution");
             if (_Count < 2) {
                 _Count = 2;
             }
 
-            _Range /= (double) _Count;
+            _Range /= static_cast<double>(_Count);
             for (size_t _Idx = 0; _Idx < _Count; ++_Idx) { // compute _Bvec and _Pvec
                 _Ty _Bval = _Low + _Idx * _Range;
                 _Bvec.push_back(_Bval);
@@ -4866,7 +4881,7 @@ public:
         }
 
         _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
-            return *(_Mypbase*) this == *(_Mypbase*) &_Right && _Bvec == _Right._Bvec;
+            return static_cast<const _Mypbase&>(*this) == static_cast<const _Mypbase&>(_Right) && _Bvec == _Right._Bvec;
         }
 
         _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
@@ -4917,8 +4932,7 @@ public:
         vector<_Ty> _Bvec;
     };
 
-    piecewise_linear_distribution() { // default constructor
-    }
+    piecewise_linear_distribution() {}
 
     template <class _InIt1, class _InIt2>
     piecewise_linear_distribution(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2)
@@ -5011,7 +5025,7 @@ public:
 
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
-        size_t _Px = (*(_Mybase*) this)(_Eng, _Par0);
+        size_t _Px = _Mybase::operator()(_Eng, _Par0);
         double _P0 = _Par0._Pvec[_Px];
         double _P1 = _Par0._Pvec[_Px + 1];
         uniform_real<_Ty> _Dist;
@@ -5184,7 +5198,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _RANDOM_
 
 /*

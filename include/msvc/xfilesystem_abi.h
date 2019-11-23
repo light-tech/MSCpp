@@ -3,7 +3,8 @@
 #pragma once
 #ifndef _XFILESYSTEM_ABI_H
 #define _XFILESYSTEM_ABI_H
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <stdint.h>
 #include <type_traits>
@@ -32,6 +33,7 @@ enum class __std_win_error : unsigned long {
     _File_exists               = 80, // #define ERROR_FILE_EXISTS                80L
     _Invalid_parameter         = 87, // #define ERROR_INVALID_PARAMETER          87L
     _Insufficient_buffer       = 122, // #define ERROR_INSUFFICIENT_BUFFER        122L
+    _Invalid_name              = 123, // #define ERROR_INVALID_NAME               123L
     _Directory_not_empty       = 145, // #define ERROR_DIR_NOT_EMPTY              145L
     _Already_exists            = 183, // #define ERROR_ALREADY_EXISTS             183L
     _Filename_exceeds_range    = 206, // #define ERROR_FILENAME_EXCED_RANGE       206L
@@ -151,9 +153,20 @@ enum class __std_access_rights : unsigned long {
     _Delete                = 0x00010000, // #define DELETE                           (0x00010000L)
     _File_read_attributes  = 0x0080, // #define FILE_READ_ATTRIBUTES      ( 0x0080 )
     _File_write_attributes = 0x0100, // #define FILE_WRITE_ATTRIBUTES     ( 0x0100 )
+
+    // #define READ_CONTROL          (0x00020000L)
+    // #define STANDARD_RIGHTS_WRITE (READ_CONTROL)
+    // #define FILE_WRITE_DATA       (0x0002)
+    // #define FILE_WRITE_ATTRIBUTES (0x0100)
+    // #define FILE_WRITE_EA         (0x0010)
+    // #define FILE_APPEND_DATA      (0x0004)
+    // #define SYNCHRONIZE           (0x00100000L)
+    // #define FILE_GENERIC_WRITE    (STANDARD_RIGHTS_WRITE | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES
+    //                                   | FILE_WRITE_EA | FILE_APPEND_DATA | SYNCHRONIZE)
+    _File_generic_write = 0x00120116,
 };
 
-_BITMASK_OPS(__std_access_rights);
+_BITMASK_OPS(__std_access_rights)
 
 enum class __std_fs_file_flags : unsigned long {
     _None               = 0,
@@ -161,7 +174,7 @@ enum class __std_fs_file_flags : unsigned long {
     _Open_reparse_point = 0x00200000, // #define FILE_FLAG_OPEN_REPARSE_POINT    0x00200000
 };
 
-_BITMASK_OPS(__std_fs_file_flags);
+_BITMASK_OPS(__std_fs_file_flags)
 
 enum class __std_fs_file_handle : intptr_t { _Invalid = -1 };
 
@@ -186,7 +199,7 @@ enum class __std_fs_copy_options {
     _Update_existing    = 0x4,
 };
 
-_BITMASK_OPS(__std_fs_copy_options);
+_BITMASK_OPS(__std_fs_copy_options)
 
 _EXTERN_C
 _NODISCARD __std_ulong_and_error __stdcall __std_fs_get_full_path_name(_In_z_ const wchar_t* _Source,
@@ -285,6 +298,8 @@ _NODISCARD __std_fs_remove_result __stdcall __std_fs_remove(_In_z_ const wchar_t
 _NODISCARD __std_win_error __stdcall __std_fs_rename(
     _In_z_ const wchar_t* _Source, _In_z_ const wchar_t* _Target) noexcept;
 
+_NODISCARD __std_win_error __stdcall __std_fs_resize_file(_In_z_ const wchar_t* _Target, uintmax_t _New_size) noexcept;
+
 _NODISCARD __std_win_error __stdcall __std_fs_space(_In_z_ const wchar_t* _Target, _Out_ uintmax_t* _Available,
     _Out_ uintmax_t* _Total_bytes, _Out_ uintmax_t* _Free_bytes) noexcept;
 _END_EXTERN_C
@@ -328,5 +343,5 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XFILESYSTEM_ABI_H

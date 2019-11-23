@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _ITERATOR_
 #define _ITERATOR_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <istream>
 #include <xutility>
 
@@ -57,7 +58,7 @@ protected:
 
 // FUNCTION TEMPLATE front_inserter
 template <class _Container>
-_NODISCARD inline front_insert_iterator<_Container> front_inserter(_Container& _Cont) { // return front_insert_iterator
+_NODISCARD front_insert_iterator<_Container> front_inserter(_Container& _Cont) { // return front_insert_iterator
     return front_insert_iterator<_Container>(_Cont);
 }
 
@@ -111,15 +112,14 @@ protected:
 
 // FUNCTION TEMPLATE inserter
 template <class _Container>
-_NODISCARD inline insert_iterator<_Container> inserter(_Container& _Cont,
+_NODISCARD insert_iterator<_Container> inserter(_Container& _Cont,
     typename _Container::iterator _Where) { // return insert_iterator
     return insert_iterator<_Container>(_Cont, _Where);
 }
 
 
 // CLASS TEMPLATE istream_iterator
-template <class _Ty, class _Elem = char, class _Traits = char_traits<_Elem>,
-    class _Diff = ptrdiff_t>
+template <class _Ty, class _Elem = char, class _Traits = char_traits<_Elem>, class _Diff = ptrdiff_t>
 class istream_iterator { // wrap _Ty extracts from input stream as input iterator
 public:
     using iterator_category = input_iterator_tag;
@@ -139,32 +139,32 @@ public:
         _Getval();
     }
 
-    _NODISCARD const _Ty& operator*() const { // return designated value
+    _NODISCARD const _Ty& operator*() const {
         return _Myval;
     }
 
-    _NODISCARD const _Ty* operator->() const { // return pointer to class object
+    _NODISCARD const _Ty* operator->() const {
         return _STD addressof(_Myval);
     }
 
-    istream_iterator& operator++() { // preincrement
+    istream_iterator& operator++() {
         _Getval();
         return *this;
     }
 
-    istream_iterator operator++(int) { // postincrement
+    istream_iterator operator++(int) {
         istream_iterator _Tmp = *this;
-        ++*this;
+        _Getval();
         return _Tmp;
     }
 
-    bool _Equal(const istream_iterator& _Right) const { // test for iterator equality
+    bool _Equal(const istream_iterator& _Right) const {
         return _Myistr == _Right._Myistr;
     }
 
 protected:
     void _Getval() { // get a _Ty value if possible
-        if (_Myistr != nullptr && !(*_Myistr >> _Myval)) {
+        if (_Myistr && !(*_Myistr >> _Myval)) {
             _Myistr = nullptr;
         }
     }
@@ -174,21 +174,20 @@ protected:
 };
 
 template <class _Ty, class _Elem, class _Traits, class _Diff>
-_NODISCARD inline bool operator==(const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Left,
+_NODISCARD bool operator==(const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Left,
     const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Right) { // test for istream_iterator equality
     return _Left._Equal(_Right);
 }
 
 template <class _Ty, class _Elem, class _Traits, class _Diff>
-_NODISCARD inline bool operator!=(const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Left,
+_NODISCARD bool operator!=(const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Left,
     const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Right) { // test for istream_iterator inequality
     return !(_Left == _Right);
 }
 
 
 // CLASS TEMPLATE ostream_iterator
-template <class _Ty, class _Elem = char,
-    class _Traits = char_traits<_Elem>>
+template <class _Ty, class _Elem = char, class _Traits = char_traits<_Elem>>
 class ostream_iterator { // wrap _Ty inserts to output stream as output iterator
 public:
     using iterator_category = output_iterator_tag;
@@ -207,7 +206,7 @@ public:
 
     ostream_iterator& operator=(const _Ty& _Val) { // insert value into output stream, followed by delimiter
         *_Myostr << _Val;
-        if (_Mydelim != nullptr) {
+        if (_Mydelim) {
             *_Myostr << _Mydelim;
         }
 
@@ -248,55 +247,54 @@ public:
     using pointer           = typename iterator_traits<_Ptr>::pointer;
     using reference         = typename iterator_traits<_Ptr>::reference;
 
-    constexpr checked_array_iterator() noexcept : _Myarray(nullptr), _Mysize(0), _Myindex(0) { // default construct
-    }
+    constexpr checked_array_iterator() noexcept : _Myarray(nullptr), _Mysize(0), _Myindex(0) {}
 
     constexpr checked_array_iterator(const _Ptr _Array, const size_t _Size, const size_t _Index = 0) noexcept
         : _Myarray(_Array), _Mysize(_Size), _Myindex(_Index) { // construct with array, size, and optional index
         _STL_VERIFY(_Index <= _Size, "checked_array_iterator construction index out of range");
     }
 
-    _NODISCARD constexpr _Ptr base() const noexcept { // return unwrapped iterator
+    _NODISCARD constexpr _Ptr base() const noexcept {
         return _Myarray + _Myindex;
     }
 
-    _NODISCARD constexpr reference operator*() const noexcept { // return designated object
+    _NODISCARD constexpr reference operator*() const noexcept {
         return *operator->();
     }
 
-    _NODISCARD constexpr pointer operator->() const noexcept { // return pointer to class object
+    _NODISCARD constexpr pointer operator->() const noexcept {
         _STL_VERIFY(_Myarray, "cannot dereference value-initialized or null checked_array_iterator");
         _STL_VERIFY(_Myindex < _Mysize, "cannot dereference end checked_array_iterator");
         return _Myarray + _Myindex;
     }
 
-    constexpr checked_array_iterator& operator++() noexcept { // preincrement
+    constexpr checked_array_iterator& operator++() noexcept {
         _STL_VERIFY(_Myarray, "cannot increment value-initialized or null checked_array_iterator");
         _STL_VERIFY(_Myindex < _Mysize, "cannot increment checked_array_iterator past end");
         ++_Myindex;
         return *this;
     }
 
-    constexpr checked_array_iterator operator++(int) noexcept { // postincrement
+    constexpr checked_array_iterator operator++(int) noexcept {
         checked_array_iterator _Tmp = *this;
         ++*this;
         return _Tmp;
     }
 
-    constexpr checked_array_iterator& operator--() noexcept { // predecrement
+    constexpr checked_array_iterator& operator--() noexcept {
         _STL_VERIFY(_Myarray, "cannot decrement value-initialized or null checked_array_iterator");
         _STL_VERIFY(_Myindex != 0, "cannot decrement checked_array_iterator before begin");
         --_Myindex;
         return *this;
     }
 
-    constexpr checked_array_iterator operator--(int) noexcept { // postdecrement
+    constexpr checked_array_iterator operator--(int) noexcept {
         checked_array_iterator _Tmp = *this;
         --*this;
         return _Tmp;
     }
 
-    constexpr checked_array_iterator& operator+=(const difference_type _Off) noexcept { // increment by integer
+    constexpr checked_array_iterator& operator+=(const difference_type _Off) noexcept {
         if (_Off != 0) {
             _STL_VERIFY(_Myarray, "cannot seek value-initialized or null checked_array_iterator");
         }
@@ -315,8 +313,7 @@ public:
         return *this;
     }
 
-    _NODISCARD constexpr checked_array_iterator operator+(const difference_type _Off) const
-        noexcept { // return this + integer
+    _NODISCARD constexpr checked_array_iterator operator+(const difference_type _Off) const noexcept {
         checked_array_iterator _Tmp = *this;
         _Tmp += _Off;
         return _Tmp;
@@ -324,11 +321,10 @@ public:
 
     friend constexpr checked_array_iterator operator+(const difference_type _Off,
         const checked_array_iterator<_Ptr>& _Next) noexcept { // TRANSITION, VSO#568006
-        // add offset to iterator
         return _Next + _Off;
     }
 
-    constexpr checked_array_iterator& operator-=(const difference_type _Off) noexcept { // decrement by integer
+    constexpr checked_array_iterator& operator-=(const difference_type _Off) noexcept {
         if (_Off != 0) {
             _STL_VERIFY(_Myarray, "cannot seek value-initialized or null checked_array_iterator");
         }
@@ -347,53 +343,47 @@ public:
         return *this;
     }
 
-    _NODISCARD constexpr checked_array_iterator operator-(const difference_type _Off) const
-        noexcept { // return this - integer
+    _NODISCARD constexpr checked_array_iterator operator-(const difference_type _Off) const noexcept {
         checked_array_iterator _Tmp = *this;
         _Tmp -= _Off;
         return _Tmp;
     }
 
-    _NODISCARD constexpr difference_type operator-(const checked_array_iterator& _Right) const
-        noexcept { // return difference of iterators
+    _NODISCARD constexpr difference_type operator-(const checked_array_iterator& _Right) const noexcept {
         _STL_VERIFY(_Myarray == _Right._Myarray && _Mysize == _Right._Mysize,
             "cannot subtract incompatible checked_array_iterators");
         return static_cast<difference_type>(_Myindex - _Right._Myindex);
     }
 
-    _NODISCARD constexpr reference operator[](const difference_type _Off) const noexcept { // subscript
+    _NODISCARD constexpr reference operator[](const difference_type _Off) const noexcept {
         return *(*this + _Off);
     }
 
-    _NODISCARD constexpr bool operator==(const checked_array_iterator& _Right) const
-        noexcept { // test for iterator equality
+    _NODISCARD constexpr bool operator==(const checked_array_iterator& _Right) const noexcept {
         _STL_VERIFY(_Myarray == _Right._Myarray && _Mysize == _Right._Mysize,
             "cannot compare incompatible checked_array_iterators for equality");
         return _Myindex == _Right._Myindex;
     }
 
-    _NODISCARD constexpr bool operator!=(const checked_array_iterator& _Right) const
-        noexcept { // test for iterator inequality
+    _NODISCARD constexpr bool operator!=(const checked_array_iterator& _Right) const noexcept {
         return !(*this == _Right);
     }
 
-    _NODISCARD constexpr bool operator<(const checked_array_iterator& _Right) const noexcept { // test if this < _Right
+    _NODISCARD constexpr bool operator<(const checked_array_iterator& _Right) const noexcept {
         _STL_VERIFY(_Myarray == _Right._Myarray && _Mysize == _Right._Mysize,
             "cannot compare incompatible checked_array_iterators");
         return _Myindex < _Right._Myindex;
     }
 
-    _NODISCARD constexpr bool operator>(const checked_array_iterator& _Right) const noexcept { // test if this > _Right
+    _NODISCARD constexpr bool operator>(const checked_array_iterator& _Right) const noexcept {
         return _Right < *this;
     }
 
-    _NODISCARD constexpr bool operator<=(const checked_array_iterator& _Right) const
-        noexcept { // test if this <= _Right
+    _NODISCARD constexpr bool operator<=(const checked_array_iterator& _Right) const noexcept {
         return !(_Right < *this);
     }
 
-    _NODISCARD constexpr bool operator>=(const checked_array_iterator& _Right) const
-        noexcept { // test if this >= _Right
+    _NODISCARD constexpr bool operator>=(const checked_array_iterator& _Right) const noexcept {
         return !(*this < _Right);
     }
 
@@ -451,53 +441,50 @@ public:
     using pointer           = typename iterator_traits<_Ptr>::pointer;
     using reference         = typename iterator_traits<_Ptr>::reference;
 
-    constexpr unchecked_array_iterator() noexcept : _Myptr(nullptr) { // default construct
-    }
+    constexpr unchecked_array_iterator() noexcept : _Myptr(nullptr) {}
 
-    constexpr explicit unchecked_array_iterator(const _Ptr _Src) noexcept : _Myptr(_Src) { // construct with pointer
-    }
+    constexpr explicit unchecked_array_iterator(const _Ptr _Src) noexcept : _Myptr(_Src) {}
 
-    _NODISCARD constexpr _Ptr base() const noexcept { // return unwrapped iterator
+    _NODISCARD constexpr _Ptr base() const noexcept {
         return _Myptr;
     }
 
-    _NODISCARD constexpr reference operator*() const noexcept { // return designated object
+    _NODISCARD constexpr reference operator*() const noexcept {
         return *_Myptr;
     }
 
-    _NODISCARD constexpr pointer operator->() const noexcept { // return pointer to class object
+    _NODISCARD constexpr pointer operator->() const noexcept {
         return _Myptr;
     }
 
-    constexpr unchecked_array_iterator& operator++() noexcept { // preincrement
+    constexpr unchecked_array_iterator& operator++() noexcept {
         ++_Myptr;
         return *this;
     }
 
-    constexpr unchecked_array_iterator operator++(int) noexcept { // postincrement
+    constexpr unchecked_array_iterator operator++(int) noexcept {
         unchecked_array_iterator _Tmp = *this;
-        ++*this;
+        ++_Myptr;
         return _Tmp;
     }
 
-    constexpr unchecked_array_iterator& operator--() noexcept { // predecrement
+    constexpr unchecked_array_iterator& operator--() noexcept {
         --_Myptr;
         return *this;
     }
 
-    constexpr unchecked_array_iterator operator--(int) noexcept { // postdecrement
+    constexpr unchecked_array_iterator operator--(int) noexcept {
         unchecked_array_iterator _Tmp = *this;
-        --*this;
+        --_Myptr;
         return _Tmp;
     }
 
-    constexpr unchecked_array_iterator& operator+=(const difference_type _Off) noexcept { // increment by integer
+    constexpr unchecked_array_iterator& operator+=(const difference_type _Off) noexcept {
         _Myptr += _Off;
         return *this;
     }
 
-    _NODISCARD constexpr unchecked_array_iterator operator+(const difference_type _Off) const
-        noexcept { // return this + integer
+    _NODISCARD constexpr unchecked_array_iterator operator+(const difference_type _Off) const noexcept {
         unchecked_array_iterator _Tmp = *this;
         _Tmp += _Off;
         return _Tmp;
@@ -505,57 +492,48 @@ public:
 
     friend constexpr unchecked_array_iterator operator+(const difference_type _Off,
         const unchecked_array_iterator& _Next) noexcept { // TRANSITION, VSO#568006
-        // add offset to iterator
         return _Next + _Off;
     }
 
-    constexpr unchecked_array_iterator& operator-=(const difference_type _Off) noexcept { // decrement by integer
+    constexpr unchecked_array_iterator& operator-=(const difference_type _Off) noexcept {
         return *this += -_Off;
     }
 
-    _NODISCARD constexpr unchecked_array_iterator operator-(const difference_type _Off) const
-        noexcept { // return this - integer
+    _NODISCARD constexpr unchecked_array_iterator operator-(const difference_type _Off) const noexcept {
         unchecked_array_iterator _Tmp = *this;
         _Tmp -= _Off;
         return _Tmp;
     }
 
-    _NODISCARD constexpr difference_type operator-(const unchecked_array_iterator& _Right) const
-        noexcept { // return difference of iterators
+    _NODISCARD constexpr difference_type operator-(const unchecked_array_iterator& _Right) const noexcept {
         return _Myptr - _Right._Myptr;
     }
 
-    _NODISCARD constexpr reference operator[](const difference_type _Off) const noexcept { // subscript
+    _NODISCARD constexpr reference operator[](const difference_type _Off) const noexcept {
         return *(*this + _Off);
     }
 
-    _NODISCARD constexpr bool operator==(const unchecked_array_iterator& _Right) const
-        noexcept { // test for iterator equality
+    _NODISCARD constexpr bool operator==(const unchecked_array_iterator& _Right) const noexcept {
         return _Myptr == _Right._Myptr;
     }
 
-    _NODISCARD constexpr bool operator!=(const unchecked_array_iterator& _Right) const
-        noexcept { // test for iterator inequality
+    _NODISCARD constexpr bool operator!=(const unchecked_array_iterator& _Right) const noexcept {
         return !(*this == _Right);
     }
 
-    _NODISCARD constexpr bool operator<(const unchecked_array_iterator& _Right) const
-        noexcept { // test if this < _Right
+    _NODISCARD constexpr bool operator<(const unchecked_array_iterator& _Right) const noexcept {
         return _Myptr < _Right._Myptr;
     }
 
-    _NODISCARD constexpr bool operator>(const unchecked_array_iterator& _Right) const
-        noexcept { // test if this > _Right
+    _NODISCARD constexpr bool operator>(const unchecked_array_iterator& _Right) const noexcept {
         return _Right < *this;
     }
 
-    _NODISCARD constexpr bool operator<=(const unchecked_array_iterator& _Right) const
-        noexcept { // test if this <= _Right
+    _NODISCARD constexpr bool operator<=(const unchecked_array_iterator& _Right) const noexcept {
         return !(_Right < *this);
     }
 
-    _NODISCARD constexpr bool operator>=(const unchecked_array_iterator& _Right) const
-        noexcept { // test if this >= _Right
+    _NODISCARD constexpr bool operator>=(const unchecked_array_iterator& _Right) const noexcept {
         return !(*this < _Right);
     }
 
@@ -583,8 +561,7 @@ private:
 };
 
 template <class _Ptr>
-_NODISCARD inline unchecked_array_iterator<_Ptr> make_unchecked_array_iterator(
-    const _Ptr _It) noexcept { // construct with pointer
+_NODISCARD unchecked_array_iterator<_Ptr> make_unchecked_array_iterator(const _Ptr _It) noexcept {
     return unchecked_array_iterator<_Ptr>(_It);
 }
 _STDEXT_END
@@ -593,7 +570,7 @@ _STDEXT_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _ITERATOR_
 
 /*

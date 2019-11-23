@@ -3,15 +3,15 @@
 #pragma once
 #ifndef _OPTIONAL_
 #define _OPTIONAL_
-#ifndef RC_INVOKED
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #if _HAS_CXX17
 #include <exception>
 #include <initializer_list>
 #include <type_traits>
 #include <utility>
-#include <xmemory0>
+#include <xmemory>
 #include <xsmf_control.h>
 
 #pragma pack(push, _CRT_PACKING)
@@ -45,8 +45,11 @@ protected:
 #endif // !_HAS_EXCEPTIONS
 };
 
-template <class _Ty,
-    bool = is_trivially_destructible_v<_Ty>>
+[[noreturn]] inline void _Throw_bad_optional_access() {
+    _THROW(bad_optional_access{});
+}
+
+template <class _Ty, bool = is_trivially_destructible_v<_Ty>>
 struct _Optional_destruct_base { // either contains a value of _Ty or is empty (trivial destructor)
     union {
         char _Dummy;
@@ -186,7 +189,7 @@ public:
         class = enable_if_t<is_constructible_v<_Ty, initializer_list<_Elem>&, _Types...>>>
     constexpr explicit optional(in_place_t, initializer_list<_Elem> _Ilist, _Types&&... _Args)
         : _Mybase(
-              in_place, _Ilist, _STD forward<_Types>(_Args)...) { // initialize contained value from _Ilist and _Args...
+            in_place, _Ilist, _STD forward<_Types>(_Args)...) { // initialize contained value from _Ilist and _Args...
     }
 
     template <class _Ty2>
@@ -342,28 +345,28 @@ public:
 
     _NODISCARD constexpr const _Ty& value() const& { // return reference to contained value or throw if none
         if (!has_value()) {
-            _THROW(bad_optional_access{});
+            _Throw_bad_optional_access();
         }
 
         return this->_Get();
     }
     _NODISCARD constexpr _Ty& value() & { // return reference to contained value or throw if none
         if (!has_value()) {
-            _THROW(bad_optional_access{});
+            _Throw_bad_optional_access();
         }
 
         return this->_Get();
     }
     _NODISCARD constexpr _Ty&& value() && { // return reference to contained value or throw if none
         if (!has_value()) {
-            _THROW(bad_optional_access{});
+            _Throw_bad_optional_access();
         }
 
         return _STD move(this->_Get());
     }
     _NODISCARD constexpr const _Ty&& value() const&& { // return reference to contained value or throw if none
         if (!has_value()) {
-            _THROW(bad_optional_access{});
+            _Throw_bad_optional_access();
         }
 
         return _STD move(this->_Get());
@@ -618,7 +621,7 @@ _NODISCARD constexpr bool operator>=(const _Ty1& _Left, const optional<_Ty2>& _R
 
 // FUNCTION TEMPLATE swap [optional.specalg]
 template <class _Ty, class = enable_if_t<is_move_constructible_v<_Ty> && is_swappable_v<_Ty>>>
-inline void swap(optional<_Ty>& _Left, optional<_Ty>& _Right)
+void swap(optional<_Ty>& _Left, optional<_Ty>& _Right)
     _NOEXCEPT_COND(noexcept(_Left.swap(_Right))) { // exchange the values of _Left and _Right
     _Left.swap(_Right);
 }
@@ -628,8 +631,7 @@ template <class _Ty>
 _NODISCARD constexpr optional<decay_t<_Ty>> make_optional(_Ty&& _Value) { // Construct an optional from _Value
     return optional<decay_t<_Ty>>{_STD forward<_Ty>(_Value)};
 }
-template <class _Ty,
-    class... _Types>
+template <class _Ty, class... _Types>
 _NODISCARD constexpr optional<_Ty> make_optional(_Types&&... _Args) { // Construct an optional from _Args
     return optional<_Ty>{in_place, _STD forward<_Types>(_Args)...};
 }
@@ -665,5 +667,5 @@ _STL_RESTORE_CLANG_WARNINGS
 #else // ^^^ _HAS_CXX17 / !_HAS_CXX17 vvv
 #pragma message("class template optional is only available with C++17 or later.")
 #endif // _HAS_CXX17
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _OPTIONAL_

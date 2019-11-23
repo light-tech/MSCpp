@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _EXPERIMENTAL_LIST_
 #define _EXPERIMENTAL_LIST_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <list>
 
@@ -19,13 +20,13 @@ namespace experimental {
 
         // FUNCTION TEMPLATE erase_if
         template <class _Ty, class _Alloc, class _Pr>
-        inline void erase_if(list<_Ty, _Alloc>& _Cont, _Pr _Pred) { // erase each element satisfying _Pred
+        void erase_if(list<_Ty, _Alloc>& _Cont, _Pr _Pred) { // erase each element satisfying _Pred
             _Cont.remove_if(_Pass_fn(_Pred));
         }
 
         // FUNCTION TEMPLATE erase
         template <class _Ty, class _Alloc, class _Uty>
-        inline void erase(list<_Ty, _Alloc>& _Cont, const _Uty& _Val) { // erase each element matching _Val
+        void erase(list<_Ty, _Alloc>& _Cont, const _Uty& _Val) { // erase each element matching _Val
             _Cont.remove_if([&](_Ty& _Elem) { // return whether element matches _Val
                 return _Elem == _Val;
             });
@@ -40,7 +41,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _EXPERIMENTAL_LIST_
 
 /*

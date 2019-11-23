@@ -14,9 +14,10 @@
 #pragma once
 #ifndef _EXPERIMENTAL_COROUTINE_
 #define _EXPERIMENTAL_COROUTINE_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <experimental/resumable>
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _EXPERIMENTAL_COROUTINE_

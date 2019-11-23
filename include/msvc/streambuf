@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _STREAMBUF_
 #define _STREAMBUF_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <xiosbase>
 
 #pragma pack(push, _CRT_PACKING)
@@ -14,8 +15,7 @@ _STL_DISABLE_CLANG_WARNINGS
 
 _STD_BEGIN
 // CLASS TEMPLATE basic_streambuf
-template <class _Elem,
-    class _Traits>
+template <class _Elem, class _Traits>
 class basic_streambuf { // control read/write buffers
 protected:
     __CLR_OR_THIS_CALL basic_streambuf() : _Plocale(new locale) { // construct with no buffers
@@ -64,7 +64,7 @@ public:
     using char_type   = _Elem;
     using traits_type = _Traits;
 
-    virtual __CLR_OR_THIS_CALL ~basic_streambuf() noexcept { // destroy the object
+    virtual __CLR_OR_THIS_CALL ~basic_streambuf() noexcept {
         delete _Plocale;
     }
 
@@ -80,7 +80,7 @@ public:
 #if _HAS_OLD_IOSTREAMS_MEMBERS
     pos_type __CLR_OR_THIS_CALL pubseekoff(off_type _Off, ios_base::seek_dir _Way,
         ios_base::open_mode _Mode) { // change position by _Off, according to _Way, _Mode (old style)
-        return pubseekoff(_Off, (ios_base::seekdir) _Way, (ios_base::openmode) _Mode);
+        return pubseekoff(_Off, static_cast<ios_base::seekdir>(_Way), static_cast<ios_base::openmode>(_Mode));
     }
 #endif // _HAS_OLD_IOSTREAMS_MEMBERS
 
@@ -92,7 +92,7 @@ public:
 #if _HAS_OLD_IOSTREAMS_MEMBERS
     pos_type __CLR_OR_THIS_CALL pubseekpos(pos_type _Pos,
         ios_base::open_mode _Mode) { // change position to _Pos, according to _Mode (old style)
-        return seekpos(_Pos, (ios_base::openmode) _Mode);
+        return seekpos(_Pos, static_cast<ios_base::openmode>(_Mode));
     }
 #endif // _HAS_OLD_IOSTREAMS_MEMBERS
 
@@ -140,9 +140,11 @@ public:
     }
 
     int_type __CLR_OR_THIS_CALL sputbackc(_Elem _Ch) { // put back _Ch
-        return gptr() != nullptr && eback() < gptr() && _Traits::eq(_Ch, gptr()[-1])
-                   ? _Traits::to_int_type(*_Gndec())
-                   : pbackfail(_Traits::to_int_type(_Ch));
+        if (gptr() && eback() < gptr() && _Traits::eq(_Ch, gptr()[-1])) {
+            return _Traits::to_int_type(*_Gndec());
+        }
+
+        return pbackfail(_Traits::to_int_type(_Ch));
     }
 
 #if _HAS_OLD_IOSTREAMS_MEMBERS
@@ -156,7 +158,7 @@ public:
 #endif // _HAS_OLD_IOSTREAMS_MEMBERS
 
     int_type __CLR_OR_THIS_CALL sungetc() { // back up one position
-        return gptr() != nullptr && eback() < gptr() ? _Traits::to_int_type(*_Gndec()) : pbackfail();
+        return gptr() && eback() < gptr() ? _Traits::to_int_type(*_Gndec()) : pbackfail();
     }
 
     int_type __CLR_OR_THIS_CALL sputc(_Elem _Ch) { // put a character
@@ -203,7 +205,7 @@ protected:
     void __CLR_OR_THIS_CALL setg(_Elem* _First, _Elem* _Next, _Elem* _Last) { // set pointers for read buffer
         *_IGfirst = _First;
         *_IGnext  = _Next;
-        *_IGcount = (int) (_Last - _Next);
+        *_IGcount = static_cast<int>(_Last - _Next);
     }
 
     _Elem* __CLR_OR_THIS_CALL epptr() const { // return end of write buffer
@@ -226,7 +228,7 @@ protected:
     }
 
     streamsize __CLR_OR_THIS_CALL _Gnavail() const { // count number of available elements in read buffer
-        return *_IGnext != nullptr ? *_IGcount : 0;
+        return *_IGnext ? *_IGcount : 0;
     }
 
     void __CLR_OR_THIS_CALL pbump(int _Off) { // alter current position in write buffer by _Off
@@ -237,14 +239,14 @@ protected:
     void __CLR_OR_THIS_CALL setp(_Elem* _First, _Elem* _Last) { // set pointers for write buffer
         *_IPfirst = _First;
         *_IPnext  = _First;
-        *_IPcount = (int) (_Last - _First);
+        *_IPcount = static_cast<int>(_Last - _First);
     }
 
     void __CLR_OR_THIS_CALL setp(
         _Elem* _First, _Elem* _Next, _Elem* _Last) { // set pointers for write buffer, extended version
         *_IPfirst = _First;
         *_IPnext  = _Next;
-        *_IPcount = (int) (_Last - _Next);
+        *_IPcount = static_cast<int>(_Last - _Next);
     }
 
     _Elem* __CLR_OR_THIS_CALL _Pninc() { // increment current position in write buffer
@@ -253,7 +255,7 @@ protected:
     }
 
     streamsize __CLR_OR_THIS_CALL _Pnavail() const { // count number of available positions in write buffer
-        return *_IPnext != nullptr ? *_IPcount : 0;
+        return *_IPnext ? *_IPcount : 0;
     }
 
     void __CLR_OR_THIS_CALL _Init() { // initialize buffer parameters for no buffers
@@ -406,8 +408,7 @@ template class _CRTIMP2_PURE_IMPORT basic_streambuf<unsigned short, char_traits<
 #endif // defined(_DLL_CPPLIB)
 
 // CLASS TEMPLATE istreambuf_iterator
-template <class _Elem,
-    class _Traits>
+template <class _Elem, class _Traits>
 class istreambuf_iterator { // wrap stream buffer as input iterator
 public:
     using iterator_category = input_iterator_tag;
@@ -426,11 +427,11 @@ public:
     constexpr istreambuf_iterator() noexcept : _Strbuf(nullptr), _Got(true), _Val() {}
 
     istreambuf_iterator(streambuf_type* _Sb) noexcept
-        : _Strbuf(_Sb), _Got(_Sb == nullptr), _Val() { // construct from stream buffer _Sb
+        : _Strbuf(_Sb), _Got(!_Sb), _Val() { // construct from stream buffer _Sb
     }
 
     istreambuf_iterator(istream_type& _Istr) noexcept
-        : _Strbuf(_Istr.rdbuf()), _Got(_Strbuf == nullptr), _Val() { // construct from stream buffer in istream _Istr
+        : _Strbuf(_Istr.rdbuf()), _Got(!_Strbuf), _Val() { // construct from stream buffer in istream _Istr
     }
 
 private:
@@ -450,31 +451,31 @@ private:
 
 public:
     istreambuf_iterator(const _Istreambuf_proxy& _Px) noexcept
-        : _Strbuf(_Px._Strbuf), _Got(_Strbuf == nullptr), _Val() { // construct from proxy
+        : _Strbuf(_Px._Strbuf), _Got(!_Strbuf), _Val() { // construct from proxy
     }
 
-    _NODISCARD _Elem operator*() const { // return designated value
+    _NODISCARD _Elem operator*() const {
         if (!_Got) {
             _Peek();
         }
 
 #if _ITERATOR_DEBUG_LEVEL == 2
-        _STL_VERIFY(_Strbuf != nullptr, "istreambuf_iterator is not dereferencable");
+        _STL_VERIFY(_Strbuf, "istreambuf_iterator is not dereferencable");
 #endif // _ITERATOR_DEBUG_LEVEL == 2
 
         return _Val;
     }
 
-    istreambuf_iterator& operator++() { // preincrement
+    istreambuf_iterator& operator++() {
 #if _ITERATOR_DEBUG_LEVEL == 2
-        _STL_VERIFY(_Strbuf != nullptr, "istreambuf_iterator is not incrementable");
+        _STL_VERIFY(_Strbuf, "istreambuf_iterator is not incrementable");
 #endif // _ITERATOR_DEBUG_LEVEL == 2
 
         _Inc();
         return *this;
     }
 
-    _Istreambuf_proxy operator++(int) { // postincrement
+    _Istreambuf_proxy operator++(int) {
         if (!_Got) {
             _Peek();
         }
@@ -493,12 +494,12 @@ public:
             _Right._Peek();
         }
 
-        return (_Strbuf == nullptr && _Right._Strbuf == nullptr) || (_Strbuf != nullptr && _Right._Strbuf != nullptr);
+        return (!_Strbuf && !_Right._Strbuf) || (_Strbuf && _Right._Strbuf);
     }
 
 private:
     void _Inc() { // skip to next input element
-        if (_Strbuf == nullptr || traits_type::eq_int_type(traits_type::eof(), _Strbuf->sbumpc())) {
+        if (!_Strbuf || traits_type::eq_int_type(traits_type::eof(), _Strbuf->sbumpc())) {
             _Strbuf = nullptr;
             _Got    = true;
         } else {
@@ -508,7 +509,7 @@ private:
 
     _Elem _Peek() const { // peek at next input element
         int_type _Meta;
-        if (_Strbuf == nullptr || traits_type::eq_int_type(traits_type::eof(), _Meta = _Strbuf->sgetc())) {
+        if (!_Strbuf || traits_type::eq_int_type(traits_type::eof(), _Meta = _Strbuf->sgetc())) {
             _Strbuf = nullptr;
         } else {
             _Val = traits_type::to_char_type(_Meta);
@@ -524,20 +525,19 @@ private:
 };
 
 template <class _Elem, class _Traits>
-_NODISCARD inline bool operator==(const istreambuf_iterator<_Elem, _Traits>& _Left,
+_NODISCARD bool operator==(const istreambuf_iterator<_Elem, _Traits>& _Left,
     const istreambuf_iterator<_Elem, _Traits>& _Right) { // test for istreambuf_iterator equality
     return _Left.equal(_Right);
 }
 
 template <class _Elem, class _Traits>
-_NODISCARD inline bool operator!=(const istreambuf_iterator<_Elem, _Traits>& _Left,
+_NODISCARD bool operator!=(const istreambuf_iterator<_Elem, _Traits>& _Left,
     const istreambuf_iterator<_Elem, _Traits>& _Right) { // test for istreambuf_iterator inequality
     return !(_Left == _Right);
 }
 
 // CLASS TEMPLATE ostreambuf_iterator
-template <class _Elem,
-    class _Traits>
+template <class _Elem, class _Traits>
 class ostreambuf_iterator { // wrap stream buffer as output iterator
 public:
     using iterator_category = output_iterator_tag;
@@ -560,7 +560,7 @@ public:
     }
 
     ostreambuf_iterator& operator=(_Elem _Right) { // store element and increment
-        if (_Strbuf == nullptr || traits_type::eq_int_type(_Traits::eof(), _Strbuf->sputc(_Right))) {
+        if (!_Strbuf || traits_type::eq_int_type(_Traits::eof(), _Strbuf->sputc(_Right))) {
             _Failed = true;
         }
 
@@ -593,7 +593,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _STREAMBUF_
 
 /*

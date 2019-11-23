@@ -14,7 +14,8 @@
 #pragma once
 #ifndef _EXPERIMENTAL_GENERATOR_
 #define _EXPERIMENTAL_GENERATOR_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #ifndef _RESUMABLE_FUNCTIONS_SUPPORTED
 #error <experimental/generator> requires /await compiler option
@@ -178,5 +179,5 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _EXPERIMENTAL_GENERATOR_

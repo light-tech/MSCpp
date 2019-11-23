@@ -12,11 +12,10 @@
 
 #pragma once
 #define __INTRIN_H_
-#ifndef RC_INVOKED
-#ifndef __midl
+#include <vcruntime.h>
+#if _VCRT_COMPILER_PREPROCESSOR && !defined(__midl)
 
 #include <intrin0.h>
-#include <vcruntime.h>
 #include <setjmp.h>
 
 #if defined (_M_ARM64) || defined(_M_HYBRID_X86_ARM64)
@@ -92,11 +91,9 @@ __MACHINEARM_ARM64(void * _InterlockedCompareExchangePointer_nf(void * volatile 
 __MACHINEX64(void * _InterlockedCompareExchangePointer_np(void * volatile * _Destination, void * _Exchange, void * _Comparand))
 __MACHINEARM_ARM64(void * _InterlockedCompareExchangePointer_rel(void * volatile * _Destination, void * _Exchange, void * _Comparand))
 __MACHINEX64(long _InterlockedCompareExchange_np(long volatile * _Destination, long _Exchange, long _Comparand))
-__MACHINE(short _InterlockedDecrement16(short volatile * _Addend))
 __MACHINEARM_ARM64(short _InterlockedDecrement16_acq(short volatile * _Addend))
 __MACHINEARM_ARM64(short _InterlockedDecrement16_nf(short volatile * _Addend))
 __MACHINEARM_ARM64(short _InterlockedDecrement16_rel(short volatile * _Addend))
-__MACHINEARM_ARM64_X64(__int64 _InterlockedDecrement64(__int64 volatile * _Addend))
 __MACHINEARM_ARM64(__int64 _InterlockedDecrement64_acq(__int64 volatile * _Addend))
 __MACHINEARM_ARM64(__int64 _InterlockedDecrement64_nf(__int64 volatile * _Addend))
 __MACHINEARM_ARM64(__int64 _InterlockedDecrement64_rel(__int64 volatile * _Addend))
@@ -107,16 +104,13 @@ __MACHINE(void * _InterlockedExchangePointer(void * volatile * _Target, void * _
 __MACHINEARM_ARM64(void * _InterlockedExchangePointer_acq(void * volatile * _Target, void * _Value))
 __MACHINEARM_ARM64(void * _InterlockedExchangePointer_nf(void * volatile * _Target, void * _Value))
 __MACHINEARM_ARM64(void * _InterlockedExchangePointer_rel(void * volatile * _Target, void * _Value))
-__MACHINE(short _InterlockedIncrement16(short volatile * _Addend))
 __MACHINEARM_ARM64(short _InterlockedIncrement16_acq(short volatile * _Addend))
 __MACHINEARM_ARM64(short _InterlockedIncrement16_nf(short volatile * _Addend))
 __MACHINEARM_ARM64(short _InterlockedIncrement16_rel(short volatile * _Addend))
-__MACHINEARM_ARM64_X64(__int64 _InterlockedIncrement64(__int64 volatile * _Addend))
 __MACHINEARM_ARM64(__int64 _InterlockedIncrement64_acq(__int64 volatile * _Addend))
 __MACHINEARM_ARM64(__int64 _InterlockedIncrement64_nf(__int64 volatile * _Addend))
 __MACHINEARM_ARM64(__int64 _InterlockedIncrement64_rel(__int64 volatile * _Addend))
 __MACHINEARM_ARM64(long _InterlockedIncrement_acq(long volatile * _Addend))
-__MACHINEARM_ARM64(long _InterlockedIncrement_nf(long volatile * _Addend))
 __MACHINEARM_ARM64(long _InterlockedIncrement_rel(long volatile * _Addend))
 __MACHINEX64(short _InterlockedOr16_np(short volatile * _Value, short _Mask))
 __MACHINEX64(__int64 _InterlockedOr64_np(__int64 volatile * _Value, __int64 _Mask))
@@ -321,9 +315,9 @@ __MACHINE(unsigned char _bittestandreset(long *, long))
 __MACHINEARM64_X64(unsigned char _bittestandreset64(__int64 *, __int64))
 __MACHINE(unsigned char _bittestandset(long *, long))
 __MACHINEARM64_X64(unsigned char _bittestandset64(__int64 *, __int64))
-__MACHINE(_Check_return_ unsigned __int64 __cdecl _byteswap_uint64(_In_ unsigned __int64))
-__MACHINE(_Check_return_ unsigned long __cdecl _byteswap_ulong(_In_ unsigned long))
-__MACHINE(_Check_return_ unsigned short __cdecl _byteswap_ushort(_In_ unsigned short))
+__MACHINE(_NODISCARD _Check_return_ unsigned __int64 __cdecl _byteswap_uint64(_In_ unsigned __int64))
+__MACHINE(_NODISCARD _Check_return_ unsigned long __cdecl _byteswap_ulong(_In_ unsigned long))
+__MACHINE(_NODISCARD _Check_return_ unsigned short __cdecl _byteswap_ushort(_In_ unsigned short))
 __MACHINE(void __cdecl _disable(void))
 __MACHINE(void __cdecl _enable(void))
 __MACHINE(unsigned char _interlockedbittestandreset(long volatile *, long))
@@ -348,8 +342,8 @@ __MACHINEARM64(unsigned __int32 __crc32cw(unsigned __int32, unsigned __int32))
 __MACHINEARM64(unsigned __int32 __crc32cd(unsigned __int32, unsigned __int64))
 __MACHINEARM(int _isunordered(double, double))
 __MACHINEARM(int _isunorderedf(float, float))
-__MACHINE(_Check_return_ unsigned long __cdecl _lrotl(_In_ unsigned long, _In_ int))
-__MACHINE(_Check_return_ unsigned long __cdecl _lrotr(_In_ unsigned long, _In_ int))
+__MACHINE(_NODISCARD _Check_return_ unsigned long __cdecl _lrotl(_In_ unsigned long, _In_ int))
+__MACHINE(_NODISCARD _Check_return_ unsigned long __cdecl _lrotr(_In_ unsigned long, _In_ int))
 __MACHINEX86(void _m_empty(void))
 __MACHINEX86(void _m_femms(void))
 __MACHINEX86(__m64 _m_from_float(float))
@@ -937,6 +931,5 @@ __MACHINEX86_X64(void _mm_mwaitx(unsigned int, unsigned int, unsigned int))
 
 #if defined (__cplusplus)
 }
-#endif  /* defined (__cplusplus) */
-#endif  /* __midl */
-#endif  /* RC_INVOKED */
+#endif /* defined (__cplusplus) */
+#endif /* _VCRT_COMPILER_PREPROCESSOR && !defined(__midl) */

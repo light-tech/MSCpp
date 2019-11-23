@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _XSTDDEF_
 #define _XSTDDEF_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <cstddef>
 #include <cstdlib>
 #include <initializer_list>
@@ -24,16 +25,14 @@ _INLINE_VAR constexpr bool _Always_false = false;
 // FUNCTIONAL STUFF (from <functional>)
 #if _HAS_AUTO_PTR_ETC
 // STRUCT TEMPLATE unary_function
-template <class _Arg,
-    class _Result>
+template <class _Arg, class _Result>
 struct unary_function { // base class for unary functions
     using argument_type = _Arg;
     using result_type   = _Result;
 };
 
 // STRUCT TEMPLATE binary_function
-template <class _Arg1, class _Arg2,
-    class _Result>
+template <class _Arg1, class _Arg2, class _Result>
 struct binary_function { // base class for binary functions
     using first_argument_type  = _Arg1;
     using second_argument_type = _Arg2;
@@ -286,12 +285,12 @@ const _Ty* addressof(const _Ty&&) = delete;
 
 // FUNCTION TEMPLATE _Unfancy
 template <class _Ptrty>
-inline auto _Unfancy(_Ptrty _Ptr) { // converts from a fancy pointer to a plain pointer
+auto _Unfancy(_Ptrty _Ptr) { // converts from a fancy pointer to a plain pointer
     return _STD addressof(*_Ptr);
 }
 
 template <class _Ty>
-inline _Ty* _Unfancy(_Ty* _Ptr) { // do nothing for plain pointers
+_Ty* _Unfancy(_Ty* _Ptr) { // do nothing for plain pointers
     return _Ptr;
 }
 _STD_END
@@ -385,12 +384,6 @@ _STD_END
     CLASS(_EMPTY_ARGUMENT)         \
     CLASS(const)
 
-#define _CLASS_DEFINE_CV(CLASS) \
-    CLASS(_EMPTY_ARGUMENT)      \
-    CLASS(const)                \
-    CLASS(volatile)             \
-    CLASS(const volatile)
-
 #ifdef __cpp_noexcept_function_type
 #define _CLASS_DEFINE_CV_REF_NOEXCEPT(CLASS) \
     CLASS(_EMPTY_ARGUMENT)                   \
@@ -437,7 +430,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XSTDDEF_
 
 /*

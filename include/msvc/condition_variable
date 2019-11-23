@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _CONDITION_VARIABLE_
 #define _CONDITION_VARIABLE_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <chrono>
 #include <memory>
 #include <mutex>
@@ -200,7 +201,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CONDITION_VARIABLE_
 
 /*

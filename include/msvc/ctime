@@ -2,9 +2,8 @@
 #pragma once
 #ifndef _CTIME_
 #define _CTIME_
-#ifndef RC_INVOKED
-
 #include <yvals.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <time.h>
 
@@ -40,7 +39,7 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CTIME_
 
 /*

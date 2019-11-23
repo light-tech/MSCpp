@@ -64,10 +64,6 @@
 #define EH_EXCEPTION_PARAMETERS 3			// Number of parameters in exception record
 #endif
 
-#ifdef ALLOW_UNWIND_ABORT
-#define EH_ABORT_FRAME_UNWIND_PART (EH_EXCEPTION_NUMBER + 1)
-#endif
-
 #define EH_EMPTY_STATE	(-1)
 
 #define CT_IsSimpleType			0x00000001		// type is a simple type

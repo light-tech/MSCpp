@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _IOMANIP_
 #define _IOMANIP_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <istream>
 #include <type_traits>
 #include <xlocmon>
@@ -27,12 +28,12 @@ struct _Fillobj { // store fill character
 
 // FUNCTION TEMPLATE setfill
 template <class _Elem>
-_NODISCARD inline _Fillobj<_Elem> setfill(_Elem _Ch) { // return a _Fillobj manipulator
+_NODISCARD _Fillobj<_Elem> setfill(_Elem _Ch) { // return a _Fillobj manipulator
     return _Fillobj<_Elem>(_Ch);
 }
 
 template <class _Elem, class _Traits, class _Elem2>
-inline basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
+basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
     const _Fillobj<_Elem2>& _Manip) { // set fill character in input stream
     static_assert(is_same_v<_Elem, _Elem2>, "wrong character type for setfill");
 
@@ -41,7 +42,7 @@ inline basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& 
 }
 
 template <class _Elem, class _Traits, class _Elem2>
-inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
     const _Fillobj<_Elem2>& _Manip) { // set fill character in output stream
     static_assert(is_same_v<_Elem, _Elem2>, "wrong character type for setfill");
 
@@ -64,12 +65,12 @@ struct _Monobj { // store reference to monetary amount
 
 // FUNCTION TEMPLATE get_money
 template <class _Money>
-_NODISCARD inline _Monobj<_Money> get_money(_Money& _Val_arg, bool _Intl_arg = false) { // return a _Monobj manipulator
+_NODISCARD _Monobj<_Money> get_money(_Money& _Val_arg, bool _Intl_arg = false) { // return a _Monobj manipulator
     return _Monobj<_Money>(_Val_arg, _Intl_arg);
 }
 
 template <class _Elem, class _Traits, class _Money>
-inline basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
+basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
     const _Monobj<_Money>& _Manip) { // get monetary amount from input stream
     using _Myis   = basic_istream<_Elem, _Traits>;
     using _Iter   = istreambuf_iterator<_Elem, _Traits>;
@@ -91,13 +92,13 @@ inline basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& 
 
 // FUNCTION TEMPLATE put_money
 template <class _Money>
-_NODISCARD inline _Monobj<const _Money> put_money(
+_NODISCARD _Monobj<const _Money> put_money(
     const _Money& _Val_arg, bool _Intl_arg = false) { // return a _Monobj manipulator
     return _Monobj<const _Money>(_Val_arg, _Intl_arg);
 }
 
 template <class _Elem, class _Traits, class _Money>
-inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
     const _Monobj<_Money>& _Manip) { // put monetary amount to output stream
     using _Myos   = basic_ostream<_Elem, _Traits>;
     using _Iter   = ostreambuf_iterator<_Elem, _Traits>;
@@ -120,8 +121,7 @@ inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& 
 }
 
 // STRUCT TEMPLATE _Timeobj
-template <class _Elem,
-    class _Ptr>
+template <class _Elem, class _Ptr>
 struct _Timeobj { // store reference to tm object and format
     _Timeobj(_Ptr _Tptr_arg, const _Elem* _Fmt_arg)
         : _Tptr(_Tptr_arg), _Fmtfirst(_Fmt_arg) { // construct from tm pointer and format pointer
@@ -142,7 +142,7 @@ _NODISCARD _Timeobj<_Elem, struct tm*> get_time(
 }
 
 template <class _Elem, class _Traits, class _Elem2>
-inline basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
+basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
     const _Timeobj<_Elem2, struct tm*>& _Manip) { // get time information from input stream
     using _Myis   = basic_istream<_Elem, _Traits>;
     using _Iter   = istreambuf_iterator<_Elem, _Traits>;
@@ -167,13 +167,13 @@ inline basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& 
 
 // FUNCTION TEMPLATE put_time
 template <class _Elem>
-_NODISCARD inline _Timeobj<_Elem, const struct tm*> put_time(
+_NODISCARD _Timeobj<_Elem, const struct tm*> put_time(
     const struct tm* _Tptr_arg, const _Elem* _Fmt_arg) { // return a _Timeobj manipulator
     return _Timeobj<_Elem, const struct tm*>(_Tptr_arg, _Fmt_arg);
 }
 
 template <class _Elem, class _Traits, class _Elem2>
-inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
     const _Timeobj<_Elem2, const struct tm*>& _Manip) { // put time information to output stream
     using _Myos   = basic_ostream<_Elem, _Traits>;
     using _Iter   = ostreambuf_iterator<_Elem, _Traits>;
@@ -199,8 +199,7 @@ inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& 
 }
 
 // STRUCT TEMPLATE _Quote_in
-template <class _Elem, class _Traits,
-    class _Alloc>
+template <class _Elem, class _Traits, class _Alloc>
 struct _Quote_in { // store reference to string
     using _Mystr = basic_string<_Elem, _Traits, _Alloc>;
 
@@ -216,8 +215,7 @@ struct _Quote_in { // store reference to string
 };
 
 // STRUCT TEMPLATE _Quote_out
-template <class _Elem, class _Traits,
-    class _Sizet>
+template <class _Elem, class _Traits, class _Sizet>
 struct _Quote_out { // store pointer/length for string
     _Quote_out(const _Elem* _Ptr_obj, _Sizet _Size_obj, _Elem _Delim_obj, _Elem _Escape_obj)
         : _Ptr(_Ptr_obj), _Size(_Size_obj), _Delim(_Delim_obj),
@@ -234,7 +232,7 @@ struct _Quote_out { // store pointer/length for string
 
 // FUNCTION TEMPLATE quoted
 template <class _Elem>
-_NODISCARD inline _Quote_out<_Elem, void, size_t> quoted(const _Elem* _Ptr, _Elem _Delim = _Elem('"'),
+_NODISCARD _Quote_out<_Elem, void, size_t> quoted(const _Elem* _Ptr, _Elem _Delim = _Elem('"'),
     _Elem _Escape = _Elem('\\')) { // return a _Quote_out manipulator for pointer/length
     size_t _Size = 0;
     while (_Ptr[_Size] != _Elem(0)) {
@@ -271,7 +269,7 @@ _NODISCARD _Quote_in<_Elem, _Traits, _Alloc> quoted(basic_string<_Elem, _Traits,
 
 // quoted INSERTER
 template <class _Elem, class _Traits, class _QuTraits, class _Sizet>
-inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
     const _Quote_out<_Elem, _QuTraits, _Sizet>& _Manip) { // put quoted string to output stream
     static_assert(
         is_void_v<_QuTraits> || is_same_v<_QuTraits, _Traits>, "quoted() traits must match basic_ostream traits");
@@ -288,7 +286,14 @@ inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& 
     }
 
     ios_base::iostate _State = ios_base::goodbit;
-    _Sizet _Pad = _Ostr.width() <= 0 || (_Sizet) _Ostr.width() <= _Size ? 0 : (_Sizet) _Ostr.width() - _Size;
+
+    _Sizet _Pad;
+    if (_Ostr.width() <= 0 || static_cast<_Sizet>(_Ostr.width()) <= _Size) {
+        _Pad = 0;
+    } else {
+        _Pad = static_cast<_Sizet>(_Ostr.width()) - _Size;
+    }
+
     const typename _Myos::sentry _Ok(_Ostr);
 
     if (!_Ok) {
@@ -306,21 +311,21 @@ inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& 
 
         if (_State == ios_base::goodbit
             && _Traits::eq_int_type(_Traits::eof(),
-                   _Ostr.rdbuf()->sputc(_Manip._Delim))) { // put delimiter
+                _Ostr.rdbuf()->sputc(_Manip._Delim))) { // put delimiter
             _State |= ios_base::badbit;
         }
 
         for (const _Elem* _Ptr = _Manip._Ptr; _Ptr != _Last; ++_Ptr) { // put (possibly escaped) element
             if ((_Traits::eq(*_Ptr, _Manip._Delim) || _Traits::eq(*_Ptr, _Manip._Escape)) && _State == ios_base::goodbit
                 && _Traits::eq_int_type(_Traits::eof(),
-                       _Ostr.rdbuf()->sputc(_Manip._Escape))) { // put escape
+                    _Ostr.rdbuf()->sputc(_Manip._Escape))) { // put escape
                 _State |= ios_base::badbit; // insertion failed, quit
                 break;
             }
 
             if (_State == ios_base::goodbit
                 && _Traits::eq_int_type(_Traits::eof(),
-                       _Ostr.rdbuf()->sputc(*_Ptr))) { // put element
+                    _Ostr.rdbuf()->sputc(*_Ptr))) { // put element
                 _State |= ios_base::badbit; // insertion failed, quit
                 break;
             }
@@ -328,7 +333,7 @@ inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& 
 
         if (_State == ios_base::goodbit
             && _Traits::eq_int_type(_Traits::eof(),
-                   _Ostr.rdbuf()->sputc(_Manip._Delim))) { // put delimiter
+                _Ostr.rdbuf()->sputc(_Manip._Delim))) { // put delimiter
             _State |= ios_base::badbit;
         }
 
@@ -350,7 +355,7 @@ inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& 
 }
 
 template <class _Elem, class _Traits, class _Alloc>
-inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
     const _Quote_in<_Elem, _Traits, _Alloc>& _Manip) { // put quoted string to output stream
     using _Mystr = basic_string<_Elem, _Traits, _Alloc>;
 
@@ -360,7 +365,7 @@ inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& 
 
 // quoted EXTRACTOR
 template <class _Elem, class _Traits, class _Alloc>
-inline basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
+basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
     const _Quote_in<_Elem, _Traits, _Alloc>& _Manip) { // get quoted string from input stream
     ios_base::iostate _State = ios_base::goodbit;
     const typename basic_istream<_Elem, _Traits>::sentry _Ok(_Istr);
@@ -418,14 +423,14 @@ struct _Smanip { // store function pointer and argument value
 };
 
 template <class _Elem, class _Traits, class _Arg>
-inline basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
+basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
     const _Smanip<_Arg>& _Manip) { // extract by calling function with input stream and argument
     (*_Manip._Pfun)(_Istr, _Manip._Manarg);
     return _Istr;
 }
 
 template <class _Elem, class _Traits, class _Arg>
-inline basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
+basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
     const _Smanip<_Arg>& _Manip) { // insert by calling function with output stream and argument
     (*_Manip._Pfun)(_Ostr, _Manip._Manarg);
     return _Ostr;
@@ -442,7 +447,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _IOMANIP_
 
 /*

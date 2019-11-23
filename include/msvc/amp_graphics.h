@@ -22,6 +22,9 @@
 
 #define _AMP_GRAPHICS_H
 
+#pragma warning( push )
+#pragma warning( disable : 6326 ) // Potential comparison of a constant with another constant
+
 namespace Concurrency
 {
 
@@ -31,8 +34,6 @@ namespace graphics
 namespace details
 {
 
-#pragma warning( push )
-#pragma warning( disable : 6326 ) // Potential comparison of a constant with another constant
 
 template<typename _Ty>
 struct _Short_vector_type_traits
@@ -4897,7 +4898,6 @@ namespace direct3d
                                                                                        DXGI_FORMAT _View_format /*= DXGI_FORMAT_UKNNOWN*/) __CPU_ONLY
     {
         _Texture * _Tex_ptr = NULL;
-#pragma warning( suppress: 6326 ) // Potential comparison of a constant with another constant
         Concurrency::extent<_Rank> _Ext = Concurrency::graphics::details::_Make_texture<_Rank>(_Av, _D3D_texture,
             _Short_vector_type_traits<_Value_type>::_Format_base_type_id == _Double_type ? _Uint_type : _Short_vector_type_traits<_Value_type>::_Format_base_type_id,
             &_Tex_ptr, _View_format);
@@ -4969,3 +4969,5 @@ namespace direct3d
 
 } //namespace graphics
 } //namespace Concurrency
+
+#pragma warning( pop )

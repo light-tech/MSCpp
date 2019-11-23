@@ -3,8 +3,9 @@
 #pragma once
 #ifndef _XNODE_HANDLE_H
 #define _XNODE_HANDLE_H
-#ifndef RC_INVOKED
-#include <xmemory0>
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
+#include <xmemory>
 
 #if !_HAS_CXX17
 #error Node handles are only available with C++17. (Also, you should not include this internal header.)
@@ -27,8 +28,7 @@ struct _Insert_return_type {
 };
 
 // CLASS TEMPLATE _Node_handle
-template <class _Derived_type, class _KeyTy,
-    class _ValueTy>
+template <class _Derived_type, class _KeyTy, class _ValueTy>
 struct _Node_handle_map_base { // map-specific node handle behavior
     using key_type    = _KeyTy;
     using mapped_type = _ValueTy;
@@ -51,8 +51,7 @@ private:
     }
 };
 
-template <class _Derived_type,
-    class _ValueTy>
+template <class _Derived_type, class _ValueTy>
 struct _Node_handle_set_base { // set-specific node handle behavior
     using value_type = _ValueTy;
 
@@ -63,8 +62,8 @@ struct _Node_handle_set_base { // set-specific node handle behavior
 };
 
 template <class _Node, class _Alloc, template <class...> class _Base, class... _Types>
-class _Node_handle : public _Base<_Node_handle<_Node, _Alloc, _Base, _Types...>,
-                         _Types...> { // storage for a node from one of the node-based standard containers
+class _Node_handle : public _Base<_Node_handle<_Node, _Alloc, _Base, _Types...>, _Types...> {
+    // storage for a node from one of the node-based standard containers
 public:
     using allocator_type = _Alloc;
 
@@ -130,16 +129,16 @@ public:
             return *this;
         }
 
-        _Alloc& _Al       = _Getal();
+        _Alloc& _Al = _Getal();
         _Alnode _Node_alloc{_Al};
         _Alnode_traits::destroy(_Node_alloc, _STD addressof(_Ptr->_Myval));
         _Alnode_traits::deallocate(_Node_alloc, _Ptr, 1);
 
-        _Alloc& _That_al  = _That._Getal();
+        _Alloc& _That_al = _That._Getal();
         _Pocma(_Al, _That_al);
         _Destroy_in_place(_That_al);
 
-        _Ptr              = _STD exchange(_That._Ptr, nullptr);
+        _Ptr = _STD exchange(_That._Ptr, nullptr);
         return *this;
     }
 
@@ -198,9 +197,10 @@ public:
         _Left.swap(_Right);
     }
 
-    static _Node_handle _Make(const _Nodeptr _Ptr, const allocator_type& _Al) { // initialize a _Node_handle that holds
-                                                                                // _Ptr and _Al pre: _Ptr != nullptr
-                                                                                // pre: _Al can release _Ptr
+    static _Node_handle _Make(const _Nodeptr _Ptr, const allocator_type& _Al) {
+        // initialize a _Node_handle that holds _Ptr and _Al
+        // pre: _Ptr != nullptr
+        // pre: _Al can release _Ptr
         return _Node_handle{_Ptr, _Al};
     }
 };
@@ -210,5 +210,5 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XNODE_HANDLE_H

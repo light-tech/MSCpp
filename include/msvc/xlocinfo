@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _XLOCINFO_
 #define _XLOCINFO_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <cstdlib>
 #include <xlocinfo.h>
 #include <xstddef>
@@ -19,21 +20,24 @@ _STD_BEGIN
 // CLASS _Timevec
 class _CRTIMP2_PURE_IMPORT _Timevec { // smart pointer to information used by _Strftime
 public:
-    __CLR_OR_THIS_CALL _Timevec(void* _Ptr = nullptr) : _Timeptr(_Ptr) { // construct from ptr
+    explicit __CLR_OR_THIS_CALL _Timevec(void* _Ptr = nullptr) : _Timeptr(_Ptr) { // construct from ptr
     }
 
-    __CLR_OR_THIS_CALL _Timevec(const _Timevec& _Right) { // construct from _Right
+    __CLR_OR_THIS_CALL _Timevec(const _Timevec& _Right) : _Timeptr(nullptr) { // construct from _Right
         *this = _Right;
     }
 
-    __CLR_OR_THIS_CALL ~_Timevec() noexcept { // destroy the object
-        free(_Timeptr);
+    __CLR_OR_THIS_CALL ~_Timevec() noexcept {
+        _CSTD free(_Timeptr);
     }
 
     _Timevec& __CLR_OR_THIS_CALL operator=(const _Timevec& _Right) { // transfer ownership of _Timeptr from _Right
+        if (this != &_Right) {
+            _CSTD free(_Timeptr);
+            _Timeptr                               = _Right._Timeptr;
+            const_cast<_Timevec&>(_Right)._Timeptr = nullptr; // TRANSITION, should be movable-only
+        }
 
-        _Timeptr                        = _Right._Timeptr;
-        ((_Timevec*) &_Right)->_Timeptr = nullptr;
         return *this;
     }
 
@@ -64,11 +68,12 @@ public:
 #endif // _M_CEE
 
     { // construct from NTBS
-        if (_Pch == nullptr) {
-            _Xruntime_error("bad locale name");
+        if (_Pch) {
+            _Locinfo_ctor(this, _Pch);
+            return;
         }
 
-        _Locinfo_ctor(this, _Pch);
+        _Xruntime_error("bad locale name");
     }
 
     __CLR_OR_THIS_CALL _Locinfo(int _Cat, const char* _Pch)
@@ -77,23 +82,24 @@ public:
 #endif // _M_CEE
 
     { // construct from category mask and NTBS
-        if (_Pch == nullptr) {
-            _Xruntime_error("bad locale name");
+        if (_Pch) {
+            _Locinfo_ctor(this, _Cat, _Pch);
+            return;
         }
 
-        _Locinfo_ctor(this, _Cat, _Pch);
+        _Xruntime_error("bad locale name");
     }
 
-    __CLR_OR_THIS_CALL ~_Locinfo() noexcept { // destroy the object
+    __CLR_OR_THIS_CALL ~_Locinfo() noexcept {
         _Locinfo_dtor(this);
     }
 
     _Locinfo& __CLR_OR_THIS_CALL _Addcats(int _Cat, const char* _Pch) { // add facets matching category mask and NTBS
-        if (_Pch == nullptr) {
-            _Xruntime_error("bad locale name");
+        if (_Pch) {
+            return _Locinfo_Addcats(this, _Cat, _Pch);
         }
 
-        return _Locinfo_Addcats(this, _Cat, _Pch);
+        _Xruntime_error("bad locale name");
     }
 
     const char* __CLR_OR_THIS_CALL _Getname() const { // return the new locale name
@@ -122,11 +128,11 @@ public:
 
     const char* __CLR_OR_THIS_CALL _Getdays() const { // return names for weekdays
         const char* _Ptr = ::_Getdays();
-
-        if (_Ptr != nullptr) { // capture names and free allocated C string
-            ((_Locinfo*) this)->_Days = _Ptr;
-            free((void*) _Ptr);
+        if (_Ptr) { // capture names and free allocated C string
+            const_cast<_Locinfo*>(this)->_Days = _Ptr;
+            _CSTD free(const_cast<char*>(_Ptr));
         }
+
         return !_Days._Empty() ? _Days._C_str()
                                : ":Sun:Sunday:Mon:Monday:Tue:Tuesday:Wed:Wednesday"
                                  ":Thu:Thursday:Fri:Friday:Sat:Saturday";
@@ -134,11 +140,11 @@ public:
 
     const char* __CLR_OR_THIS_CALL _Getmonths() const { // return names for months
         const char* _Ptr = ::_Getmonths();
-
-        if (_Ptr != nullptr) { // capture names and free allocated C string
-            ((_Locinfo*) this)->_Months = _Ptr;
-            free((void*) _Ptr);
+        if (_Ptr) { // capture names and free allocated C string
+            const_cast<_Locinfo*>(this)->_Months = _Ptr;
+            _CSTD free(const_cast<char*>(_Ptr));
         }
+
         return !_Months._Empty() ? _Months._C_str()
                                  : ":Jan:January:Feb:February:Mar:March"
                                    ":Apr:April:May:May:Jun:June"
@@ -164,28 +170,39 @@ public:
 
     const unsigned short* __CLR_OR_THIS_CALL _W_Getdays() const { // return names for weekdays
         const wchar_t* _Ptr = ::_W_Getdays();
-
-        if (_Ptr != nullptr) { // capture names and free allocated C string
-            ((_Locinfo*) this)->_W_Days = _Ptr;
-            free((void*) _Ptr);
+        if (_Ptr) { // capture names and free allocated C string
+            const_cast<_Locinfo*>(this)->_W_Days = _Ptr;
+            _CSTD free(const_cast<wchar_t*>(_Ptr));
         }
-        return (const unsigned short*) (!_W_Days._Empty() ? _W_Days._C_str()
-                                                          : L":Sun:Sunday:Mon:Monday:Tue:Tuesday:Wed:Wednesday"
-                                                            L":Thu:Thursday:Fri:Friday:Sat:Saturday");
+
+        const wchar_t* _Ret;
+
+        if (_W_Days._Empty()) {
+            _Ret = L":Sun:Sunday:Mon:Monday:Tue:Tuesday:Wed:Wednesday:Thu:Thursday:Fri:Friday:Sat:Saturday";
+        } else {
+            _Ret = _W_Days._C_str();
+        }
+
+        return reinterpret_cast<const unsigned short*>(_Ret);
     }
 
     const unsigned short* __CLR_OR_THIS_CALL _W_Getmonths() const { // return names for months
         const wchar_t* _Ptr = ::_W_Getmonths();
-
-        if (_Ptr != nullptr) { // capture names and free allocated C string
-            ((_Locinfo*) this)->_W_Months = _Ptr;
-            free((void*) _Ptr);
+        if (_Ptr) { // capture names and free allocated C string
+            const_cast<_Locinfo*>(this)->_W_Months = _Ptr;
+            _CSTD free(const_cast<wchar_t*>(_Ptr));
         }
-        return (const unsigned short*) (!_W_Months._Empty() ? _W_Months._C_str()
-                                                            : L":Jan:January:Feb:February:Mar:March"
-                                                              L":Apr:April:May:May:Jun:June"
-                                                              L":Jul:July:Aug:August:Sep:September"
-                                                              L":Oct:October:Nov:November:Dec:December");
+
+        const wchar_t* _Ret;
+
+        if (_W_Months._Empty()) {
+            _Ret = L":Jan:January:Feb:February:Mar:March:Apr:April:May:May:Jun:June"
+                   L":Jul:July:Aug:August:Sep:September:Oct:October:Nov:November:Dec:December";
+        } else {
+            _Ret = _W_Months._C_str();
+        }
+
+        return reinterpret_cast<const unsigned short*>(_Ret);
     }
 
     _Locinfo(const _Locinfo&) = delete;
@@ -209,7 +226,7 @@ private:
 
 // FUNCTION TEMPLATE _LStrcoll
 template <class _Elem>
-inline int __CRTDECL _LStrcoll(const _Elem* _First1, const _Elem* _Last1, const _Elem* _First2, const _Elem* _Last2,
+int __CRTDECL _LStrcoll(const _Elem* _First1, const _Elem* _Last1, const _Elem* _First2, const _Elem* _Last2,
     const _Locinfo::_Collvec*) { // perform locale-specific comparison of _Elem sequences
     for (; _First1 != _Last1 && _First2 != _Last2; ++_First1, ++_First2) {
         if (*_First1 < *_First2) {
@@ -237,7 +254,7 @@ inline int __CRTDECL _LStrcoll(const wchar_t* _First1, const wchar_t* _Last1, co
 
 // FUNCTION TEMPLATE _LStrxfrm
 template <class _Elem>
-inline size_t __CRTDECL _LStrxfrm(_Elem* _First1, _Elem* _Last1, const _Elem* _First2, const _Elem* _Last2,
+size_t __CRTDECL _LStrxfrm(_Elem* _First1, _Elem* _Last1, const _Elem* _First2, const _Elem* _Last2,
     const _Locinfo::_Collvec*) { // perform locale-specific transform of _Elems [_First1, _Last1)
     const ptrdiff_t _Count = _Last2 - _First2;
     if (_Count <= _Last1 - _First1) {
@@ -265,7 +282,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XLOCINFO_
 
 /*

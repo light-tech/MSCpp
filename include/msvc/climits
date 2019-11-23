@@ -2,13 +2,12 @@
 #pragma once
 #ifndef _CLIMITS_
 #define _CLIMITS_
-#ifndef RC_INVOKED
-
 #include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 
 #include <limits.h>
 
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CLIMITS_
 
 /*

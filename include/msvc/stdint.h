@@ -8,11 +8,8 @@
 #pragma once
 #define _STDINT
 
-#ifndef RC_INVOKED
-
 #include <vcruntime.h>
-
-
+#if _VCRT_COMPILER_PREPROCESSOR
 
 typedef signed char        int8_t;
 typedef short              int16_t;
@@ -127,9 +124,7 @@ typedef unsigned long long uintmax_t;
 #define INTMAX_C(x)  INT64_C(x)
 #define UINTMAX_C(x) UINT64_C(x)
 
-
-
-#endif // RC_INVOKED
+#endif // _VCRT_COMPILER_PREPROCESSOR
 
 /*
  * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.

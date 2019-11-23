@@ -15,7 +15,8 @@
 
 #ifndef _IVEC_H_INCLUDED
 #define _IVEC_H_INCLUDED
-#ifndef RC_INVOKED
+#include <vcruntime.h>
+#if _VCRT_COMPILER_PREPROCESSOR
 
 #if !defined __cplusplus
     #error ERROR: This file is only supported in C++ compilations!
@@ -29,7 +30,6 @@
 
 #ifndef _VEC_ASSERT
     #include <corecrt.h>
-    #include <vcruntime.h>
 
 #ifdef NDEBUG
         #define _VEC_ASSERT(_Expression) ((void)0)
@@ -837,5 +837,5 @@ inline static void empty(void)      { _m_empty(); }
 
 #endif  /* defined (_M_CEE_PURE) */
 
-#endif  /* RC_INVOKED */
+#endif  /* _VCRT_COMPILER_PREPROCESSOR */
 #endif  /* _IVEC_H_INCLUDED */

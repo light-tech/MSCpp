@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _TYPEINDEX_
 #define _TYPEINDEX_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <typeinfo>
 
 #pragma pack(push, _CRT_PACKING)
@@ -71,7 +72,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _TYPEINDEX_
 
 /*

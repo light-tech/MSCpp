@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _LOCALE_
 #define _LOCALE_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <xlocbuf>
 #include <xlocmes>
 #include <xlocmon>
@@ -22,6 +23,9 @@ _STD_BEGIN
 template <class _Elem>
 class collate : public locale::facet { // facet for ordering sequences of elements
 public:
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t, unsigned short>,
+        _FACET_SPECIALIZATION_MESSAGE);
+
     using char_type   = _Elem;
     using string_type = basic_string<_Elem, char_traits<_Elem>, allocator<_Elem>>;
 
@@ -52,7 +56,7 @@ public:
 
     static size_t _Getcat(const locale::facet** _Ppf = nullptr,
         const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
-        if (_Ppf != nullptr && *_Ppf == nullptr) {
+        if (_Ppf && !*_Ppf) {
             *_Ppf = new collate<_Elem>(_Locinfo(_Ploc->name().c_str()));
         }
 
@@ -60,11 +64,10 @@ public:
     }
 
 protected:
-    __CLR_OR_THIS_CALL ~collate() noexcept { // destroy the object
+    __CLR_OR_THIS_CALL ~collate() noexcept {
         _CSTD free(_Coll._LocaleName);
     }
 
-protected:
     collate(const char* _Locname, size_t _Refs = 0) : locale::facet(_Refs) { // construct from specified locale
         _BEGIN_LOCINFO(_Lobj(_Locname))
         _Init(_Lobj);
@@ -89,11 +92,10 @@ protected:
         size_t _Count;
         string_type _Str;
 
-        for (_Count = static_cast<size_t>(_Last - _First);
-             0 < _Count;) { // grow string if locale-specific strxfrm fails
+        for (_Count = static_cast<size_t>(_Last - _First); 0 < _Count;) {
+            // grow string if locale-specific strxfrm fails
             _Str.resize(_Count);
-            if ((_Count = _LStrxfrm(&*_Str.begin(), &*_Str.begin() + _Str.size(), _First, _Last, &_Coll))
-                <= _Str.size()) {
+            if ((_Count = _LStrxfrm(&_Str[0], &_Str[0] + _Str.size(), _First, _Last, &_Coll)) <= _Str.size()) {
                 break;
             }
         }
@@ -140,6 +142,8 @@ template __PURE_APPDOMAIN_GLOBAL locale::id collate<unsigned short>::id;
 template <class _Elem>
 class collate_byname : public collate<_Elem> { // collate for named locale
 public:
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t>, _FACET_SPECIALIZATION_MESSAGE);
+
     explicit collate_byname(const char* _Locname, size_t _Refs = 0)
         : collate<_Elem>(_Locname, _Refs) { // construct for named locale
     }
@@ -149,100 +153,99 @@ public:
     }
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~collate_byname() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~collate_byname() noexcept {}
 };
 
 // FUNCTION TEMPLATE has_facet
 template <class _Facet>
-inline bool has_facet(const locale& _Loc) noexcept { // test if facet is in locale
+bool has_facet(const locale& _Loc) noexcept { // test if facet is in locale
     _BEGIN_LOCK(_LOCK_LOCALE) // the thread lock, make get atomic
     size_t _Id = _Facet::id;
-    return _Loc._Getfacet(_Id) != nullptr || _Facet::_Getcat() != (size_t)(-1);
+    return _Loc._Getfacet(_Id) || _Facet::_Getcat() != static_cast<size_t>(-1);
     _END_LOCK()
 }
 
 // FUNCTION TEMPLATE isalnum
 template <class _Elem>
-inline bool(isalnum)(_Elem _Ch, const locale& _Loc) { // test if character is alphanumeric, locale specific
+bool(isalnum)(_Elem _Ch, const locale& _Loc) { // test if character is alphanumeric, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::alnum, _Ch);
 }
 
 // FUNCTION TEMPLATE isalpha
 template <class _Elem>
-inline bool(isalpha)(_Elem _Ch, const locale& _Loc) { // test if character is alphabetic, locale specific
+bool(isalpha)(_Elem _Ch, const locale& _Loc) { // test if character is alphabetic, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::alpha, _Ch);
 }
 
 // FUNCTION TEMPLATE isblank
 template <class _Elem>
-inline bool(isblank)(_Elem _Ch, const locale& _Loc) { // test if character is blank, locale specific
+bool(isblank)(_Elem _Ch, const locale& _Loc) { // test if character is blank, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::blank, _Ch);
 }
 
 // FUNCTION TEMPLATE iscntrl
 template <class _Elem>
-inline bool(iscntrl)(_Elem _Ch, const locale& _Loc) { // test if character is control, locale specific
+bool(iscntrl)(_Elem _Ch, const locale& _Loc) { // test if character is control, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::cntrl, _Ch);
 }
 
 // FUNCTION TEMPLATE isdigit
 template <class _Elem>
-inline bool(isdigit)(_Elem _Ch, const locale& _Loc) { // test if character is digit, locale specific
+bool(isdigit)(_Elem _Ch, const locale& _Loc) { // test if character is digit, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::digit, _Ch);
 }
 
 // FUNCTION TEMPLATE isgraph
 template <class _Elem>
-inline bool(isgraph)(_Elem _Ch, const locale& _Loc) { // test if character is graphic, locale specific
+bool(isgraph)(_Elem _Ch, const locale& _Loc) { // test if character is graphic, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::graph, _Ch);
 }
 
 // FUNCTION TEMPLATE islower
 template <class _Elem>
-inline bool(islower)(_Elem _Ch, const locale& _Loc) { // test if character is lower case, locale specific
+bool(islower)(_Elem _Ch, const locale& _Loc) { // test if character is lower case, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::lower, _Ch);
 }
 
 // FUNCTION TEMPLATE isprint
 template <class _Elem>
-inline bool(isprint)(_Elem _Ch, const locale& _Loc) { // test if character is printing, locale specific
+bool(isprint)(_Elem _Ch, const locale& _Loc) { // test if character is printing, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::print, _Ch);
 }
 
 // FUNCTION TEMPLATE ispunct
 template <class _Elem>
-inline bool(ispunct)(_Elem _Ch, const locale& _Loc) { // test if character is punctuation, locale specific
+bool(ispunct)(_Elem _Ch, const locale& _Loc) { // test if character is punctuation, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::punct, _Ch);
 }
 
 // FUNCTION TEMPLATE isspace
 template <class _Elem>
-inline bool(isspace)(_Elem _Ch, const locale& _Loc) { // test if character is whitespace, locale specific
+bool(isspace)(_Elem _Ch, const locale& _Loc) { // test if character is whitespace, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::space, _Ch);
 }
 
 // FUNCTION TEMPLATE isupper
 template <class _Elem>
-inline bool(isupper)(_Elem _Ch, const locale& _Loc) { // test if character is upper case, locale specific
+bool(isupper)(_Elem _Ch, const locale& _Loc) { // test if character is upper case, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::upper, _Ch);
 }
 
 // FUNCTION TEMPLATE isxdigit
 template <class _Elem>
-inline bool(isxdigit)(_Elem _Ch, const locale& _Loc) { // test if character is hexadecimal digit, locale specific
+bool(isxdigit)(_Elem _Ch, const locale& _Loc) { // test if character is hexadecimal digit, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).is(ctype_base::xdigit, _Ch);
 }
 
 // FUNCTION TEMPLATE tolower
 template <class _Elem>
-inline _Elem(tolower)(_Elem _Ch, const locale& _Loc) { // convert character to lower case, locale specific
+_Elem(tolower)(_Elem _Ch, const locale& _Loc) { // convert character to lower case, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).tolower(_Ch);
 }
 
 // FUNCTION TEMPLATE toupper
 template <class _Elem>
-inline _Elem(toupper)(_Elem _Ch, const locale& _Loc) { // convert character to upper case, locale specific
+_Elem(toupper)(_Elem _Ch, const locale& _Loc) { // convert character to upper case, locale specific
     return _STD use_facet<ctype<_Elem>>(_Loc).toupper(_Ch);
 }
 _STD_END
@@ -250,7 +253,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _LOCALE_
 
 /*

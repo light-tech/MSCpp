@@ -408,6 +408,18 @@ namespace details
     {
         typedef task<_Ty> _ArgType;
     };
+
+    template<typename _RetTypeT, typename _ArgTypeT>
+    struct _StdFunctionTypeHelper
+    {
+        typedef std::function<_RetTypeT __cdecl(_ArgTypeT)> _StdFuncT;
+    };
+
+    template<typename _RetTypeT>
+    struct _StdFunctionTypeHelper<_RetTypeT, void>
+    {
+        typedef std::function<_RetTypeT __cdecl()> _StdFuncT;
+    };
 #endif
 
     template<typename _Function, typename _ReturnType>
@@ -417,7 +429,7 @@ namespace details
 #ifndef _PPLTASKS_NO_STDFUNC
         typedef typename _ContinuationArgTypeHelper<_ReturnType, typename details::_FunctionTypeTraits<_Function, _ReturnType>::_Takes_task>::_ArgType _ArgTypeT;
         typedef typename _FunctionTypeTraits<_Function, _ReturnType>::_FuncRetType _RetTypeT;
-        typedef std::function<_RetTypeT __cdecl(_ArgTypeT)> _StdFuncT;
+        typedef typename _StdFunctionTypeHelper<_RetTypeT, _ArgTypeT>::_StdFuncT _StdFuncT;
 #endif
     };
     // _InitFunctorTypeTraits is used to decide whether a task constructed with a lambda should be unwrapped. Depending on how the variable is
@@ -747,7 +759,7 @@ namespace details
     private:
         // To ensure that the ReportUnhandledError DLL export is preserved, conditional error reporting via
         // _REPORT_PPLTASK_UNOBSERVED_EXCEPTION below is based on the header definition of ReportUnhandledError.
-#if !defined(_CRTBLD) && defined(BUILD_WINDOWS) && (!_PPL_TASK_ERROR_REPORT_ENABLED || defined(_KERNELX))
+#if !defined(_CRTBLD) && defined(BUILD_WINDOWS) && !_PPL_TASK_ERROR_REPORT_ENABLED
         void ReportUnhandledError() {}
 #else
         _CRTIMP2 void __thiscall ReportUnhandledError();
@@ -2194,7 +2206,7 @@ namespace details
                     if (_M_Continuations)
                     {
                         // Scheduling cancellation with automatic inlining.
-                        _ScheduleFuncWithAutoInline([=](){ _RunTaskContinuations(); }, details::_DefaultAutoInline);
+                        _ScheduleFuncWithAutoInline([this](){ _RunTaskContinuations(); }, details::_DefaultAutoInline);
                     }
 
                     break;

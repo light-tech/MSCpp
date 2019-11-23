@@ -2,7 +2,8 @@
 #pragma once
 #ifndef _XLOCTIME_
 #define _XLOCTIME_
-#ifndef RC_INVOKED
+#include <yvals_core.h>
+#if _STL_COMPILER_PREPROCESSOR
 #include <ctime>
 #include <xlocnum>
 
@@ -24,11 +25,9 @@ struct _CRTIMP2_PURE_IMPORT time_base : public locale::facet { // base class for
         ydm
     };
 
-    __CLR_OR_THIS_CALL time_base(size_t _Refs = 0) : locale::facet(_Refs) { // default constructor
-    }
+    __CLR_OR_THIS_CALL time_base(size_t _Refs = 0) : locale::facet(_Refs) {}
 
-    __CLR_OR_THIS_CALL ~time_base() noexcept { // destroy the object
-    }
+    __CLR_OR_THIS_CALL ~time_base() noexcept {}
 };
 
 // CLASS TEMPLATE time_get
@@ -38,6 +37,9 @@ private:
     friend _Tidy_guard<time_get>;
 
 public:
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t, unsigned short>,
+        _FACET_SPECIALIZATION_MESSAGE);
+
     using char_type = _Elem;
     using iter_type = _InIt;
     using _Ctype    = ctype<_Elem>;
@@ -146,9 +148,9 @@ public:
         _Init(_Lobj);
     }
 
-    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
-        if (_Ppf != nullptr && *_Ppf == nullptr) {
+    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
+        // return locale category mask and construct standard facet
+        if (_Ppf && !*_Ppf) {
             *_Ppf = new time_get<_Elem, _InIt>(_Locinfo(_Ploc->c_str()));
         }
 
@@ -156,7 +158,7 @@ public:
     }
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~time_get() noexcept { // destroy the object
+    virtual __CLR_OR_THIS_CALL ~time_get() noexcept {
         _Tidy();
     }
 
@@ -172,9 +174,10 @@ protected:
         _Cvt = _Lobj._Getcvt();
 
         if (is_same_v<_Elem2, wchar_t>) {
-            _Days   = (const _Elem*) _Maklocwcs((const wchar_t*) _Lobj._W_Getdays());
-            _Months = (const _Elem*) _Maklocwcs((const wchar_t*) _Lobj._W_Getmonths());
-            _Ampm   = (const _Elem*) _Maklocwcs(L":AM:am:PM:pm");
+            _Days = reinterpret_cast<const _Elem*>(_Maklocwcs(reinterpret_cast<const wchar_t*>(_Lobj._W_Getdays())));
+            _Months =
+                reinterpret_cast<const _Elem*>(_Maklocwcs(reinterpret_cast<const wchar_t*>(_Lobj._W_Getmonths())));
+            _Ampm = reinterpret_cast<const _Elem*>(_Maklocwcs(L":AM:am:PM:pm"));
         } else {
             _Days   = _Maklocstr(_Lobj._Getdays(), static_cast<_Elem*>(nullptr), _Cvt);
             _Months = _Maklocstr(_Lobj._Getmonths(), static_cast<_Elem*>(nullptr), _Cvt);
@@ -188,8 +191,8 @@ protected:
         _Ampm   = nullptr;
 
         _Tidy_guard<time_get> _Guard{this};
-        _Getvals((_Elem) 0, _Lobj);
-        _Dateorder     = (dateorder) _Lobj._Getdateorder();
+        _Getvals(_Elem{}, _Lobj);
+        _Dateorder     = static_cast<dateorder>(_Lobj._Getdateorder());
         _Guard._Target = nullptr;
     }
 
@@ -315,7 +318,7 @@ protected:
 
     virtual _InIt __CLR_OR_THIS_CALL do_get_weekday(_InIt _First, _InIt _Last, ios_base&, ios_base::iostate& _State,
         tm* _Pt) const { // get weekday from [_First, _Last) into _Pt
-        int _Num = _Getloctxt(_First, _Last, (size_t) 0, _Days);
+        int _Num = _Getloctxt(_First, _Last, 0, _Days);
         if (_Num < 0) {
             _State |= ios_base::failbit;
         } else {
@@ -327,7 +330,7 @@ protected:
 
     virtual _InIt __CLR_OR_THIS_CALL do_get_monthname(_InIt _First, _InIt _Last, ios_base&, ios_base::iostate& _State,
         tm* _Pt) const { // get month from [_First, _Last) into _Pt
-        int _Num = _Getloctxt(_First, _Last, (size_t) 0, _Months);
+        int _Num = _Getloctxt(_First, _Last, 0, _Months);
 
         if (_Num < 0) {
             _State |= ios_base::failbit;
@@ -433,7 +436,7 @@ protected:
             break;
 
         case 'p':
-            _Ans = _Getloctxt(_First, _Last, (size_t) 0, ":AM:am:PM:pm");
+            _Ans = _Getloctxt(_First, _Last, 0, ":AM:am:PM:pm");
             if (_Ans < 0) {
                 _State |= ios_base::failbit;
             } else if (1 < _Ans) {
@@ -584,9 +587,9 @@ private:
     }
 
     void __CLR_OR_THIS_CALL _Tidy() noexcept { // free all storage
-        _CSTD free((void*) _Days);
-        _CSTD free((void*) _Months);
-        _CSTD free((void*) _Ampm);
+        _CSTD free(const_cast<_Elem*>(_Days));
+        _CSTD free(const_cast<_Elem*>(_Months));
+        _CSTD free(const_cast<_Elem*>(_Ampm));
     }
 
     const _Elem* _Days; // ":Sun:Sunday:Mon:Monday..." for example
@@ -613,6 +616,8 @@ __PURE_APPDOMAIN_GLOBAL locale::id time_get<_Elem, _InIt>::id;
 template <class _Elem, class _InIt = istreambuf_iterator<_Elem, char_traits<_Elem>>>
 class time_get_byname : public time_get<_Elem, _InIt> { // time_get for named locale
 public:
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t>, _FACET_SPECIALIZATION_MESSAGE);
+
     explicit time_get_byname(const char* _Locname, size_t _Refs = 0)
         : time_get<_Elem, _InIt>(_Locname, _Refs) { // construct for named locale
     }
@@ -622,14 +627,16 @@ public:
     }
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~time_get_byname() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~time_get_byname() noexcept {}
 };
 
 // CLASS TEMPLATE time_put
 template <class _Elem, class _OutIt = ostreambuf_iterator<_Elem, char_traits<_Elem>>>
 class time_put : public locale::facet { // facet for converting encoded times to text
 public:
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t, unsigned short>,
+        _FACET_SPECIALIZATION_MESSAGE);
+
     using char_type = _Elem;
     using iter_type = _OutIt;
     using _Ctype    = ctype<_Elem>;
@@ -686,9 +693,9 @@ public:
         _Init(_Lobj);
     }
 
-    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
-        if (_Ppf != nullptr && *_Ppf == nullptr) {
+    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
+        // return locale category mask and construct standard facet
+        if (_Ppf && !*_Ppf) {
             *_Ppf = new time_put<_Elem, _OutIt>(_Locinfo(_Ploc->c_str()));
         }
 
@@ -696,8 +703,7 @@ public:
     }
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~time_put() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~time_put() noexcept {}
 
     void __CLR_OR_THIS_CALL _Init(const _Locinfo& _Lobj) { // initialize from _Lobj
         _Tnames = _Lobj._Gettnames();
@@ -706,7 +712,8 @@ protected:
     virtual _OutIt __CLR_OR_THIS_CALL do_put(_OutIt _Dest, ios_base&, _Elem, const tm* _Pt, char _Specifier,
         char _Modifier = '\0') const { // put formatted time from _Pt to _Dest for [_Fmtfirst, _Fmtlast)
         char _Fmt[5] = "!%x\0"; // '!' for nonzero count, null for modifier
-        size_t _Count, _Num;
+        size_t _Count;
+        size_t _Num;
         string _Str;
 
         if (_Modifier == '\0') {
@@ -718,7 +725,7 @@ protected:
 
         for (_Num = 16;; _Num *= 2) { // convert into ever larger string buffer until success
             _Str.append(_Num, '\0');
-            if (0 < (_Count = _Strftime(&*_Str.begin(), _Str.size(), _Fmt, _Pt, _Tnames._Getptr()))) {
+            if (0 < (_Count = _Strftime(&_Str[0], _Str.size(), _Fmt, _Pt, _Tnames._Getptr()))) {
                 break;
             }
         }
@@ -806,9 +813,9 @@ public:
         _Init(_Lobj);
     }
 
-    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
-        if (_Ppf != nullptr && *_Ppf == nullptr) {
+    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
+        // return locale category mask and construct standard facet
+        if (_Ppf && !*_Ppf) {
             *_Ppf = new time_put<_Elem, _OutIt>(_Locinfo(_Ploc->c_str()));
         }
 
@@ -816,8 +823,7 @@ public:
     }
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~time_put() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~time_put() noexcept {}
 
     __CLR_OR_THIS_CALL time_put(const char* _Locname, size_t _Refs = 0)
         : locale::facet(_Refs) { // construct from specified locale
@@ -833,19 +839,20 @@ protected:
     virtual _OutIt __CLR_OR_THIS_CALL do_put(_OutIt _Dest, ios_base&, _Elem, const tm* _Pt, char _Specifier,
         char _Modifier = '\0') const { // put formatted time from _Pt to _Dest for [_Fmtfirst, _Fmtlast)
         wchar_t _Fmt[5] = L"!%x\0"; // ! for nonzero count, null for modifier
-        size_t _Count, _Num;
+        size_t _Count;
+        size_t _Num;
         wstring _Str;
 
         if (_Modifier == '\0') {
-            _Fmt[2] = (_Elem) _Specifier; // conversion rule unspecified
+            _Fmt[2] = static_cast<_Elem>(_Specifier); // conversion rule unspecified
         } else { // add both modifier and specifier
-            _Fmt[2] = (_Elem) _Modifier;
-            _Fmt[3] = (_Elem) _Specifier;
+            _Fmt[2] = static_cast<_Elem>(_Modifier);
+            _Fmt[3] = static_cast<_Elem>(_Specifier);
         }
 
         for (_Num = 16;; _Num *= 2) { // convert into ever larger string buffer until success
             _Str.append(_Num, '\0');
-            if (0 < (_Count = _Wcsftime(&*_Str.begin(), _Str.size(), _Fmt, _Pt, _Tnames._Getptr()))) {
+            if (0 < (_Count = _Wcsftime(&_Str[0], _Str.size(), _Fmt, _Pt, _Tnames._Getptr()))) {
                 break;
             }
         }
@@ -933,9 +940,9 @@ public:
         _Init(_Lobj);
     }
 
-    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
-        if (_Ppf != nullptr && *_Ppf == nullptr) {
+    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
+        // return locale category mask and construct standard facet
+        if (_Ppf && !*_Ppf) {
             *_Ppf = new time_put<_Elem, _OutIt>(_Locinfo(_Ploc->c_str()));
         }
 
@@ -943,8 +950,7 @@ public:
     }
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~time_put() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~time_put() noexcept {}
 
     __CLR_OR_THIS_CALL time_put(const char* _Locname, size_t _Refs = 0)
         : locale::facet(_Refs) { // construct from specified locale
@@ -960,19 +966,20 @@ protected:
     virtual _OutIt __CLR_OR_THIS_CALL do_put(_OutIt _Dest, ios_base&, _Elem, const tm* _Pt, char _Specifier,
         char _Modifier = '\0') const { // put formatted time from _Pt to _Dest for [_Fmtfirst, _Fmtlast)
         wchar_t _Fmt[5] = L"!%x\0"; // ! for nonzero count, null for modifier
-        size_t _Count, _Num;
+        size_t _Count;
+        size_t _Num;
         wstring _Str;
 
         if (_Modifier == '\0') {
-            _Fmt[2] = (_Elem) _Specifier; // conversion rule unspecified
+            _Fmt[2] = static_cast<_Elem>(_Specifier); // conversion rule unspecified
         } else { // add both modifier and specifier
-            _Fmt[2] = (_Elem) _Modifier;
-            _Fmt[3] = (_Elem) _Specifier;
+            _Fmt[2] = static_cast<_Elem>(_Modifier);
+            _Fmt[3] = static_cast<_Elem>(_Specifier);
         }
 
         for (_Num = 16;; _Num *= 2) { // convert into ever larger string buffer until success
             _Str.append(_Num, '\0');
-            if (0 < (_Count = _Wcsftime(&*_Str.begin(), _Str.size(), _Fmt, _Pt, _Tnames._Getptr()))) {
+            if (0 < (_Count = _Wcsftime(&_Str[0], _Str.size(), _Fmt, _Pt, _Tnames._Getptr()))) {
                 break;
             }
         }
@@ -1002,6 +1009,8 @@ __PURE_APPDOMAIN_GLOBAL locale::id time_put<unsigned short, _OutIt>::id;
 template <class _Elem, class _OutIt = ostreambuf_iterator<_Elem, char_traits<_Elem>>>
 class time_put_byname : public time_put<_Elem, _OutIt> { // time_put for named locale
 public:
+    static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t>, _FACET_SPECIALIZATION_MESSAGE);
+
     explicit time_put_byname(const char* _Locname, size_t _Refs = 0)
         : time_put<_Elem, _OutIt>(_Locname, _Refs) { // construct for named locale
     }
@@ -1011,8 +1020,7 @@ public:
     }
 
 protected:
-    virtual __CLR_OR_THIS_CALL ~time_put_byname() noexcept { // destroy the object
-    }
+    virtual __CLR_OR_THIS_CALL ~time_put_byname() noexcept {}
 };
 
 #if defined(_DLL_CPPLIB)
@@ -1045,7 +1053,7 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#endif // RC_INVOKED
+#endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XLOCTIME_
 
 /*
