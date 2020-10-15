@@ -1,4 +1,8 @@
 // xerrc.h internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XERRC_H
 #define _XERRC_H
@@ -104,8 +108,3 @@ _STL_RESTORE_CLANG_WARNINGS
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XERRC_H
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

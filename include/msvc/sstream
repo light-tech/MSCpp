@@ -1,4 +1,8 @@
 // sstream standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _SSTREAM_
 #define _SSTREAM_
@@ -25,33 +29,33 @@ public:
     using _Mystr         = basic_string<_Elem, _Traits, _Alloc>;
     using _Mysize_type   = typename _Mystr::size_type;
 
-    explicit basic_stringbuf(ios_base::openmode _Mode = ios_base::in | ios_base::out)
-        : _Seekhigh(nullptr), _Mystate(_Getstate(_Mode)), _Al() { // construct empty character buffer from mode
-    }
+    basic_stringbuf() : _Seekhigh(nullptr), _Mystate(_Getstate(ios_base::in | ios_base::out)), _Al() {}
+
+    explicit basic_stringbuf(ios_base::openmode _Mode) : _Seekhigh(nullptr), _Mystate(_Getstate(_Mode)), _Al() {}
 
     explicit basic_stringbuf(const _Mystr& _Str, ios_base::openmode _Mode = ios_base::in | ios_base::out)
-        : _Al(_Str.get_allocator()) { // construct character buffer from string, mode
+        : _Al(_Str.get_allocator()) {
         _Init(_Str.c_str(), _Str.size(), _Getstate(_Mode));
     }
 
-    basic_stringbuf(basic_stringbuf&& _Right) { // construct by moving _Right
+    basic_stringbuf(basic_stringbuf&& _Right) {
         _Assign_rv(_STD move(_Right));
     }
 
-    basic_stringbuf& operator=(basic_stringbuf&& _Right) { // assign from _Right
+    basic_stringbuf& operator=(basic_stringbuf&& _Right) {
         _Assign_rv(_STD move(_Right));
         return *this;
     }
 
-    void _Assign_rv(basic_stringbuf&& _Right) { // assign by moving _Right
-        if (this != _STD addressof(_Right)) { // different, worth moving
+    void _Assign_rv(basic_stringbuf&& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Tidy();
             this->swap(_Right);
         }
     }
 
-    void swap(basic_stringbuf& _Right) { // swap with _Right
-        if (this != _STD addressof(_Right)) { // different, worth swapping
+    void swap(basic_stringbuf& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Mysb::swap(_Right);
             _STD swap(_Seekhigh, _Right._Seekhigh);
             _STD swap(_Mystate, _Right._Mystate);
@@ -78,11 +82,11 @@ public:
     using pos_type = typename _Traits::pos_type;
     using off_type = typename _Traits::off_type;
 
-    _NODISCARD _Mystr str() const { // return string copy of character array
+    _NODISCARD _Mystr str() const {
         _Mystr _Result(_Al);
         if (!(_Mystate & _Constant) && _Mysb::pptr()) { // writable, make string from write buffer
             const auto _Base = _Mysb::pbase();
-            _Result.assign(_Base, static_cast<_Mysize_type>(_Max_value(_Mysb::pptr(), _Seekhigh) - _Base));
+            _Result.assign(_Base, static_cast<_Mysize_type>((_STD max)(_Mysb::pptr(), _Seekhigh) - _Base));
         } else if (!(_Mystate & _Noread) && _Mysb::gptr()) { // readable, make string from read buffer
             const auto _Base = _Mysb::eback();
             _Result.assign(_Base, static_cast<_Mysize_type>(_Mysb::egptr() - _Base));
@@ -177,7 +181,7 @@ protected:
             return _Traits::eof();
         }
 
-        if (_Gptr < _Mysb::egptr()) { // return buffered
+        if (_Gptr < _Mysb::egptr()) {
             return _Traits::to_int_type(*_Gptr);
         }
 
@@ -187,7 +191,7 @@ protected:
             return _Traits::eof();
         }
 
-        const auto _Local_highwater = _Max_value(_Seekhigh, _Pptr);
+        const auto _Local_highwater = (_STD max)(_Seekhigh, _Pptr);
         if (_Local_highwater <= _Gptr) { // nothing in the put area to take
             return _Traits::eof();
         }
@@ -197,8 +201,9 @@ protected:
         return _Traits::to_int_type(*_Mysb::gptr());
     }
 
-    virtual pos_type seekoff(off_type _Off, ios_base::seekdir _Way,
-        ios_base::openmode _Mode = ios_base::in | ios_base::out) { // change position by _Off, according to _Way, _Mode
+    virtual pos_type seekoff(
+        off_type _Off, ios_base::seekdir _Way, ios_base::openmode _Mode = ios_base::in | ios_base::out) {
+        // change position by _Off, according to _Way, _Mode
         const auto _Gptr_old = _Mysb::gptr();
         const auto _Pptr_old = _Mysb::pptr();
         if (_Pptr_old && _Seekhigh < _Pptr_old) { // update high-water pointer
@@ -256,8 +261,8 @@ protected:
         return pos_type(_Off);
     }
 
-    virtual pos_type seekpos(pos_type _Pos,
-        ios_base::openmode _Mode = ios_base::in | ios_base::out) { // change position to _Pos, according to _Mode
+    virtual pos_type seekpos(pos_type _Pos, ios_base::openmode _Mode = ios_base::in | ios_base::out) {
+        // change position to _Pos, according to _Mode
         const auto _Off      = static_cast<streamoff>(_Pos);
         const auto _Gptr_old = _Mysb::gptr();
         const auto _Pptr_old = _Mysb::pptr();
@@ -287,9 +292,10 @@ protected:
         return pos_type(_Off);
     }
 
-    void _Init(
-        const _Elem* _Ptr, _Mysize_type _Count, int _State) { // initialize buffer to [_Ptr, _Ptr + _Count), set state
-        if (_Count > INT_MAX) { // TRANSITION, VSO#485517
+protected:
+    void _Init(const _Elem* _Ptr, _Mysize_type _Count, int _State) {
+        // initialize buffer to [_Ptr, _Ptr + _Count), set state
+        if (_Count > INT_MAX) { // TRANSITION, VSO-485517
             _Xbad_alloc();
         }
 
@@ -367,8 +373,7 @@ private:
 };
 
 template <class _Elem, class _Traits, class _Alloc>
-void swap(basic_stringbuf<_Elem, _Traits, _Alloc>& _Left,
-    basic_stringbuf<_Elem, _Traits, _Alloc>& _Right) { // swap _Left and _Right basic_stringbufs
+void swap(basic_stringbuf<_Elem, _Traits, _Alloc>& _Left, basic_stringbuf<_Elem, _Traits, _Alloc>& _Right) {
     _Left.swap(_Right);
 }
 
@@ -381,35 +386,32 @@ public:
     using _Mysb          = basic_stringbuf<_Elem, _Traits, _Alloc>;
     using _Mystr         = basic_string<_Elem, _Traits, _Alloc>;
 
-    explicit basic_istringstream(ios_base::openmode _Mode = ios_base::in)
-        : _Mybase(_STD addressof(_Stringbuffer)),
-          _Stringbuffer(_Mode | ios_base::in) { // construct empty readable character buffer
-    }
+    basic_istringstream() : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(ios_base::in) {}
+
+    explicit basic_istringstream(ios_base::openmode _Mode)
+        : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(_Mode | ios_base::in) {}
 
     explicit basic_istringstream(const _Mystr& _Str, ios_base::openmode _Mode = ios_base::in)
-        : _Mybase(_STD addressof(_Stringbuffer)),
-          _Stringbuffer(_Str, _Mode | ios_base::in) { // construct readable character buffer from NTCS
-    }
+        : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(_Str, _Mode | ios_base::in) {}
 
-    basic_istringstream(basic_istringstream&& _Right)
-        : _Mybase(_STD addressof(_Stringbuffer)) { // construct by moving _Right
+    basic_istringstream(basic_istringstream&& _Right) : _Mybase(_STD addressof(_Stringbuffer)) {
         _Assign_rv(_STD move(_Right));
     }
 
-    basic_istringstream& operator=(basic_istringstream&& _Right) { // move from _Right
+    basic_istringstream& operator=(basic_istringstream&& _Right) {
         _Assign_rv(_STD move(_Right));
         return *this;
     }
 
-    void _Assign_rv(basic_istringstream&& _Right) { // assign by moving _Right
-        if (this != _STD addressof(_Right)) { // different, worth moving
+    void _Assign_rv(basic_istringstream&& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Stringbuffer.str(_Mystr());
             this->swap(_Right);
         }
     }
 
-    void swap(basic_istringstream& _Right) { // swap with _Right
-        if (this != _STD addressof(_Right)) { // different, swap base and buffer
+    void swap(basic_istringstream& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Mybase::swap(_Right);
             _Stringbuffer.swap(_Right._Stringbuffer);
         }
@@ -420,11 +422,11 @@ public:
 
     virtual ~basic_istringstream() noexcept {}
 
-    _NODISCARD _Mysb* rdbuf() const { // return pointer to file buffer
+    _NODISCARD _Mysb* rdbuf() const {
         return const_cast<_Mysb*>(_STD addressof(_Stringbuffer));
     }
 
-    _NODISCARD _Mystr str() const { // return string copy of character array
+    _NODISCARD _Mystr str() const {
         return _Stringbuffer.str();
     }
 
@@ -433,12 +435,11 @@ public:
     }
 
 private:
-    _Mysb _Stringbuffer; // the string buffer
+    _Mysb _Stringbuffer;
 };
 
 template <class _Elem, class _Traits, class _Alloc>
-void swap(basic_istringstream<_Elem, _Traits, _Alloc>& _Left,
-    basic_istringstream<_Elem, _Traits, _Alloc>& _Right) { // swap _Left and _Right basic_istringstreams
+void swap(basic_istringstream<_Elem, _Traits, _Alloc>& _Left, basic_istringstream<_Elem, _Traits, _Alloc>& _Right) {
     _Left.swap(_Right);
 }
 
@@ -451,35 +452,32 @@ public:
     using _Mysb          = basic_stringbuf<_Elem, _Traits, _Alloc>;
     using _Mystr         = basic_string<_Elem, _Traits, _Alloc>;
 
-    explicit basic_ostringstream(ios_base::openmode _Mode = ios_base::out)
-        : _Mybase(_STD addressof(_Stringbuffer)),
-          _Stringbuffer(_Mode | ios_base::out) { // construct empty writable character buffer
-    }
+    basic_ostringstream() : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(ios_base::out) {}
+
+    explicit basic_ostringstream(ios_base::openmode _Mode)
+        : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(_Mode | ios_base::out) {}
 
     explicit basic_ostringstream(const _Mystr& _Str, ios_base::openmode _Mode = ios_base::out)
-        : _Mybase(_STD addressof(_Stringbuffer)),
-          _Stringbuffer(_Str, _Mode | ios_base::out) { // construct writable character buffer from NTCS
-    }
+        : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(_Str, _Mode | ios_base::out) {}
 
-    basic_ostringstream(basic_ostringstream&& _Right)
-        : _Mybase(_STD addressof(_Stringbuffer)) { // construct by moving _Right
+    basic_ostringstream(basic_ostringstream&& _Right) : _Mybase(_STD addressof(_Stringbuffer)) {
         _Assign_rv(_STD move(_Right));
     }
 
-    basic_ostringstream& operator=(basic_ostringstream&& _Right) { // move from _Right
+    basic_ostringstream& operator=(basic_ostringstream&& _Right) {
         _Assign_rv(_STD move(_Right));
         return *this;
     }
 
-    void _Assign_rv(basic_ostringstream&& _Right) { // assign by moving _Right
-        if (this != _STD addressof(_Right)) { // different, worth moving
+    void _Assign_rv(basic_ostringstream&& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Stringbuffer.str(_Mystr());
             this->swap(_Right);
         }
     }
 
-    void swap(basic_ostringstream& _Right) { // swap with _Right
-        if (this != _STD addressof(_Right)) { // different, swap base and buffer
+    void swap(basic_ostringstream& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Mybase::swap(_Right);
             _Stringbuffer.swap(_Right._Stringbuffer);
         }
@@ -490,11 +488,11 @@ public:
 
     virtual ~basic_ostringstream() noexcept {}
 
-    _NODISCARD _Mysb* rdbuf() const { // return pointer to buffer
+    _NODISCARD _Mysb* rdbuf() const {
         return const_cast<_Mysb*>(_STD addressof(_Stringbuffer));
     }
 
-    _NODISCARD _Mystr str() const { // return string copy of character array
+    _NODISCARD _Mystr str() const {
         return _Stringbuffer.str();
     }
 
@@ -503,12 +501,11 @@ public:
     }
 
 private:
-    _Mysb _Stringbuffer; // the string buffer
+    _Mysb _Stringbuffer;
 };
 
 template <class _Elem, class _Traits, class _Alloc>
-void swap(basic_ostringstream<_Elem, _Traits, _Alloc>& _Left,
-    basic_ostringstream<_Elem, _Traits, _Alloc>& _Right) { // swap _Left and _Right basic_ostringstreams
+void swap(basic_ostringstream<_Elem, _Traits, _Alloc>& _Left, basic_ostringstream<_Elem, _Traits, _Alloc>& _Right) {
     _Left.swap(_Right);
 }
 
@@ -527,33 +524,32 @@ public:
     using _Mysb          = basic_stringbuf<_Elem, _Traits, _Alloc>;
     using _Mystr         = basic_string<_Elem, _Traits, _Alloc>;
 
-    explicit basic_stringstream(ios_base::openmode _Mode = ios_base::in | ios_base::out)
-        : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(_Mode) { // construct empty character buffer
-    }
+    basic_stringstream() : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(ios_base::in | ios_base::out) {}
+
+    explicit basic_stringstream(ios_base::openmode _Mode)
+        : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(_Mode) {}
 
     explicit basic_stringstream(const _Mystr& _Str, ios_base::openmode _Mode = ios_base::in | ios_base::out)
-        : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(_Str, _Mode) { // construct character buffer from NTCS
-    }
+        : _Mybase(_STD addressof(_Stringbuffer)), _Stringbuffer(_Str, _Mode) {}
 
-    basic_stringstream(basic_stringstream&& _Right)
-        : _Mybase(_STD addressof(_Stringbuffer)) { // construct by moving _Right
+    basic_stringstream(basic_stringstream&& _Right) : _Mybase(_STD addressof(_Stringbuffer)) {
         _Assign_rv(_STD move(_Right));
     }
 
-    basic_stringstream& operator=(basic_stringstream&& _Right) { // move from _Right
+    basic_stringstream& operator=(basic_stringstream&& _Right) {
         _Assign_rv(_STD move(_Right));
         return *this;
     }
 
-    void _Assign_rv(basic_stringstream&& _Right) { // assign by moving _Right
-        if (this != _STD addressof(_Right)) { // different, worth moving
+    void _Assign_rv(basic_stringstream&& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Stringbuffer.str(_Mystr());
             this->swap(_Right);
         }
     }
 
-    void swap(basic_stringstream& _Right) { // swap with _Right
-        if (this != _STD addressof(_Right)) { // different, swap base and buffer
+    void swap(basic_stringstream& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Mybase::swap(_Right);
             _Stringbuffer.swap(_Right._Stringbuffer);
         }
@@ -564,11 +560,11 @@ public:
 
     virtual ~basic_stringstream() noexcept {}
 
-    _NODISCARD _Mysb* rdbuf() const { // return pointer to buffer
+    _NODISCARD _Mysb* rdbuf() const {
         return const_cast<_Mysb*>(_STD addressof(_Stringbuffer));
     }
 
-    _NODISCARD _Mystr str() const { // return string copy of character array
+    _NODISCARD _Mystr str() const {
         return _Stringbuffer.str();
     }
 
@@ -577,12 +573,11 @@ public:
     }
 
 private:
-    _Mysb _Stringbuffer; // the string buffer
+    _Mysb _Stringbuffer;
 };
 
 template <class _Elem, class _Traits, class _Alloc>
-void swap(basic_stringstream<_Elem, _Traits, _Alloc>& _Left,
-    basic_stringstream<_Elem, _Traits, _Alloc>& _Right) { // swap _Left and _Right basic_stringstreams
+void swap(basic_stringstream<_Elem, _Traits, _Alloc>& _Left, basic_stringstream<_Elem, _Traits, _Alloc>& _Right) {
     _Left.swap(_Right);
 }
 _STD_END
@@ -592,8 +587,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _SSTREAM_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

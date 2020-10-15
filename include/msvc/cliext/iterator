@@ -1,4 +1,5 @@
 // iterator stl/clr header
+// Copyright (c) Microsoft Corporation. All rights reserved.
 #ifndef _CLI_ITERATOR_
  #define _CLI_ITERATOR_
 #include <cliext/xutility>
@@ -4257,8 +4258,3 @@ template<typename _Iter_t> inline
 	}
 }	// namespace cliext
 #endif // _CLI_ITERATOR_
-
-/*
- * Copyright (c) 2004-2007 by Dinkumware, Ltd.  ALL RIGHTS RESERVED.
- * Consult your license regarding permissions and restrictions.
-V5.03:0009 */

@@ -514,7 +514,7 @@ namespace details
     /// <param name="_InliningMode">
     ///     The inlining scheduling policy for current functor.
     /// </param>
-    static void _ScheduleFuncWithAutoInline(const std::function<void ()> & _Func, _TaskInliningMode_t _InliningMode)
+    inline void _ScheduleFuncWithAutoInline(const std::function<void ()> & _Func, _TaskInliningMode_t _InliningMode)
     {
         _TaskCollection_t::_RunTask(&_TaskProcThunk::_Bridge, new _TaskProcThunk(_Func), _InliningMode);
     }
@@ -759,7 +759,7 @@ namespace details
     private:
         // To ensure that the ReportUnhandledError DLL export is preserved, conditional error reporting via
         // _REPORT_PPLTASK_UNOBSERVED_EXCEPTION below is based on the header definition of ReportUnhandledError.
-#if !defined(_CRTBLD) && defined(BUILD_WINDOWS) && !_PPL_TASK_ERROR_REPORT_ENABLED
+#if !defined(_CRTBLD) && defined(UNDOCKED_WINDOWS_UCRT) && !_PPL_TASK_ERROR_REPORT_ENABLED
         void ReportUnhandledError() {}
 #else
         _CRTIMP2 void __thiscall ReportUnhandledError();
@@ -1060,7 +1060,7 @@ public:
 
 private:
     _CRTIMP2 __thiscall task_continuation_context();
-#if defined(BUILD_WINDOWS) || _PPL_TASK_CONTEXT_CONTROL_ENABLED
+#if defined(UNDOCKED_WINDOWS_UCRT) || _PPL_TASK_CONTEXT_CONTROL_ENABLED
     explicit task_continuation_context(bool _Enable_context) : _ContextCallback(_Enable_context), _M_RunInline(false)
     {
     }

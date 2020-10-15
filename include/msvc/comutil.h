@@ -65,7 +65,7 @@
 #define INTSAFE_E_ARITHMETIC_OVERFLOW   ((HRESULT)0x80070216L)  // 0x216 = 534 = ERROR_ARITHMETIC_OVERFLOW
 #endif
 #ifndef INTSAFE_UINT_MAX
-#define INTSAFE_UINT_MAX        		0xffffffff
+#define INTSAFE_UINT_MAX                0xffffffff
 #endif
 #ifndef FAILED
 #define FAILED(hr) (((HRESULT)(hr)) < 0)
@@ -97,26 +97,26 @@ namespace _com_util {
             _com_issue_error(hr);
         }
     }
-	static HRESULT UIntAdd(UINT uAugend, UINT uAddend, UINT *puResult)
-	{
-		if((uAugend + uAddend) < uAddend)
-		{
-			return INTSAFE_E_ARITHMETIC_OVERFLOW;
-		}
-		*puResult = uAugend + uAddend;
-		return S_OK;
-	}
+    static HRESULT UIntAdd(UINT uAugend, UINT uAddend, UINT *puResult)
+    {
+        if((uAugend + uAddend) < uAddend)
+        {
+            return INTSAFE_E_ARITHMETIC_OVERFLOW;
+        }
+        *puResult = uAugend + uAddend;
+        return S_OK;
+    }
 
-	static HRESULT UIntMult(UINT uMultiplicand, UINT uMultiplier, UINT *puResult)
-	{
-		ULONGLONG ull64Result = UInt32x32To64(uMultiplicand, uMultiplier);
-		if(ull64Result <= INTSAFE_UINT_MAX)
-		{
-			*puResult = (UINT)ull64Result;
-			return S_OK;
-		}
-		return INTSAFE_E_ARITHMETIC_OVERFLOW;
-	}
+    static HRESULT UIntMult(UINT uMultiplicand, UINT uMultiplier, UINT *puResult)
+    {
+        ULONGLONG ull64Result = UInt32x32To64(uMultiplicand, uMultiplier);
+        if(ull64Result <= INTSAFE_UINT_MAX)
+        {
+            *puResult = (UINT)ull64Result;
+            return S_OK;
+        }
+        return INTSAFE_E_ARITHMETIC_OVERFLOW;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -719,41 +719,41 @@ inline _bstr_t::Data_t::Data_t(BSTR bstr, bool fCopy)
 inline _bstr_t::Data_t::Data_t(const _bstr_t& s1, const _bstr_t& s2)
     : m_str(NULL), m_RefCount(1)
 {
-	const unsigned int l1 = s1.length();
-	const unsigned int l2 = s2.length();
-	unsigned int l3;
+    const unsigned int l1 = s1.length();
+    const unsigned int l2 = s2.length();
+    unsigned int l3;
 
-	if (FAILED(_com_util::UIntAdd(l1, l2, &l3)) ||
-		FAILED(_com_util::UIntMult(l3, sizeof(wchar_t), &l3)))
-	{
-		_com_issue_error(E_OUTOFMEMORY);
-		return;
-	}
+    if (FAILED(_com_util::UIntAdd(l1, l2, &l3)) ||
+        FAILED(_com_util::UIntMult(l3, sizeof(wchar_t), &l3)))
+    {
+        _com_issue_error(E_OUTOFMEMORY);
+        return;
+    }
 
-	m_wstr = ::SysAllocStringByteLen(NULL, (l1 + l2) * sizeof(wchar_t));
-	if (m_wstr == NULL)
-	{
-		if (l1 + l2 == 0)
-		{
-			return;
-		}
-		_com_issue_error(E_OUTOFMEMORY);
-		return;
-	}
+    m_wstr = ::SysAllocStringByteLen(NULL, (l1 + l2) * sizeof(wchar_t));
+    if (m_wstr == NULL)
+    {
+        if (l1 + l2 == 0)
+        {
+            return;
+        }
+        _com_issue_error(E_OUTOFMEMORY);
+        return;
+    }
 
-	const wchar_t* wstr1 = static_cast<const wchar_t*>(s1);
+    const wchar_t* wstr1 = static_cast<const wchar_t*>(s1);
 
-	if (wstr1 != NULL)
-	{
-		_COM_MEMCPY_S(m_wstr, (l1 + l2 + 1) * sizeof(wchar_t), wstr1, (l1 + 1) * sizeof(wchar_t));
-	}
+    if (wstr1 != NULL)
+    {
+        _COM_MEMCPY_S(m_wstr, (l1 + l2 + 1) * sizeof(wchar_t), wstr1, (l1 + 1) * sizeof(wchar_t));
+    }
 
-	const wchar_t* wstr2 = static_cast<const wchar_t*>(s2);
+    const wchar_t* wstr2 = static_cast<const wchar_t*>(s2);
 
-	if (wstr2 != NULL)
-	{
-		_COM_MEMCPY_S(m_wstr + l1, (l2 + 1) * sizeof(wchar_t), wstr2, (l2 + 1) * sizeof(wchar_t));
-	}
+    if (wstr2 != NULL)
+    {
+        _COM_MEMCPY_S(m_wstr + l1, (l2 + 1) * sizeof(wchar_t), wstr2, (l2 + 1) * sizeof(wchar_t));
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -770,7 +770,8 @@ inline unsigned long _bstr_t::Data_t::AddRef() throw()
 
 inline unsigned long _bstr_t::Data_t::Release() throw()
 {
-    unsigned long cRef = InterlockedDecrement(reinterpret_cast<long*>(&m_RefCount));
+    unsigned long cRef = static_cast<unsigned long>(
+        InterlockedDecrement(reinterpret_cast<long*>(&m_RefCount)));
     if (cRef == 0) {
         delete this;
     }

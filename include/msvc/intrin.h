@@ -13,12 +13,16 @@
 #pragma once
 #define __INTRIN_H_
 #include <vcruntime.h>
+
 #if _VCRT_COMPILER_PREPROCESSOR && !defined(__midl)
+
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
 
 #include <intrin0.h>
 #include <setjmp.h>
 
-#if defined (_M_ARM64) || defined(_M_HYBRID_X86_ARM64)
+#if defined (_M_ARM64) || defined(_M_HYBRID_X86_ARM64) || defined(_M_ARM64EC)
 #include <stdint.h> // uint8_t
 #endif
 
@@ -38,7 +42,7 @@
         #include <arm_neon.h>
     #endif
 
-    #if defined (_M_ARM64) || defined(_M_HYBRID_X86_ARM64)
+    #if defined (_M_ARM64) || defined(_M_HYBRID_X86_ARM64) || defined(_M_ARM64EC)
         #include <arm64intr.h>
         #include <arm64_neon.h>
     #endif
@@ -65,8 +69,8 @@ __MACHINEARM(unsigned int _CountOneBits64(unsigned __int64))
 __MACHINEARM(int _DAddSatInt(int, int))
 __MACHINEARM(int _DSubSatInt(int, int))
 __MACHINECHPEX86ARM64(void _HybridGenerateThunks(void *, unsigned))
-__MACHINEARM_ARM64(long _InterlockedAdd(long volatile * _Addend, long _Value))
-__MACHINEARM_ARM64(__int64 _InterlockedAdd64(__int64 volatile * _Addend, __int64 _Value))
+__MACHINEX86_ARM_ARM64(long _InterlockedAdd(long volatile * _Addend, long _Value))
+__MACHINEX86_ARM_ARM64(__int64 _InterlockedAdd64(__int64 volatile * _Addend, __int64 _Value))
 __MACHINEARM_ARM64(__int64 _InterlockedAdd64_acq(__int64 volatile * _Addend, __int64 _Value))
 __MACHINEARM_ARM64(__int64 _InterlockedAdd64_nf(__int64 volatile * _Addend, __int64 _Value))
 __MACHINEARM_ARM64(__int64 _InterlockedAdd64_rel(__int64 volatile * _Addend, __int64 _Value))
@@ -846,7 +850,7 @@ __MACHINEX86_X64(void _mm_storer_ps(float *, __m128))
 __MACHINEX86_X64(void _mm_storeu_pd(double *, __m128d))
 __MACHINEX86_X64(void _mm_storeu_ps(float *, __m128))
 __MACHINEX86_X64(void _mm_storeu_si128(__m128i *, __m128i))
-#if defined(_CRT_WINDOWS) || defined(BUILD_WINDOWS)
+#if defined(_CRT_WINDOWS) || defined(UNDOCKED_WINDOWS_UCRT)
 __MACHINEX86_X64(__m128i _mm_stream_load_si128(__m128i *))
 #else
 __MACHINEX86_X64(__m128i _mm_stream_load_si128(const __m128i *))
@@ -928,8 +932,16 @@ __MACHINEX64(unsigned char __cdecl _addcarry_u64(unsigned char, unsigned __int64
 __MACHINEX64(unsigned char __cdecl _subborrow_u64(unsigned char, unsigned __int64, unsigned __int64, unsigned __int64 *))
 __MACHINEX86_X64(void _mm_monitorx(void const *, unsigned int, unsigned int))
 __MACHINEX86_X64(void _mm_mwaitx(unsigned int, unsigned int, unsigned int))
+__MACHINEX64(unsigned int __rmpupdate(unsigned __int64, rmp_seg *, int))
+__MACHINEX64(unsigned int __psmash(unsigned __int64))
+__MACHINEX64(unsigned int __rmpadjust(unsigned __int64, int, int))
+#pragma warning(suppress:4392) // PDB toolset uses this header file, build break if changing prototype, need to remove this warning after tools updated, see VSO#1087712
+__MACHINEX64(unsigned int __pvalidate(unsigned __int64, int, int, int*))
+__MACHINEX86_X64(void __svm_invlpgb(void*, int))
+__MACHINEX86_X64(void __svm_tlbsync(void))
 
 #if defined (__cplusplus)
 }
 #endif /* defined (__cplusplus) */
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 #endif /* _VCRT_COMPILER_PREPROCESSOR && !defined(__midl) */

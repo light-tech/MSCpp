@@ -1,4 +1,8 @@
-// xlocnum internal header (from <locale>)
+// xlocnum internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XLOCNUM_
 #define _XLOCNUM_
@@ -8,6 +12,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <iterator>
 #include <streambuf>
 
 #pragma pack(push, _CRT_PACKING)
@@ -19,9 +24,7 @@ _STL_DISABLE_CLANG_WARNINGS
 
 // TEXT-TO-NUMERIC CONVERSION FUNCTIONS
 
-#if !defined(MRTDLL) && !defined(_M_CEE_PURE)
-_EXTERN_C
-#endif // !defined(MRTDLL) etc.
+_EXTERN_C_UNLESS_PURE
 
 extern _CRTIMP2_PURE float __CLRCALL_PURE_OR_CDECL _Stofx(
     const char*, _Out_opt_ _Deref_post_opt_valid_ char**, long, int*);
@@ -38,9 +41,7 @@ extern _CRTIMP2_PURE long long __CLRCALL_PURE_OR_CDECL _Stollx(
 extern _CRTIMP2_PURE unsigned long long __CLRCALL_PURE_OR_CDECL _Stoullx(
     const char*, _Out_opt_ _Deref_post_opt_valid_ char**, int, int*);
 
-#if !defined(MRTDLL) && !defined(_M_CEE_PURE)
-_END_EXTERN_C
-#endif // !defined(MRTDLL) etc.
+_END_EXTERN_C_UNLESS_PURE
 
 _STD_BEGIN
 
@@ -114,23 +115,23 @@ public:
 
     __PURE_APPDOMAIN_GLOBAL _CRTIMP2_PURE_IMPORT static locale::id id; // unique facet id
 
-    _Elem decimal_point() const { // return decimal point
+    _Elem decimal_point() const {
         return do_decimal_point();
     }
 
-    _Elem thousands_sep() const { // return thousands separator
+    _Elem thousands_sep() const {
         return do_thousands_sep();
     }
 
-    string grouping() const { // return grouping string
+    string grouping() const {
         return do_grouping();
     }
 
-    string_type falsename() const { // return name for false
+    string_type falsename() const {
         return do_falsename();
     }
 
-    string_type truename() const { // return name for true
+    string_type truename() const {
         return do_truename();
     }
 
@@ -144,8 +145,7 @@ public:
         _END_LOCINFO()
     }
 
-    numpunct(const _Locinfo& _Lobj, size_t _Refs = 0, bool _Isdef = false)
-        : locale::facet(_Refs) { // construct from specified locale
+    numpunct(const _Locinfo& _Lobj, size_t _Refs = 0, bool _Isdef = false) : locale::facet(_Refs) {
         _Init(_Lobj, _Isdef);
     }
 
@@ -162,8 +162,7 @@ protected:
         _Tidy();
     }
 
-    numpunct(const char* _Locname, size_t _Refs = 0, bool _Isdef = false)
-        : locale::facet(_Refs) { // construct from specified locale
+    numpunct(const char* _Locname, size_t _Refs = 0, bool _Isdef = false) : locale::facet(_Refs) {
         _BEGIN_LOCINFO(_Lobj(_Locname))
         _Init(_Lobj, _Isdef);
         _END_LOCINFO()
@@ -203,23 +202,23 @@ protected:
         }
     }
 
-    virtual _Elem __CLR_OR_THIS_CALL do_decimal_point() const { // return decimal point
+    virtual _Elem __CLR_OR_THIS_CALL do_decimal_point() const {
         return _Dp;
     }
 
-    virtual _Elem __CLR_OR_THIS_CALL do_thousands_sep() const { // return thousands separator
+    virtual _Elem __CLR_OR_THIS_CALL do_thousands_sep() const {
         return _Kseparator;
     }
 
-    virtual string __CLR_OR_THIS_CALL do_grouping() const { // return grouping string
+    virtual string __CLR_OR_THIS_CALL do_grouping() const {
         return string(_Grouping);
     }
 
-    virtual string_type __CLR_OR_THIS_CALL do_falsename() const { // return name for false
+    virtual string_type __CLR_OR_THIS_CALL do_falsename() const {
         return string_type(_Falsename);
     }
 
-    virtual string_type __CLR_OR_THIS_CALL do_truename() const { // return name for true
+    virtual string_type __CLR_OR_THIS_CALL do_truename() const {
         return string_type(_Truename);
     }
 
@@ -244,19 +243,17 @@ public:
     static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t>, _FACET_SPECIALIZATION_MESSAGE);
 
     explicit numpunct_byname(const char* _Locname, size_t _Refs = 0)
-        : numpunct<_Elem>(_Locname, _Refs) { // construct for named locale
-    }
+        : numpunct<_Elem>(_Locname, _Refs) {} // construct for named locale
 
     explicit numpunct_byname(const string& _Str, size_t _Refs = 0)
-        : numpunct<_Elem>(_Str.c_str(), _Refs) { // construct for named locale
-    }
+        : numpunct<_Elem>(_Str.c_str(), _Refs) {} // construct for named locale
 
 protected:
     virtual __CLR_OR_THIS_CALL ~numpunct_byname() noexcept {}
 };
 
 // STATIC numpunct::id OBJECT
-#if !(defined _CRTBLD && defined _BUILDING_SATELLITE_2) // TRANSITION, VSO#578955
+#if !(defined _CRTBLD && defined _BUILDING_SATELLITE_2) // TRANSITION, VSO-578955
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdllimport-static-field-def"
@@ -291,8 +288,7 @@ public:
 protected:
     virtual __CLR_OR_THIS_CALL ~num_get() noexcept {}
 
-    void _Init(const _Locinfo&) { // initialize from _Locinfo object
-    }
+    void _Init(const _Locinfo&) {} // initialize from _Locinfo object
 
 public:
     explicit __CLR_OR_THIS_CALL num_get(size_t _Refs = 0) : locale::facet(_Refs) { // construct from current locale
@@ -301,8 +297,7 @@ public:
         _END_LOCINFO()
     }
 
-    __CLR_OR_THIS_CALL num_get(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : locale::facet(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL num_get(const _Locinfo& _Lobj, size_t _Refs = 0) : locale::facet(_Refs) {
         _Init(_Lobj);
     }
 
@@ -393,8 +388,8 @@ protected:
                                   //  "zero, if the conversion function does not convert the entire field."
                                   // We should still do numeric conversion with bad digit separators, instead of
                                   // setting 0, but we can't distinguish that from _Getifld's interface, and _Getifld's
-                                  // interface can't be changed as it is an exported function. Fixing that when ABI
-                                  // allows is tracked by VSO#591516.
+                                  // interface can't be changed as it is an exported function.
+                                  // TRANSITION, ABI: Fixing that when ABI allows is tracked by VSO-591516.
                 _Val   = false;
                 _State = ios_base::failbit;
             } else {
@@ -425,7 +420,7 @@ protected:
         _Adl_verify_range(_First, _Last);
         char _Ac[_MAX_INT_DIG];
         const int _Base = _Getifld(_Ac, _First, _Last, _Iosbase.flags(), _Iosbase.getloc()); // gather field
-        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO#591516
+        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO-591516
             _State = ios_base::failbit;
             _Val   = 0;
         } else {
@@ -472,7 +467,7 @@ protected:
         _Adl_verify_range(_First, _Last);
         char _Ac[_MAX_INT_DIG];
         const int _Base = _Getifld(_Ac, _First, _Last, _Iosbase.flags(), _Iosbase.getloc()); // gather field
-        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO#591516
+        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO-591516
             _State = ios_base::failbit;
             _Val   = 0;
         } else {
@@ -496,7 +491,7 @@ protected:
         _Adl_verify_range(_First, _Last);
         char _Ac[_MAX_INT_DIG];
         const int _Base = _Getifld(_Ac, _First, _Last, _Iosbase.flags(), _Iosbase.getloc()); // gather field
-        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO#591516
+        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO-591516
             _State = ios_base::failbit;
             _Val   = 0;
         } else {
@@ -520,7 +515,7 @@ protected:
         _Adl_verify_range(_First, _Last);
         char _Ac[_MAX_INT_DIG];
         const int _Base = _Getifld(_Ac, _First, _Last, _Iosbase.flags(), _Iosbase.getloc());
-        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO#591516
+        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO-591516
             _State = ios_base::failbit;
             _Val   = 0;
         } else {
@@ -544,7 +539,7 @@ protected:
         _Adl_verify_range(_First, _Last);
         char _Ac[_MAX_INT_DIG];
         const int _Base = _Getifld(_Ac, _First, _Last, _Iosbase.flags(), _Iosbase.getloc());
-        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO#591516
+        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO-591516
             _State = ios_base::failbit;
             _Val   = 0;
         } else {
@@ -563,7 +558,8 @@ protected:
         return _First;
     }
 
-// Sentinel value used by num_get::do_get() to enable correct "V2" behavior in _Getffld() and _Getffldx()
+// TRANSITION, ABI: Sentinel value used by num_get::do_get()
+// to enable correct "V2" behavior in _Getffld() and _Getffldx()
 #define _ENABLE_V2_BEHAVIOR 1000000000
 
 // Size of char buffer used by num_get::do_get() for float/double/long double
@@ -575,7 +571,7 @@ protected:
         char _Ac[_FLOATING_BUFFER_SIZE];
         int _Hexexp     = _ENABLE_V2_BEHAVIOR;
         const int _Base = _Getffld(_Ac, _First, _Last, _Iosbase, &_Hexexp); // gather field
-        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO#591516
+        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO-591516
             _State = ios_base::failbit;
             _Val   = 0.0f;
         } else {
@@ -603,7 +599,7 @@ protected:
         char _Ac[_FLOATING_BUFFER_SIZE];
         int _Hexexp     = _ENABLE_V2_BEHAVIOR;
         const int _Base = _Getffld(_Ac, _First, _Last, _Iosbase, &_Hexexp); // gather field
-        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO#591516
+        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO-591516
             _State = ios_base::failbit;
             _Val   = 0.0;
         } else {
@@ -640,7 +636,7 @@ protected:
         _Adl_verify_range(_First, _Last);
         char _Ac[_MAX_INT_DIG];
         const int _Base = _Getifld(_Ac, _First, _Last, ios_base::hex, _Iosbase.getloc()); // gather field
-        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO#591516
+        if (_Ac[0] == '\0') { // ditto "fails to convert the entire field" / VSO-591516
             _State = ios_base::failbit;
             _Val   = nullptr;
         } else {
@@ -671,12 +667,12 @@ private:
         const string _Grouping  = _Punct_fac.grouping();
         const _Elem _Kseparator = _Grouping.size() == 0 ? _Elem{} : _Punct_fac.thousands_sep();
 
-        constexpr int _Numget_signoff             = 22;
-        constexpr int _Numget_xoff                = 24;
-        _STATIC_UNLESS_PURE constexpr char _Src[] = "0123456789ABCDEFabcdef-+Xx";
+        constexpr int _Numget_signoff = 22;
+        constexpr int _Numget_xoff    = 24;
+        static constexpr char _Src[]  = "0123456789ABCDEFabcdef-+Xx";
         _Elem _Atoms[sizeof(_Src)];
         const ctype<_Elem>& _Ctype_fac = _STD use_facet<ctype<_Elem>>(_Loc);
-        _Ctype_fac.widen(&_Src[0], &_Src[sizeof(_Src)], _Atoms);
+        _Ctype_fac.widen(_STD begin(_Src), _STD end(_Src), _Atoms);
 
         char* _Ptr = _Ac;
 
@@ -784,12 +780,12 @@ private:
         bool _Bad              = false;
         bool _Sticky           = false;
 
-        constexpr int _Numget_signoff             = 10;
-        constexpr int _Numget_eoff                = 12;
-        _STATIC_UNLESS_PURE constexpr char _Src[] = "0123456789-+Ee";
+        constexpr int _Numget_signoff = 10;
+        constexpr int _Numget_eoff    = 12;
+        static constexpr char _Src[]  = "0123456789-+Ee";
         _Elem _Atoms[sizeof(_Src)];
         const ctype<_Elem>& _Ctype_fac = _STD use_facet<ctype<_Elem>>(_Iosbase.getloc());
-        _Ctype_fac.widen(&_Src[0], &_Src[sizeof(_Src)], _Atoms);
+        _Ctype_fac.widen(_STD begin(_Src), _STD end(_Src), _Atoms);
 
         if (_First != _Last) {
             if (*_First == _Atoms[_Numget_signoff + 1]) { // gather plus sign
@@ -965,13 +961,13 @@ private:
         const auto& _Punct_fac = _STD use_facet<numpunct<_Elem>>(_Iosbase.getloc());
         const string _Grouping = _Punct_fac.grouping();
 
-        constexpr int _Numget_signoff             = 22;
-        constexpr int _Numget_xoff                = 24;
-        constexpr int _Numget_poff                = 26;
-        _STATIC_UNLESS_PURE constexpr char _Src[] = "0123456789ABCDEFabcdef-+XxPp";
+        constexpr int _Numget_signoff = 22;
+        constexpr int _Numget_xoff    = 24;
+        constexpr int _Numget_poff    = 26;
+        static constexpr char _Src[]  = "0123456789ABCDEFabcdef-+XxPp";
         _Elem _Atoms[sizeof(_Src)];
         const ctype<_Elem>& _Ctype_fac = _STD use_facet<ctype<_Elem>>(_Iosbase.getloc());
-        _Ctype_fac.widen(&_Src[0], &_Src[sizeof(_Src)], _Atoms);
+        _Ctype_fac.widen(_STD begin(_Src), _STD end(_Src), _Atoms);
 
         char* _Ptr = _Ac;
         bool _Bad  = false;
@@ -1171,8 +1167,7 @@ public:
 protected:
     virtual __CLR_OR_THIS_CALL ~num_put() noexcept {}
 
-    void __CLR_OR_THIS_CALL _Init(const _Locinfo&) { // initialize from _Locinfo object
-    }
+    void __CLR_OR_THIS_CALL _Init(const _Locinfo&) {} // initialize from _Locinfo object
 
 public:
     explicit __CLR_OR_THIS_CALL num_put(size_t _Refs = 0) : locale::facet(_Refs) { // construct from current locale
@@ -1181,8 +1176,7 @@ public:
         _END_LOCINFO()
     }
 
-    __CLR_OR_THIS_CALL num_put(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : locale::facet(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL num_put(const _Locinfo& _Lobj, size_t _Refs = 0) : locale::facet(_Refs) {
         _Init(_Lobj);
     }
 
@@ -1412,7 +1406,7 @@ private:
 
         const ctype<_Elem>& _Ctype_fac = _STD use_facet<ctype<_Elem>>(_Iosbase.getloc());
         basic_string<_Elem> _Groupstring(_Count, _Elem(0)); // reserve space
-        _Ctype_fac.widen(&_Buf[0], &_Buf[_Count], &_Groupstring[0]);
+        _Ctype_fac.widen(_Buf, _Buf + _Count, &_Groupstring[0]);
 
         const auto& _Punct_fac  = _STD use_facet<numpunct<_Elem>>(_Iosbase.getloc());
         const string _Grouping  = _Punct_fac.grouping();
@@ -1498,7 +1492,7 @@ private:
 
         const ctype<_Elem>& _Ctype_fac = _STD use_facet<ctype<_Elem>>(_Iosbase.getloc());
         basic_string<_Elem> _Groupstring(_Count, _Elem(0)); // reserve space
-        _Ctype_fac.widen(&_Buf[0], &_Buf[_Count], &_Groupstring[0]);
+        _Ctype_fac.widen(_Buf, _Buf + _Count, &_Groupstring[0]);
 
         const auto& _Punct_fac = _STD use_facet<numpunct<_Elem>>(_Iosbase.getloc());
         const string _Grouping = _Punct_fac.grouping();
@@ -1600,8 +1594,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XLOCNUM_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

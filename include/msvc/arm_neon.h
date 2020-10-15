@@ -21,6 +21,8 @@
 #error This header is specific to ARM targets
 #endif  /* !defined (_M_ARM) */
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
 
 #if defined (__cplusplus)
 extern "C" {
@@ -7720,5 +7722,7 @@ __n128x2 __vzipq_u8(__n128 _Qd, __n128 _Qm);
 #endif  /* defined (__cplusplus) */
 
 #endif
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 
 #endif  /* defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64)*/

@@ -33,7 +33,7 @@
 #define _EH_RELATIVE_TYPEINFO 1
 #define _EH_RELATIVE_FUNCINFO 1
 #define _RTTI_RELATIVE_TYPEINFO 0
-#elif defined(_M_AMD64) || defined(_M_ARM64)
+#elif defined(_M_X64) || defined(_M_ARM64)
 #define _EH_RELATIVE_TYPEINFO 1
 #define _EH_RELATIVE_FUNCINFO 1
 #define _RTTI_RELATIVE_TYPEINFO 1
@@ -79,7 +79,7 @@ typedef void* (__stdcall * PGETWINRT_OOM_EXCEPTION)();
 #pragma warning(push)
 #pragma warning(disable:4200)	// nonstandard extension used: array of runtime bound
 
-#if defined(_M_AMD64) || defined(_M_ARM64) || defined(BUILDING_C1XX_FORCEINCLUDE)
+#if defined(_M_X64) || defined(_M_ARM64) || defined(BUILDING_C1XX_FORCEINCLUDE)
 #pragma pack(push, TypeDescriptor, 8)
 #endif
 
@@ -94,7 +94,7 @@ typedef struct TypeDescriptor
 	char			name[];			// The decorated name of the type; 0 terminated.
 	} TypeDescriptor;
 
-#if defined(_M_AMD64) || defined(_M_ARM64) || defined(BUILDING_C1XX_FORCEINCLUDE)
+#if defined(_M_X64) || defined(_M_ARM64) || defined(BUILDING_C1XX_FORCEINCLUDE)
 #pragma pack(pop, TypeDescriptor)
 #endif
 #pragma warning(pop)

@@ -1,12 +1,17 @@
 // execution standard header
-// Copyright (c) Microsoft Corporation. All rights reserved.
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _EXECUTION_
 #define _EXECUTION_
 #include <yvals.h>
 #if _STL_COMPILER_PREPROCESSOR
 
-#if _HAS_CXX17
+#if !_HAS_CXX17
+#pragma message("The contents of <execution> are available only with C++17 or later.")
+#else // ^^^ !_HAS_CXX17 / _HAS_CXX17 vvv
 #include <algorithm>
 #include <atomic>
 #include <memory>
@@ -23,15 +28,11 @@ _STL_DISABLE_CLANG_WARNINGS
 #pragma push_macro("new")
 #undef new
 
-// TRANSITION, Several names herein are declared as _Xxx_xxx2; in all such cases the corresponding
-// _Xxx_xxx name is an ABI zombie name
-
 _EXTERN_C
-// If on XP, returns 1 (disabling parallelism); otherwise, returns the number of
-// hardware threads available.
+// If on Windows XP, returns 1 (disabling parallelism); otherwise, returns the number of hardware threads available.
 _NODISCARD unsigned int __stdcall __std_parallel_algorithms_hw_threads() noexcept;
 
-// Vista thread pool interface; __std_parallel_algorithms_hw_threads must be called on the current
+// Windows Vista thread pool interface; __std_parallel_algorithms_hw_threads must be called on the current
 // thread before calling any of the below.
 #ifdef _M_CEE
 using __std_TP_WORK              = void;
@@ -102,28 +103,25 @@ namespace execution {
 } // namespace execution
 
 template <>
-struct is_execution_policy<execution::sequenced_policy> : true_type { // sequenced_policy is an execution policy
-};
+struct is_execution_policy<execution::sequenced_policy> : true_type {}; // sequenced_policy is an execution policy
 
 template <>
-struct is_execution_policy<execution::parallel_policy> : true_type { // parallel_policy is an execution policy
-};
+struct is_execution_policy<execution::parallel_policy> : true_type {}; // parallel_policy is an execution policy
 
 template <>
-struct is_execution_policy<execution::parallel_unsequenced_policy>
-    : true_type { // parallel_unsequenced_policy is an execution policy
-};
+struct is_execution_policy<execution::parallel_unsequenced_policy> : true_type {
+}; // parallel_unsequenced_policy is an execution policy
 
 // STRUCT _Parallelism_resources_exhausted
 struct _Parallelism_resources_exhausted : exception {
-    _NODISCARD virtual const char* __CLR_OR_THIS_CALL what() const
-        noexcept override { // return pointer to message string
+    _NODISCARD virtual const char* __CLR_OR_THIS_CALL what() const noexcept override {
+        // return pointer to message string
         return "Insufficient resources were available to use additional parallelism.";
     }
 
 #if !_HAS_EXCEPTIONS
 protected:
-    virtual void _Doraise() const { // perform class-specific exception handling
+    virtual void _Doraise() const override { // perform class-specific exception handling
         _RAISE(*this);
     }
 #endif // !_HAS_EXCEPTIONS
@@ -165,7 +163,7 @@ public:
         : _Ptp_work(__std_create_threadpool_work(&_Work::_Threadpool_callback, _STD addressof(_Operation), nullptr)) {
         // register work with the thread pool
         // usually, after _Work_ptr is constructed, a parallel algorithm runs to completion or terminates
-        static_assert(_NOEXCEPT_OPER(_Work::_Threadpool_callback(_STD declval<__std_PTP_CALLBACK_INSTANCE>(),
+        static_assert(noexcept(_Work::_Threadpool_callback(_STD declval<__std_PTP_CALLBACK_INSTANCE>(),
                           _STD declval<void*>(), _STD declval<__std_PTP_WORK>())),
             "Threadpool callbacks must be noexcept to enforce termination");
         if (!_Ptp_work) {
@@ -191,7 +189,7 @@ public:
     }
 
     void _Submit_for_chunks(const size_t _Hw_threads, const size_t _Chunks) const noexcept {
-        _Submit(_Min_value(_Hw_threads * _Oversubmission_multiplier, _Chunks));
+        _Submit((_STD min)(_Hw_threads * _Oversubmission_multiplier, _Chunks));
     }
 
 private:
@@ -207,8 +205,8 @@ void _Run_available_chunked_work(_Work& _Operation) {
 
 // FUNCTION TEMPLATE _Run_chunked_parallel_work
 template <class _Work>
-void _Run_chunked_parallel_work(
-    const size_t _Hw_threads, _Work& _Operation) { // process chunks of _Operation on the thread pool
+void _Run_chunked_parallel_work(const size_t _Hw_threads, _Work& _Operation) {
+    // process chunks of _Operation on the thread pool
     const _Work_ptr _Work_op{_Operation};
     // setup complete, hereafter nothrow or terminate
     _Work_op._Submit_for_chunks(_Hw_threads, _Operation._Team._Chunks);
@@ -216,13 +214,11 @@ void _Run_chunked_parallel_work(
 }
 
 // CHUNK CALCULATION FUNCTIONS
-// The parallel algorithms library below assumes that distance(first, last) fits into a
-// size_t; forward iterators must refer to objects in memory and therefore must meet
-// this requirement.
+// The parallel algorithms library below assumes that distance(first, last) fits into a size_t;
+// forward iterators must refer to objects in memory and therefore must meet this requirement.
 //
-// Unlike the serial algorithms library, which can stay in the difference_type domain,
-// here we need to talk with vector (which speaks size_t), and with Windows, which wants
-// to speak unsigned int.
+// Unlike the serial algorithms library, which can stay in the difference_type domain, here we need
+// to talk with vector (which speaks size_t), and with Windows, which wants to speak unsigned int.
 //
 // This assumption should be localized to the chunk calculation functions; the rest of
 // the library assumes that chunk numbers can be static_cast into the difference_type domain.
@@ -233,7 +229,7 @@ constexpr size_t _Get_chunked_work_chunk_count(const size_t _Hw_threads, const _
     // get the number of chunks to break work into to parallelize
     const auto _Size_count = static_cast<size_t>(_Count); // no overflow due to forward iterators
     // we assume _Hw_threads * _Oversubscription_multiplier does not overflow
-    return _Min_value(_Hw_threads * _Oversubscription_multiplier, _Size_count);
+    return (_STD min)(_Hw_threads * _Oversubscription_multiplier, _Size_count);
 }
 
 // FUNCTION TEMPLATE _Get_least2_chunked_work_chunk_count
@@ -242,12 +238,12 @@ constexpr size_t _Get_least2_chunked_work_chunk_count(const size_t _Hw_threads, 
     // get the number of chunks to break work into to parallelize, assuming chunks must be of size 2
     const auto _Size_count = static_cast<size_t>(_Count); // no overflow due to forward iterators
     // we assume _Hw_threads * _Oversubscription_multiplier does not overflow
-    return _Get_chunked_work_chunk_count(_Hw_threads, _Size_count >> 1);
+    return _Get_chunked_work_chunk_count(_Hw_threads, _Size_count / 2);
 }
 
 // STRUCT TEMPLATE _Parallelism_allocator
 struct _Parallelism_allocate_traits {
-    _DECLSPEC_ALLOCATOR static void* _Allocate(const size_t _Bytes) {
+    __declspec(allocator) static void* _Allocate(const size_t _Bytes) {
         void* _Result = ::operator new(_Bytes, nothrow);
         if (!_Result) {
             _Throw_parallelism_resources_exhausted();
@@ -257,7 +253,7 @@ struct _Parallelism_allocate_traits {
     }
 
 #ifdef __cpp_aligned_new
-    _DECLSPEC_ALLOCATOR static void* _Allocate_aligned(const size_t _Bytes, const size_t _Align) {
+    __declspec(allocator) static void* _Allocate_aligned(const size_t _Bytes, const size_t _Align) {
         void* _Result = ::operator new (_Bytes, align_val_t{_Align}, nothrow);
         if (!_Result) {
             _Throw_parallelism_resources_exhausted();
@@ -320,7 +316,7 @@ struct _Generalized_sum_drop { // drop off point for GENERALIZED_SUM intermediat
     }
 
     template <class... _Args>
-    void _Add_result(_Args&&... _Vals) noexcept { // enforces termination
+    void _Add_result(_Args&&... _Vals) noexcept /* terminates */ {
         // constructs a _Ty in place with _Vals parameters perfectly forwarded
         // pre: the number of results added is less than the size the drop was constructed with
         const size_t _Target = _Frontier++;
@@ -338,8 +334,8 @@ struct _Generalized_sum_drop { // drop off point for GENERALIZED_SUM intermediat
 
 // VARIABLE TEMPLATE _Use_atomic_iterator
 template <class _Ty>
-struct _Atomic_is_usually_lock_free
-    : bool_constant<atomic<_Ty>::is_always_lock_free> { // deferred evaluation of atomic::is_always_lock_free
+struct _Atomic_is_usually_lock_free : bool_constant<atomic<_Ty>::is_always_lock_free> {
+    // deferred evaluation of atomic::is_always_lock_free
 };
 
 template <class _FwdIt>
@@ -414,8 +410,8 @@ struct _Parallel_choose_min_chunk {
         return _Selected_chunk.load(memory_order_relaxed) != _Still_active;
     }
 
-    void _Imbue(
-        const size_t _Chunk, const _Ty _Local_result) { // atomically sets the result to the lowest chunk's value
+    void _Imbue(const size_t _Chunk, const _Ty _Local_result) {
+        // atomically sets the result to the lowest chunk's value
         size_t _Expected = _Still_active;
         while (!_Selected_chunk.compare_exchange_weak(_Expected, _Chunk)) {
             // note: _Still_active is the maximum possible value, so it gets ignored implicitly
@@ -424,7 +420,7 @@ struct _Parallel_choose_min_chunk {
             }
         }
 
-        lock_guard<mutex> _Lck(_Mtx); // TRANSITION, VSO#671180
+        lock_guard<mutex> _Lck(_Mtx); // TRANSITION, VSO-671180
         if (_Selected_chunk.load(memory_order_relaxed) == _Chunk) {
             _Result = _Local_result;
         }
@@ -449,8 +445,8 @@ struct _Parallel_choose_max_chunk {
         return _Selected_chunk.load(memory_order_relaxed) != _Still_active;
     }
 
-    void _Imbue(
-        const size_t _Chunk, const _Ty _Local_result) { // atomically sets the result to the highest chunk's value
+    void _Imbue(const size_t _Chunk, const _Ty _Local_result) {
+        // atomically sets the result to the highest chunk's value
         size_t _Expected = _Still_active;
         while (!_Selected_chunk.compare_exchange_weak(_Expected, _Chunk)) {
             // wrap _Still_active down to 0 so that only 1 branch is necessary:
@@ -459,7 +455,7 @@ struct _Parallel_choose_max_chunk {
             }
         }
 
-        lock_guard<mutex> _Lck(_Mtx); // TRANSITION, VSO#671180
+        lock_guard<mutex> _Lck(_Mtx); // TRANSITION, VSO-671180
         if (_Selected_chunk.load(memory_order_relaxed) == _Chunk) {
             _Result = _Local_result;
         }
@@ -481,8 +477,8 @@ struct alignas(_Ty) alignas(size_t) alignas(_Atomic_counter_t) _Circular_buffer 
         }
     }
 
-    static _Circular_buffer* _Allocate_circular_buffer(
-        const size_t _New_log_size) { // allocate a circular buffer with space for 2^_New_log_size elements
+    static _Circular_buffer* _Allocate_circular_buffer(const size_t _New_log_size) {
+        // allocate a circular buffer with space for 2^_New_log_size elements
         if (_New_log_size >= 32) {
             _Throw_parallelism_resources_exhausted();
         }
@@ -539,9 +535,9 @@ struct alignas(_Ty) alignas(size_t) alignas(_Atomic_counter_t) _Circular_buffer 
 #pragma warning(disable : 4324) // structure was padded due to alignment specifier
 template <class _Ty>
 class alignas(hardware_destructive_interference_size) _Work_stealing_deque {
-    // thread-local work-stealing deque, which allows efficient access from a single owner thread at the "bottom" of the
-    // queue, and any thread access to the "top" of the queue. Originally described in the paper "Dynamic Circular
-    // Work-Stealing Deque" by David Chase and Yossi Lev
+    // thread-local work-stealing deque, which allows efficient access from a single owner thread at the "bottom"
+    // of the queue, and any thread access to the "top" of the queue. Originally described in the paper
+    // "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev
 public:
     _Work_stealing_deque()                            = default;
     _Work_stealing_deque(const _Work_stealing_deque&) = delete;
@@ -556,8 +552,8 @@ public:
         // may be accessed by owning thread only
         const auto _Local_b = _Bottom.load();
         if (_Local_b == SIZE_MAX) {
-            // we assume that any input range won't be divided into more than SIZE_MAX subproblems; treat overflow of
-            // that kind as OOM
+            // we assume that any input range won't be divided into more than SIZE_MAX subproblems;
+            // treat overflow of that kind as OOM
             _Throw_parallelism_resources_exhausted();
         }
 
@@ -567,7 +563,7 @@ public:
             auto _New_segment = _Segment->_Grow(_Local_b, _Local_t);
             _Circular_buffer<_Ty>* _Detached_segment;
             {
-                lock_guard<mutex> _Lck(_Segment_lock); // TRANSITION, VSO#671180
+                lock_guard<mutex> _Lck(_Segment_lock); // TRANSITION, VSO-671180
                 _Detached_segment = _STD exchange(_Segment, _New_segment);
             } // unlock
 
@@ -578,7 +574,7 @@ public:
         _Bottom.store(_Local_b + 1U);
     }
 
-    bool _Steal(_Ty& _Val) {
+    bool _Steal(_Ty& _Val) noexcept {
         // attempt to pop an item from the top of this deque
         // may be accessed by any thread
         // returns false if the deque was empty and _Val is indeterminate; otherwise, returns true and sets _Val to the
@@ -592,24 +588,23 @@ public:
 
             _Circular_buffer<_Ty>* _Stealing_segment;
             {
-                lock_guard<mutex> _Lck(_Segment_lock); // TRANSITION, VSO#671180
+                lock_guard<mutex> _Lck(_Segment_lock); // TRANSITION, VSO-671180
                 _Stealing_segment = _Segment;
                 _MT_INCR(_Stealing_segment->_Ref_count);
             }
 
             _Val = _Stealing_segment->_Subscript(_Local_t); // speculative read/write data race
             _Stealing_segment->_Release();
-            // The above is technically prohibited by the C++ memory model, but
-            // happens to be well defined on all hardware this implementation
-            // targets. Hardware with trap representations or similar must not
-            // use this implementation.
+            // The above is technically prohibited by the C++ memory model, but happens
+            // to be well defined on all hardware this implementation targets.
+            // Hardware with trap representations or similar must not use this implementation.
             _Desired_t = _Local_t + 1U;
         } while (!_Top.compare_exchange_strong(_Local_t, _Desired_t)); // if a data race occurred, try again
 
         return true;
     }
 
-    bool _Try_pop_bottom(_Ty& _Val) {
+    bool _Try_pop_bottom(_Ty& _Val) noexcept {
         // attempt to pop an item from the bottom of this deque into _Val
         // may be accessed by owning thread only
         auto _Local_b = _Bottom.load();
@@ -633,9 +628,8 @@ public:
             return true;
         }
 
-        // We're trying to read the last element that another thread may be
-        // trying to steal; see who gets to keep the element through _Top
-        // (effectively, steal from ourselves)
+        // We're trying to read the last element that another thread may be trying to steal;
+        // see who gets to keep the element through _Top (effectively, steal from ourselves)
         const auto _Desired_top = _Local_t + 1U;
         if (_Top.compare_exchange_strong(_Local_t, _Desired_top)) {
             _Bottom.store(_Desired_top);
@@ -725,13 +719,12 @@ struct _Work_stealing_team { // inter-thread communication for threads working o
 
     _Work_stealing_team(size_t _Threads, _Diff _Total_work)
         : _Queues(_Threads), _Queues_used(0), _Remaining_work(_Total_work), _Available_mutex(),
-          _Available_queues(greater<>{}, _Get_queues(_Threads)) { // register work with the thread pool
-    }
+          _Available_queues(greater<>{}, _Get_queues(_Threads)) {} // register work with the thread pool
 
     _Work_stealing_membership<_Ty> _Join_team() noexcept {
         size_t _Id;
         {
-            lock_guard<mutex> _Lck(_Available_mutex); // TRANSITION, VSO#671180
+            lock_guard<mutex> _Lck(_Available_mutex); // TRANSITION, VSO-671180
             _Id = _Available_queues.top();
             _Available_queues.pop();
         } // unlock
@@ -745,7 +738,7 @@ struct _Work_stealing_team { // inter-thread communication for threads working o
     }
 
     void _Leave_team(size_t _Id) noexcept {
-        lock_guard<mutex> _Lck(_Available_mutex); // TRANSITION, VSO#671180
+        lock_guard<mutex> _Lck(_Available_mutex); // TRANSITION, VSO-671180
         _Available_queues.push(_Id);
     }
 
@@ -779,8 +772,9 @@ struct _Static_partition_team { // common data for all static partitioned ops
     _Diff _Unchunked_items;
 
     _Static_partition_team(const _Diff _Count_, const size_t _Chunks_)
-        : _Consumed_chunks{0}, _Chunks{_Chunks_}, _Count{_Count_}, _Chunk_size{_Count_ / static_cast<_Diff>(_Chunks_)},
-          _Unchunked_items{_Count_ % static_cast<_Diff>(_Chunks_)} {
+        : _Consumed_chunks{0}, _Chunks{_Chunks_}, _Count{_Count_}, _Chunk_size{static_cast<_Diff>(
+                                                                       _Count_ / static_cast<_Diff>(_Chunks_))},
+          _Unchunked_items{static_cast<_Diff>(_Count_ % static_cast<_Diff>(_Chunks_))} {
         // Calculate common data for statically partitioning iterator ranges.
         // pre: _Count_ >= _Chunks_ && _Chunks_ >= 1
     }
@@ -790,8 +784,8 @@ struct _Static_partition_team { // common data for all static partitioned ops
         auto _This_chunk_size       = _Chunk_size;
         auto _This_chunk_start_at   = static_cast<_Diff>(_This_chunk_diff * _This_chunk_size);
         if (_This_chunk_diff < _Unchunked_items) {
-            // chunks at index lower than _Unchunked_items get an extra item, and need to shift forward by all their
-            // predecessors' extra items
+            // chunks at index lower than _Unchunked_items get an extra item,
+            // and need to shift forward by all their predecessors' extra items
             _This_chunk_start_at += _This_chunk_diff;
             ++_This_chunk_size;
         } else { // chunks without an extra item need to account for all the extra items
@@ -803,12 +797,12 @@ struct _Static_partition_team { // common data for all static partitioned ops
 
     _Diff _Get_chunk_offset(const size_t _This_chunk) const {
         const auto _This_chunk_diff = static_cast<_Diff>(_This_chunk);
-        return _This_chunk_diff * _Chunk_size + _Min_value(_This_chunk_diff, _Unchunked_items);
+        return _This_chunk_diff * _Chunk_size + (_STD min)(_This_chunk_diff, _Unchunked_items);
     }
 
     _Static_partition_key<_Diff> _Get_next_key() {
-        // retrieves the next static partition key to process, if it exists; otherwise, retrieves an invalid partition
-        // key
+        // retrieves the next static partition key to process, if it exists;
+        // otherwise, retrieves an invalid partition key
         const auto _This_chunk = _Consumed_chunks++;
         if (_This_chunk < _Chunks) {
             return _Get_chunk_key(_This_chunk);
@@ -832,33 +826,34 @@ struct _Static_partition_range;
 template <class _RanIt, class _Diff>
 struct _Static_partition_range<_RanIt, _Diff, true> {
     using _Target_diff = _Iter_diff_t<_RanIt>;
-    _Unwrapped_t<_RanIt> _Start_at;
-    using _Chunk_type = _Iterator_range<_Unwrapped_t<_RanIt>>;
+    using _URanIt      = _Unwrapped_t<const _RanIt&>;
+    _URanIt _Start_at;
+    using _Chunk_type = _Iterator_range<_URanIt>;
 
-    _RanIt _Populate(const _Static_partition_team<_Diff>& _Team,
-        _RanIt _First) { // statically partition a random-access iterator range and return next(_First, _Team._Count)
-                         // pre: _Populate hasn't yet been called on this instance
+    _RanIt _Populate(const _Static_partition_team<_Diff>& _Team, _RanIt _First) {
+        // statically partition a random-access iterator range and return next(_First, _Team._Count)
+        // pre: _Populate hasn't yet been called on this instance
         auto _Result = _First + static_cast<_Target_diff>(_Team._Count); // does verification
         _Start_at    = _Get_unwrapped(_First);
         return _Result;
     }
 
-    bool _Populate(const _Static_partition_team<_Diff>& _Team, _RanIt _First,
-        _RanIt _Last) { // statically partition a random-access iterator range and check if the range ends at _Last
-                        // pre: _Populate hasn't yet been called on this instance
+    bool _Populate(const _Static_partition_team<_Diff>& _Team, _RanIt _First, _RanIt _Last) {
+        // statically partition a random-access iterator range and check if the range ends at _Last
+        // pre: _Populate hasn't yet been called on this instance
         _Adl_verify_range(_First, _Last);
         _Start_at = _Get_unwrapped(_First);
         return _Team._Count == _Last - _First;
     }
 
-    _Unwrapped_t<_RanIt> _Get_first(size_t /* _Chunk_number */,
-        const _Diff _Offset) { // get the first iterator for _Chunk _Chunk_number (which is at offset _Offset)
+    _URanIt _Get_first(size_t /* _Chunk_number */, const _Diff _Offset) {
+        // get the first iterator for _Chunk _Chunk_number (which is at offset _Offset)
         return _Start_at + static_cast<_Target_diff>(_Offset);
     }
 
-    _Chunk_type _Get_chunk(const _Static_partition_key<_Diff> _Key)
-        const { // get a static partition chunk from a random-access range
-                // pre: _Key was generated by the _Static_partition_team instance passed to a previous call to _Populate
+    _Chunk_type _Get_chunk(const _Static_partition_key<_Diff> _Key) const {
+        // get a static partition chunk from a random-access range
+        // pre: _Key was generated by the _Static_partition_team instance passed to a previous call to _Populate
         const auto _First = _Start_at + static_cast<_Target_diff>(_Key._Start_at);
         return {_First, _First + static_cast<_Target_diff>(_Key._Size)};
     }
@@ -867,12 +862,13 @@ struct _Static_partition_range<_RanIt, _Diff, true> {
 template <class _FwdIt, class _Diff>
 struct _Static_partition_range<_FwdIt, _Diff, false> {
     using _Target_diff = _Iter_diff_t<_FwdIt>;
-    _Parallel_vector<_Unwrapped_t<_FwdIt>> _Division_points;
-    using _Chunk_type = _Iterator_range<_Unwrapped_t<_FwdIt>>;
+    using _UFwdIt      = _Unwrapped_t<const _FwdIt&>;
+    _Parallel_vector<_UFwdIt> _Division_points;
+    using _Chunk_type = _Iterator_range<_UFwdIt>;
 
-    _FwdIt _Populate(const _Static_partition_team<_Diff>& _Team,
-        _FwdIt _First) { // statically partition a forward iterator range and return next(_First, _Team._Count)
-                         // pre: _Populate hasn't yet been called on this instance
+    _FwdIt _Populate(const _Static_partition_team<_Diff>& _Team, _FwdIt _First) {
+        // statically partition a forward iterator range and return next(_First, _Team._Count)
+        // pre: _Populate hasn't yet been called on this instance
         const auto _Chunks = _Team._Chunks;
         _Division_points.resize(_Chunks + 1);
         // The following potentially narrowing cast is OK because caller has ensured
@@ -895,9 +891,9 @@ struct _Static_partition_range<_FwdIt, _Diff, false> {
         return _First;
     }
 
-    bool _Populate(const _Static_partition_team<_Diff>& _Team, _FwdIt _First,
-        _FwdIt _Last) { // statically partition a forward iterator range and check if the range ends at _Last
-                        // pre: _Populate hasn't yet been called on this instance
+    bool _Populate(const _Static_partition_team<_Diff>& _Team, _FwdIt _First, _FwdIt _Last) {
+        // statically partition a forward iterator range and check if the range ends at _Last
+        // pre: _Populate hasn't yet been called on this instance
         const auto _Chunks = _Team._Chunks;
         _Division_points.resize(_Chunks + 1);
         const auto _Chunk_size      = _Team._Chunk_size;
@@ -932,7 +928,7 @@ struct _Static_partition_range<_FwdIt, _Diff, false> {
         return _First == _Last;
     }
 
-    _Unwrapped_t<_FwdIt> _Get_first(const size_t _Chunk_number, _Diff /* _Offset */) {
+    _UFwdIt _Get_first(const size_t _Chunk_number, _Diff /* _Offset */) {
         // get the first iterator for _Chunk _Chunk_number (which is at offset _Offset)
         return _Division_points[_Chunk_number];
     }
@@ -951,8 +947,8 @@ struct _Static_partition_range_backward;
 template <class _RanIt, class _Diff>
 struct _Static_partition_range_backward<_RanIt, _Diff, true> {
     using _Target_diff = _Iter_diff_t<_RanIt>;
-    _Unwrapped_t<_RanIt> _Start_at;
-    using _Chunk_type = _Iterator_range<_Unwrapped_t<_RanIt>>;
+    _Unwrapped_t<const _RanIt&> _Start_at;
+    using _Chunk_type = _Iterator_range<_Unwrapped_t<const _RanIt&>>;
 
     void _Populate(const _Static_partition_team<_Diff>& _Team, _RanIt _Last) {
         // statically partition a random-access iterator range ending at _Last
@@ -971,8 +967,8 @@ struct _Static_partition_range_backward<_RanIt, _Diff, true> {
 template <class _BidIt, class _Diff>
 struct _Static_partition_range_backward<_BidIt, _Diff, false> {
     using _Target_diff = _Iter_diff_t<_BidIt>;
-    _Parallel_vector<_Unwrapped_t<_BidIt>> _Division_points;
-    using _Chunk_type = _Iterator_range<_Unwrapped_t<_BidIt>>;
+    _Parallel_vector<_Unwrapped_t<const _BidIt&>> _Division_points;
+    using _Chunk_type = _Iterator_range<_Unwrapped_t<const _BidIt&>>;
 
     void _Populate(const _Static_partition_team<_Diff>& _Team, _BidIt _Last) {
         // statically partition a bidirectional iterator range ending at _Last
@@ -1004,19 +1000,13 @@ struct _Static_partition_range_backward<_BidIt, _Diff, false> {
 
 // FUNCTION TEMPLATE _Distance_any
 template <class _InIt1, class _InIt2>
-_Common_diff_t<_InIt1, _InIt2> _Distance_any(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2,
-    _InIt2 _Last2) { // get the distance from 2 ranges which should have identical lengths
+_Common_diff_t<_InIt1, _InIt2> _Distance_any(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2, _InIt2 _Last2) {
+    // get the distance from 2 ranges which should have identical lengths
     if constexpr (_Is_random_iter_v<_InIt1>) {
-        (void) _First2; // TRANSITION, VSO#486357
-        (void) _Last2; // TRANSITION, VSO#486357
         return _Last1 - _First1;
     } else if constexpr (_Is_random_iter_v<_InIt2>) {
-        (void) _First1; // TRANSITION, VSO#486357
-        (void) _Last1; // TRANSITION, VSO#486357
         return _Last2 - _First2;
     } else {
-        (void) _First2; // TRANSITION, VSO#486357
-        (void) _Last2; // TRANSITION, VSO#486357
         return _STD distance(_First1, _Last1);
     }
 }
@@ -1030,7 +1020,7 @@ _Common_diff_t<_InIt1, _InIt2> _Distance_min(_InIt1 _First1, const _InIt1 _Last1
     if constexpr (_Is_random_iter_v<_InIt1> && _Is_random_iter_v<_InIt2>) {
         const _CT _Count1 = _Last1 - _First1;
         const _CT _Count2 = _Last2 - _First2;
-        _Result           = _Min_value(_Count1, _Count2);
+        _Result           = (_STD min)(_Count1, _Count2);
     } else if constexpr (_Is_random_iter_v<_InIt1>) {
         for (auto _Count1 = _Last1 - _First1; 0 < _Count1 && _First2 != _Last2; --_Count1) {
             ++_First2;
@@ -1089,7 +1079,7 @@ struct _Static_partitioned_all_of_family2 { // all_of/any_of/none_of task schedu
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_all_of_family2*>(_Context));
     }
 };
@@ -1121,7 +1111,7 @@ bool _All_of_family_parallel(_FwdIt _First, const _FwdIt _Last, _Pr _Pred) {
 }
 
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD bool all_of(_ExPo&&, _FwdIt _First, _FwdIt _Last, _Pr _Pred) noexcept {
+_NODISCARD bool all_of(_ExPo&&, _FwdIt _First, _FwdIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // test if all elements in [_First, _Last) satisfy _Pred with the indicated execution policy
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Adl_verify_range(_First, _Last);
@@ -1136,7 +1126,7 @@ _NODISCARD bool all_of(_ExPo&&, _FwdIt _First, _FwdIt _Last, _Pr _Pred) noexcept
 
 // PARALLEL FUNCTION TEMPLATE any_of
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD bool any_of(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept {
+_NODISCARD bool any_of(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // test if any element in [_First, _Last) satisfies _Pred with the indicated execution policy
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Adl_verify_range(_First, _Last);
@@ -1151,7 +1141,7 @@ _NODISCARD bool any_of(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Pr _Pr
 
 // PARALLEL FUNCTION TEMPLATE none_of
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD bool none_of(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept {
+_NODISCARD bool none_of(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // test if no element in [_First, _Last) satisfies _Pred with the indicated execution policy
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Adl_verify_range(_First, _Last);
@@ -1195,13 +1185,13 @@ struct _Static_partitioned_for_each2 { // for_each task scheduled on the system 
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_for_each2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt, class _Fn, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-void for_each(_ExPo&&, _FwdIt _First, _FwdIt _Last, _Fn _Func) noexcept {
+void for_each(_ExPo&&, _FwdIt _First, _FwdIt _Last, _Fn _Func) noexcept /* terminates */ {
     // perform function for each element [_First, _Last) with the indicated execution policy
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Adl_verify_range(_First, _Last);
@@ -1246,7 +1236,7 @@ _FwdIt _For_each_n_ivdep(_FwdIt _First, _Diff _Count, _Fn _Func) {
 }
 
 template <class _ExPo, class _FwdIt, class _Diff, class _Fn, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_FwdIt for_each_n(_ExPo&&, _FwdIt _First, const _Diff _Count_raw, _Fn _Func) noexcept {
+_FwdIt for_each_n(_ExPo&&, _FwdIt _First, const _Diff _Count_raw, _Fn _Func) noexcept /* terminates */ {
     // perform function for each element [_First, _First + _Count)
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Algorithm_int_t<_Diff> _Count = _Count_raw;
@@ -1279,18 +1269,6 @@ _FwdIt for_each_n(_ExPo&&, _FwdIt _First, const _Diff _Count_raw, _Fn _Func) noe
 
     return _First;
 }
-
-#if _ITERATOR_DEBUG_ARRAY_OVERLOADS
-template <class _ExPo, class _SourceTy, size_t _SourceSize, class _Diff, class _Fn,
-    _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_SourceTy* for_each_n(_ExPo&& _Exec, _SourceTy (&_First)[_SourceSize], const _Diff _Count_raw, _Fn _Func) noexcept {
-    // perform function for each element [_First, _First + _Count)
-    _Algorithm_int_t<_Diff> _Count = _Count_raw;
-    _STL_VERIFY_ARRAY_SIZE(_First, _Count);
-    return _STD for_each_n(_STD forward<_ExPo>(_Exec), static_cast<_SourceTy*>(_First), _Count, _Pass_fn(_Func));
-}
-#endif // _ITERATOR_DEBUG_ARRAY_OVERLOADS
-
 
 // PARALLEL FUNCTION TEMPLATE find
 template <class _FwdIt>
@@ -1329,7 +1307,7 @@ struct _Static_partitioned_find2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_find2*>(_Context));
     }
 };
@@ -1359,10 +1337,10 @@ _FwdIt _Find_parallel_unchecked(_ExPo&&, const _FwdIt _First, const _FwdIt _Last
 }
 
 template <class _ExPo, class _FwdIt, class _Ty, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _FwdIt find(
-    _ExPo&& _Exec, _FwdIt _First, const _FwdIt _Last, const _Ty& _Val) noexcept { // find first matching _Val
+_NODISCARD _FwdIt find(_ExPo&& _Exec, _FwdIt _First, const _FwdIt _Last, const _Ty& _Val) noexcept /* terminates */ {
+    // find first matching _Val
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
-    using _UFwdIt = _Unwrapped_t<_FwdIt>;
+    using _UFwdIt = _Unwrapped_t<const _FwdIt&>;
     _Adl_verify_range(_First, _Last);
     _Seek_wrapped(_First,
         _Find_parallel_unchecked(_STD forward<_ExPo>(_Exec), _Get_unwrapped(_First), _Get_unwrapped(_Last),
@@ -1372,10 +1350,10 @@ _NODISCARD _FwdIt find(
 
 // PARALLEL FUNCTION TEMPLATE find_if
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _FwdIt find_if(
-    _ExPo&& _Exec, _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept { // find first satisfying _Pred
+_NODISCARD _FwdIt find_if(_ExPo&& _Exec, _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept /* terminates */ {
+    // find first satisfying _Pred
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
-    using _UFwdIt = _Unwrapped_t<_FwdIt>;
+    using _UFwdIt = _Unwrapped_t<const _FwdIt&>;
     _Adl_verify_range(_First, _Last);
     auto _Pass_pred = _Pass_fn(_Pred);
     _Seek_wrapped(_First,
@@ -1386,10 +1364,10 @@ _NODISCARD _FwdIt find_if(
 
 // PARALLEL FUNCTION TEMPLATE find_if_not
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _FwdIt find_if_not(
-    _ExPo&& _Exec, _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept { // find first satisfying !_Pred
+_NODISCARD _FwdIt find_if_not(_ExPo&& _Exec, _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept /* terminates */ {
+    // find first satisfying !_Pred
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
-    using _UFwdIt = _Unwrapped_t<_FwdIt>;
+    using _UFwdIt = _Unwrapped_t<const _FwdIt&>;
     _Adl_verify_range(_First, _Last);
     auto _Pass_pred = _Pass_fn(_Pred);
     _Seek_wrapped(_First, _Find_parallel_unchecked(_STD forward<_ExPo>(_Exec), _Get_unwrapped(_First),
@@ -1460,7 +1438,7 @@ struct _Static_partitioned_find_end_forward {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         (void) static_cast<_Static_partitioned_find_end_forward*>(_Context)->_Process_chunk();
     }
 };
@@ -1537,14 +1515,14 @@ struct _Static_partitioned_find_end_backward2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_find_end_backward2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _FwdIt1 find_end(
-    _ExPo&&, _FwdIt1 _First1, const _FwdIt1 _Last1, const _FwdIt2 _First2, const _FwdIt2 _Last2, _Pr _Pred) noexcept {
+_NODISCARD _FwdIt1 find_end(_ExPo&&, _FwdIt1 _First1, const _FwdIt1 _Last1, const _FwdIt2 _First2, const _FwdIt2 _Last2,
+    _Pr _Pred) noexcept /* terminates */ {
     // find last [_First2, _Last2) satisfying _Pred
     _Adl_verify_range(_First1, _Last1);
     _Adl_verify_range(_First2, _Last2);
@@ -1601,10 +1579,10 @@ _NODISCARD _FwdIt1 find_end(
 // PARALLEL FUNCTION TEMPLATE find_first_of
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
 _NODISCARD _FwdIt1 find_first_of(_ExPo&& _Exec, const _FwdIt1 _First1, _FwdIt1 _Last1, const _FwdIt2 _First2,
-    const _FwdIt2 _Last2, _Pr _Pred) noexcept {
+    const _FwdIt2 _Last2, _Pr _Pred) noexcept /* terminates */ {
     // look for one of [_First2, _Last2) that matches element
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
-    using _UFwdIt1 = _Unwrapped_t<_FwdIt1>;
+    using _UFwdIt1 = _Unwrapped_t<const _FwdIt1&>;
     _Adl_verify_range(_First1, _Last1);
     _Adl_verify_range(_First2, _Last2);
     const auto _UFirst2 = _Get_unwrapped(_First2);
@@ -1634,8 +1612,12 @@ struct _Static_partitioned_adjacent_find2 {
         : _Team{_Count, _Get_chunked_work_chunk_count(_Hw_threads, _Count)}, _Basis{}, _Results{_Last}, _Pred{_Pred_} {}
 
     _Cancellation_status _Process_chunk() {
+        if (_Results._Complete()) {
+            return _Cancellation_status::_Canceled;
+        }
+
         const auto _Key = _Team._Get_next_key();
-        if (!_Key || _Results._Complete()) {
+        if (!_Key) {
             return _Cancellation_status::_Canceled;
         }
 
@@ -1656,13 +1638,13 @@ struct _Static_partitioned_adjacent_find2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_adjacent_find2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _FwdIt adjacent_find(_ExPo&&, _FwdIt _First, _FwdIt _Last, _Pr _Pred) noexcept {
+_NODISCARD _FwdIt adjacent_find(_ExPo&&, _FwdIt _First, _FwdIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // find first satisfying _Pred with successor
     _Adl_verify_range(_First, _Last);
     auto _UFirst      = _Get_unwrapped(_First);
@@ -1714,14 +1696,15 @@ struct _Static_partitioned_count_if2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         const auto _This = static_cast<_Static_partitioned_count_if2*>(_Context);
         _This->_Results.fetch_add(_This->_Process_chunks(), memory_order_relaxed);
     }
 };
 
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _Iter_diff_t<_FwdIt> count_if(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept {
+_NODISCARD _Iter_diff_t<_FwdIt> count_if(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept
+/* terminates */ {
     // count elements satisfying _Pred
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Adl_verify_range(_First, _Last);
@@ -1755,8 +1738,8 @@ _NODISCARD _Iter_diff_t<_FwdIt> count_if(_ExPo&&, const _FwdIt _First, const _Fw
 }
 
 template <class _ExPo, class _FwdIt, class _Ty, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _Iter_diff_t<_FwdIt> count(
-    _ExPo&& _Exec, const _FwdIt _First, const _FwdIt _Last, const _Ty& _Val) noexcept {
+_NODISCARD _Iter_diff_t<_FwdIt> count(_ExPo&& _Exec, const _FwdIt _First, const _FwdIt _Last, const _Ty& _Val) noexcept
+/* terminates */ {
     // count elements that match _Val
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Adl_verify_range(_First, _Last);
@@ -1765,8 +1748,9 @@ _NODISCARD _Iter_diff_t<_FwdIt> count(
 }
 
 // PARALLEL FUNCTION TEMPLATE mismatch
-template <class _FwdIt1, class _FwdIt2, bool = _Use_atomic_iterator<_Unwrapped_t<_FwdIt1>>&& _Is_random_iter_v<_FwdIt2>,
-    bool = _Use_atomic_iterator<_Unwrapped_t<_FwdIt2>>&& _Is_random_iter_v<_FwdIt1>>
+template <class _FwdIt1, class _FwdIt2,
+    bool = _Use_atomic_iterator<_Unwrapped_t<const _FwdIt1&>>&& _Is_random_iter_v<_FwdIt2>,
+    bool = _Use_atomic_iterator<_Unwrapped_t<const _FwdIt2&>>&& _Is_random_iter_v<_FwdIt1>>
 struct _Static_partitioned_mismatch_results;
 
 template <class _FwdIt1, class _FwdIt2, bool _Unused>
@@ -1774,9 +1758,10 @@ struct _Static_partitioned_mismatch_results<_FwdIt1, _FwdIt2, true, _Unused> {
     // atomically manipulate atomic<_FwdIt1> and calculate the second iterator by adding distance to it
     _Parallel_choose_min_result<_FwdIt1> _Storage;
 
-    _Static_partitioned_mismatch_results(const _FwdIt1 _Last1, const _Unwrapped_t<_FwdIt2>&) : _Storage(_Last1) {}
+    _Static_partitioned_mismatch_results(const _FwdIt1 _Last1, const _Unwrapped_t<const _FwdIt2&>&)
+        : _Storage(_Last1) {}
 
-    void _Imbue(const size_t _Chunk_number, const _FwdIt1 _First1, const _Unwrapped_t<_FwdIt2>&) {
+    void _Imbue(const size_t _Chunk_number, const _FwdIt1 _First1, const _Unwrapped_t<const _FwdIt2&>&) {
         _Storage._Imbue(_Chunk_number, _First1);
     }
 
@@ -1791,9 +1776,10 @@ struct _Static_partitioned_mismatch_results<_FwdIt1, _FwdIt2, false, true> {
     // atomically manipulate atomic<_FwdIt2> and calculate the first iterator by adding distance to it
     _Parallel_choose_min_result<_FwdIt2> _Storage;
 
-    _Static_partitioned_mismatch_results(const _Unwrapped_t<_FwdIt1>&, const _FwdIt2 _Last2) : _Storage(_Last2) {}
+    _Static_partitioned_mismatch_results(const _Unwrapped_t<const _FwdIt1&>&, const _FwdIt2 _Last2)
+        : _Storage(_Last2) {}
 
-    void _Imbue(const size_t _Chunk_number, const _Unwrapped_t<_FwdIt1>&, const _FwdIt2 _First2) {
+    void _Imbue(const size_t _Chunk_number, const _Unwrapped_t<const _FwdIt1&>&, const _FwdIt2 _First2) {
         _Storage._Imbue(_Chunk_number, _First2);
     }
 
@@ -1806,12 +1792,13 @@ struct _Static_partitioned_mismatch_results<_FwdIt1, _FwdIt2, false, true> {
 template <class _FwdIt1, class _FwdIt2>
 struct _Static_partitioned_mismatch_results<_FwdIt1, _FwdIt2, false, false> {
     // get both iterators by manipulating them under lock
-    _Parallel_choose_min_chunk<pair<_Unwrapped_t<_FwdIt1>, _Unwrapped_t<_FwdIt2>>> _Storage;
+    using _UFwdIt1 = _Unwrapped_t<const _FwdIt1&>;
+    using _UFwdIt2 = _Unwrapped_t<const _FwdIt2&>;
+    _Parallel_choose_min_chunk<pair<_UFwdIt1, _UFwdIt2>> _Storage;
 
-    _Static_partitioned_mismatch_results(const _Unwrapped_t<_FwdIt1> _Last1, const _Unwrapped_t<_FwdIt2> _Last2)
-        : _Storage({_Last1, _Last2}) {}
+    _Static_partitioned_mismatch_results(const _UFwdIt1 _Last1, const _UFwdIt2 _Last2) : _Storage({_Last1, _Last2}) {}
 
-    void _Imbue(const size_t _Chunk_number, const _Unwrapped_t<_FwdIt1> _First1, const _Unwrapped_t<_FwdIt2> _First2) {
+    void _Imbue(const size_t _Chunk_number, const _UFwdIt1 _First1, const _UFwdIt2 _First2) {
         _Storage._Imbue(_Chunk_number, {_First1, _First2});
     }
 
@@ -1869,7 +1856,7 @@ struct _Static_partitioned_mismatch2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_mismatch2*>(_Context));
     }
 };
@@ -1879,7 +1866,7 @@ struct _Static_partitioned_mismatch2 {
                                 // in braced initializer list (/Wall)
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
 _NODISCARD pair<_FwdIt1, _FwdIt2> mismatch(
-    _ExPo&&, _FwdIt1 _First1, _FwdIt1 _Last1, _FwdIt2 _First2, _Pr _Pred) noexcept {
+    _ExPo&&, _FwdIt1 _First1, _FwdIt1 _Last1, _FwdIt2 _First2, _Pr _Pred) noexcept /* terminates */ {
     // return [_First1, _Last1)/[_First2, ...) mismatch using _Pred
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -1921,7 +1908,7 @@ _NODISCARD pair<_FwdIt1, _FwdIt2> mismatch(
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
 _NODISCARD pair<_FwdIt1, _FwdIt2> mismatch(
-    _ExPo&&, _FwdIt1 _First1, _FwdIt1 _Last1, _FwdIt2 _First2, _FwdIt2 _Last2, _Pr _Pred) noexcept {
+    _ExPo&&, _FwdIt1 _First1, _FwdIt1 _Last1, _FwdIt2 _First2, _FwdIt2 _Last2, _Pr _Pred) noexcept /* terminates */ {
     // return [_First1, _Last1)/[_First2, _Last2) mismatch using _Pred
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -1991,13 +1978,14 @@ struct _Static_partitioned_equal2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_equal2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD bool equal(_ExPo&&, const _FwdIt1 _First1, const _FwdIt1 _Last1, const _FwdIt2 _First2, _Pr _Pred) noexcept {
+_NODISCARD bool equal(_ExPo&&, const _FwdIt1 _First1, const _FwdIt1 _Last1, const _FwdIt2 _First2, _Pr _Pred) noexcept
+/* terminates */ {
     // compare [_First1, _Last1) to [_First2, ...) using _Pred
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -2030,7 +2018,7 @@ _NODISCARD bool equal(_ExPo&&, const _FwdIt1 _First1, const _FwdIt1 _Last1, cons
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
 _NODISCARD bool equal(_ExPo&&, const _FwdIt1 _First1, const _FwdIt1 _Last1, const _FwdIt2 _First2, const _FwdIt2 _Last2,
-    _Pr _Pred) noexcept {
+    _Pr _Pred) noexcept /* terminates */ {
     // compare [_First1, _Last1) to [_First2, _Last2) using _Pred
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -2047,13 +2035,13 @@ _NODISCARD bool equal(_ExPo&&, const _FwdIt1 _First1, const _FwdIt1 _Last1, cons
             if (_Count >= 2) {
                 _TRY_BEGIN
                 _Static_partitioned_equal2 _Operation{_Hw_threads, _Count, _Pass_fn(_Pred), _UFirst1, _UFirst2};
-                if (!_Operation._Basis1._Populate(
-                        _Operation._Team, _UFirst1, _ULast1)) { // left sequence didn't have length _Count
+                if (!_Operation._Basis1._Populate(_Operation._Team, _UFirst1, _ULast1)) {
+                    // left sequence didn't have length _Count
                     return false;
                 }
 
-                if (!_Operation._Basis2._Populate(
-                        _Operation._Team, _UFirst2, _ULast2)) { // right sequence didn't have length _Count
+                if (!_Operation._Basis2._Populate(_Operation._Team, _UFirst2, _ULast2)) {
+                    // right sequence didn't have length _Count
                     return false;
                 }
 
@@ -2109,14 +2097,14 @@ struct _Static_partitioned_search2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_search2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdItHaystack, class _FwdItPat, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
 _NODISCARD _FwdItHaystack search(_ExPo&&, const _FwdItHaystack _First1, _FwdItHaystack _Last1, const _FwdItPat _First2,
-    const _FwdItPat _Last2, _Pr _Pred) noexcept {
+    const _FwdItPat _Last2, _Pr _Pred) noexcept /* terminates */ {
     // find first [_First2, _Last2) match
     _Adl_verify_range(_First2, _Last2);
     const auto _UFirst2 = _Get_unwrapped(_First2);
@@ -2236,14 +2224,14 @@ struct _Static_partitioned_search_n2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_search_n2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt, class _Diff, class _Ty, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _FwdIt search_n(
-    _ExPo&&, const _FwdIt _First, _FwdIt _Last, const _Diff _Count_raw, const _Ty& _Val, _Pr _Pred) noexcept {
+_NODISCARD _FwdIt search_n(_ExPo&&, const _FwdIt _First, _FwdIt _Last, const _Diff _Count_raw, const _Ty& _Val,
+    _Pr _Pred) noexcept /* terminates */ {
     // find first _Count * _Val satisfying _Pred
     const _Algorithm_int_t<_Diff> _Count = _Count_raw;
     if (_Count <= 0) {
@@ -2324,13 +2312,14 @@ struct _Static_partitioned_unary_transform2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_unary_transform2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Fn, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_FwdIt2 transform(_ExPo&&, const _FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _Dest, _Fn _Func) noexcept {
+_FwdIt2 transform(_ExPo&&, const _FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _Dest, _Fn _Func) noexcept
+/* terminates */ {
     // transform [_First, _Last) with _Func
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -2409,7 +2398,7 @@ struct _Static_partitioned_binary_transform2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_binary_transform2*>(_Context));
     }
 };
@@ -2419,8 +2408,8 @@ struct _Static_partitioned_binary_transform2 {
                                 // in braced initializer list (/Wall)
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _FwdIt3, class _Fn,
     _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_FwdIt3 transform(
-    _ExPo&&, const _FwdIt1 _First1, const _FwdIt1 _Last1, const _FwdIt2 _First2, _FwdIt3 _Dest, _Fn _Func) noexcept {
+_FwdIt3 transform(_ExPo&&, const _FwdIt1 _First1, const _FwdIt1 _Last1, const _FwdIt2 _First2, _FwdIt3 _Dest,
+    _Fn _Func) noexcept /* terminates */ {
     // transform [_First1, _Last1) and [_First2, ...) with _Func
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -2465,7 +2454,8 @@ _FwdIt3 transform(
 
 // PARALLEL FUNCTION TEMPLATE replace
 template <class _ExPo, class _FwdIt, class _Ty, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-void replace(_ExPo&& _Exec, const _FwdIt _First, const _FwdIt _Last, const _Ty& _Oldval, const _Ty& _Newval) noexcept {
+void replace(_ExPo&& _Exec, const _FwdIt _First, const _FwdIt _Last, const _Ty& _Oldval, const _Ty& _Newval) noexcept
+/* terminates */ {
     // replace each matching _Oldval with _Newval
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _STD for_each(_STD forward<_ExPo>(_Exec), _First, _Last, [&](auto&& _Value) {
@@ -2477,7 +2467,8 @@ void replace(_ExPo&& _Exec, const _FwdIt _First, const _FwdIt _Last, const _Ty& 
 
 // PARALLEL FUNCTION TEMPLATE replace_if
 template <class _ExPo, class _FwdIt, class _Pr, class _Ty, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-void replace_if(_ExPo&& _Exec, const _FwdIt _First, const _FwdIt _Last, _Pr _Pred, const _Ty& _Val) noexcept {
+void replace_if(_ExPo&& _Exec, const _FwdIt _First, const _FwdIt _Last, _Pr _Pred, const _Ty& _Val) noexcept
+/* terminates */ {
     // replace each satisfying _Pred with _Val
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _STD for_each(
@@ -2595,13 +2586,13 @@ struct _Static_partitioned_remove_if2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_remove_if2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _FwdIt remove_if(_ExPo&&, _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept {
+_NODISCARD _FwdIt remove_if(_ExPo&&, _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // remove each satisfying _Pred
     _Adl_verify_range(_First, _Last);
     auto _UFirst      = _Get_unwrapped(_First);
@@ -2628,7 +2619,8 @@ _NODISCARD _FwdIt remove_if(_ExPo&&, _FwdIt _First, const _FwdIt _Last, _Pr _Pre
 }
 
 template <class _ExPo, class _FwdIt, class _Ty, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _FwdIt remove(_ExPo&& _Exec, const _FwdIt _First, const _FwdIt _Last, const _Ty& _Val) noexcept {
+_NODISCARD _FwdIt remove(_ExPo&& _Exec, const _FwdIt _First, const _FwdIt _Last, const _Ty& _Val) noexcept
+/* terminates */ {
     // remove each matching _Val
     return _STD remove_if(_STD forward<_ExPo>(_Exec), _First, _Last,
         [&_Val](auto&& _Lhs) { return _STD forward<decltype(_Lhs)>(_Lhs) == _Val; });
@@ -2649,8 +2641,7 @@ using _Sort_work_item = _Sort_work_item_impl<_Iter_diff_t<_RanIt>>;
 
 template <class _RanIt, class _Pr>
 bool _Process_sort_work_item(const _RanIt _Basis, _Pr _Pred, _Sort_work_item<_RanIt>& _Wi,
-    _Sort_work_item<_RanIt>& _Right_fork_wi,
-    _Iter_diff_t<_RanIt>& _Work_complete) noexcept { // enforces termination
+    _Sort_work_item<_RanIt>& _Right_fork_wi, _Iter_diff_t<_RanIt>& _Work_complete) noexcept /* terminates */ {
     // processes the sort work item, _Wi, relative to _Basis
     // if the sort is divided into quicksort sub-problems:
     //   the return value is true
@@ -2674,7 +2665,7 @@ bool _Process_sort_work_item(const _RanIt _Basis, _Pr _Pred, _Sort_work_item<_Ra
 
     if (0 < _Ideal) { // divide and conquer by partitioning (quicksort)
         const auto _Mid       = _Partition_by_median_guess_unchecked(_First, _Last, _Pred);
-        const auto _New_ideal = static_cast<_Diff>((_Ideal >> 1) + (_Ideal >> 2)); // allow 1.5 log2(N) divisions
+        const auto _New_ideal = static_cast<_Diff>(_Ideal / 2 + _Ideal / 4); // allow 1.5 log2(N) divisions
         _Wi._Size             = _Mid.first - _First;
         _Wi._Ideal            = _New_ideal;
         _Right_fork_wi        = {_Mid.second - _Basis, _Last - _Mid.second, _New_ideal};
@@ -2691,7 +2682,7 @@ bool _Process_sort_work_item(const _RanIt _Basis, _Pr _Pred, _Sort_work_item<_Ra
 
 template <class _RanIt, class _Pr>
 void _Process_sort_queue(const _RanIt _Basis, _Pr _Pred, _Work_stealing_membership<_Sort_work_item<_RanIt>>& _My_ticket,
-    _Sort_work_item<_RanIt>& _Wi) noexcept {
+    _Sort_work_item<_RanIt>& _Wi) noexcept /* terminates */ {
     _Sort_work_item<_RanIt> _Right_fork_wi;
     do { // process work items in the local queue
         while (_Process_sort_work_item(_Basis, _Pred, _Wi, _Right_fork_wi, _My_ticket._Work_complete)) {
@@ -2717,7 +2708,7 @@ struct _Sort_operation { // context for background threads
         : _Basis(_First), _Pred(_Pred_arg), _Team(_Threads, _Count) {}
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, const __std_PTP_WORK _Work) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, const __std_PTP_WORK _Work) noexcept /* terminates */ {
         auto* const _This = static_cast<_Sort_operation*>(_Context);
         const auto _Basis = _This->_Basis;
         const auto _Pred  = _This->_Pred;
@@ -2741,17 +2732,15 @@ struct _Sort_operation { // context for background threads
 };
 
 template <class _ExPo, class _RanIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-void sort(_ExPo&&, const _RanIt _First, const _RanIt _Last, _Pr _Pred) noexcept {
+void sort(_ExPo&&, const _RanIt _First, const _RanIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // order [_First, _Last), using _Pred
-    using _Diff = _Iter_diff_t<_RanIt>;
     _Adl_verify_range(_First, _Last);
-    const auto _UFirst = _Get_unwrapped(_First);
-    const auto _ULast  = _Get_unwrapped(_Last);
-    const _Diff _Ideal = _ULast - _UFirst;
+    const auto _UFirst                = _Get_unwrapped(_First);
+    const auto _ULast                 = _Get_unwrapped(_Last);
+    const _Iter_diff_t<_RanIt> _Ideal = _ULast - _UFirst;
     if constexpr (remove_reference_t<_ExPo>::_Parallelize) {
-        constexpr auto _Diffsort_max = static_cast<_Diff>(_ISORT_MAX);
         size_t _Threads;
-        if (_Ideal > _Diffsort_max && (_Threads = __std_parallel_algorithms_hw_threads()) > 1) {
+        if (_Ideal > _ISORT_MAX && (_Threads = __std_parallel_algorithms_hw_threads()) > 1) {
             // parallelize when input is large enough and we aren't on a uniprocessor machine
             _TRY_BEGIN
             _Sort_operation _Operation(_UFirst, _Pass_fn(_Pred), _Threads, _Ideal); // throws
@@ -2810,7 +2799,7 @@ struct _Static_partitioned_temporary_buffer2 {
     ptrdiff_t _Get_offset(const size_t _Chunk_number) {
         // get the offset of the first element of the temporary buffer allocated to chunk _Chunk_number
         auto _Diff_chunk = static_cast<ptrdiff_t>(_Chunk_number);
-        return _Diff_chunk * _Chunk_size + _Min_value(_Diff_chunk, _Unchunked_items);
+        return _Diff_chunk * _Chunk_size + (_STD min)(_Diff_chunk, _Unchunked_items);
     }
 
     void _Destroy_all() { // destroy each element of the temporary buffer
@@ -2834,20 +2823,20 @@ inline size_t _Get_stable_sort_tree_height(const size_t _Count, const size_t _Hw
     // go to the next smaller power of 2
     const auto _Count_max_tree_height = _Log_count_max_chunks & ~static_cast<size_t>(1);
 
-    const auto _Ideal_chunks       = _Hw_threads * _Oversubscription_multiplier;
-    const size_t _Log_ideal_chunks = _Floor_of_log_2(_Ideal_chunks);
+    const auto _Ideal_chunks           = _Hw_threads * _Oversubscription_multiplier;
+    const size_t _Log_ideal_chunks     = _Floor_of_log_2(_Ideal_chunks);
 #ifdef _WIN64
-    const size_t _Max_tree_height = 62; // to avoid ptrdiff_t overflow
+    const size_t _Max_tree_height      = 62; // to avoid ptrdiff_t overflow
 #else // ^^^ _WIN64 ^^^ // vvv !_WIN64 vvv
     const size_t _Max_tree_height = 30;
 #endif // _WIN64
-    const size_t _Clamped_ideal_chunks = _Min_value(_Max_tree_height, _Log_ideal_chunks);
+    const size_t _Clamped_ideal_chunks = (_STD min)(_Max_tree_height, _Log_ideal_chunks);
 
     // similarly, if _Clamped_ideal_chunks is odd, that would break our 2 to even power invariant,
     // so go to the next higher power of 2
     const auto _Ideal_tree_height = _Clamped_ideal_chunks + (_Clamped_ideal_chunks & 0x1U);
 
-    return _Min_value(_Count_max_tree_height, _Ideal_tree_height);
+    return (_STD min)(_Count_max_tree_height, _Ideal_tree_height);
 }
 
 struct _Bottom_up_merge_tree {
@@ -2893,7 +2882,6 @@ struct _Bottom_up_tree_visitor {
     }
 };
 
-// TRANSITION, _Static_partitioned_stable_sort2 is an ABI zombie name
 template <class _BidIt, class _Pr>
 struct _Static_partitioned_stable_sort3 {
     using _Diff = _Iter_diff_t<_BidIt>;
@@ -2951,8 +2939,8 @@ struct _Static_partitioned_stable_sort3 {
                         _Basis._Get_first(_Base, _Team._Get_chunk_offset(_Base)), _Pred);
                 }
 
-                if (!_Visitor._Go_to_parent()) { // temporary bits have been copied back to the input, no parent, so
-                                                 // we're done
+                if (!_Visitor._Go_to_parent()) {
+                    // temporary bits have been copied back to the input, no parent, so we're done
                     _Temp_buf._Destroy_all();
                     return _Cancellation_status::_Canceled;
                 }
@@ -2996,23 +2984,20 @@ struct _Static_partitioned_stable_sort3 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_stable_sort3*>(_Context));
     }
 };
 
 template <class _ExPo, class _BidIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-void stable_sort(_ExPo&&, const _BidIt _First, const _BidIt _Last, _Pr _Pred) noexcept {
+void stable_sort(_ExPo&&, const _BidIt _First, const _BidIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // sort preserving order of equivalents, using _Pred
     _Adl_verify_range(_First, _Last);
     const auto _UFirst = _Get_unwrapped(_First);
     const auto _ULast  = _Get_unwrapped(_Last);
     const auto _Count  = _STD distance(_UFirst, _ULast);
     if (_Count <= _ISORT_MAX) {
-        if (_Count > 1) {
-            _Insertion_sort_unchecked(_UFirst, _ULast, _Pass_fn(_Pred));
-        }
-
+        _Insertion_sort_unchecked(_UFirst, _ULast, _Pass_fn(_Pred));
         return;
     }
 
@@ -3022,12 +3007,10 @@ void stable_sort(_ExPo&&, const _BidIt _First, const _BidIt _Last, _Pr _Pred) no
         _Hw_threads          = __std_parallel_algorithms_hw_threads();
         _Attempt_parallelism = _Hw_threads > 1;
     } else {
-        (void) _Hw_threads; // TRANSITION, VSO#486357
         _Attempt_parallelism = false;
     }
 
-    _Optimistic_temporary_buffer<_Iter_value_t<_BidIt>> _Temp_buf{
-        _Attempt_parallelism ? _Count : _Count - (_Count >> 1)};
+    _Optimistic_temporary_buffer<_Iter_value_t<_BidIt>> _Temp_buf{_Attempt_parallelism ? _Count : _Count - _Count / 2};
     if constexpr (remove_reference_t<_ExPo>::_Parallelize) {
         if (_Attempt_parallelism) {
             // forward+ iterator overflow assumption for size_t cast
@@ -3088,13 +3071,13 @@ struct _Static_partitioned_is_sorted_until {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_is_sorted_until*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _FwdIt is_sorted_until(_ExPo&&, _FwdIt _First, _FwdIt _Last, _Pr _Pred) noexcept {
+_NODISCARD _FwdIt is_sorted_until(_ExPo&&, _FwdIt _First, _FwdIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // find extent of range that is ordered by predicate
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Adl_verify_range(_First, _Last);
@@ -3203,8 +3186,8 @@ struct _Static_partitioned_is_partitioned {
             return _Cancellation_status::_Canceled;
         }
 
-        // after determining the is_partitioned status for this chunk, we need to update the chunk numbers for leftmost
-        // F and rightmost T
+        // after determining the is_partitioned status for this chunk,
+        // we need to update the chunk numbers for leftmost F and rightmost T
         auto _Old_true = _Rightmost_true.load();
         if (_This_chunk_status & _Contains_true) {
             while (_Target_chunk_number > _Old_true) {
@@ -3243,13 +3226,13 @@ struct _Static_partitioned_is_partitioned {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_is_partitioned*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD bool is_partitioned(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept {
+_NODISCARD bool is_partitioned(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // test if [_First, _Last) is partitioned by _Pred
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Adl_verify_range(_First, _Last);
@@ -3279,7 +3262,7 @@ _NODISCARD bool is_partitioned(_ExPo&&, const _FwdIt _First, const _FwdIt _Last,
 template <class _RanIt, class _Pr>
 struct _Static_partitioned_is_heap_until {
     using _Diff = _Iter_diff_t<_RanIt>;
-    _Static_partition_team<_Iter_diff_t<_RanIt>> _Team;
+    _Static_partition_team<_Diff> _Team;
     _RanIt _Range_first;
     _Pr _Pred;
     _Parallel_find_results<_RanIt> _Results;
@@ -3303,9 +3286,9 @@ struct _Static_partitioned_is_heap_until {
         const auto _Chunk_offset     = _Key._Start_at;
         const auto _Last             = _Chunk_offset + _Chunk_range_size;
 
-        const auto _Initial = _Max_value(_Chunk_offset, _Diff{1});
+        const auto _Initial = (_STD max)(_Chunk_offset, _Diff{1});
         for (_Diff _Off = _Initial; _Off < _Last; ++_Off) {
-            if (_DEBUG_LT_PRED(_Pred, _Range_first[(_Off - 1) >> 1], _Range_first[_Off])) {
+            if (_DEBUG_LT_PRED(_Pred, *(_Range_first + ((_Off - 1) >> 1)), *(_Range_first + _Off))) {
                 _Results._Imbue(_Key._Chunk_number, _Range_first + _Off);
                 return _Cancellation_status::_Canceled;
             }
@@ -3315,13 +3298,13 @@ struct _Static_partitioned_is_heap_until {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_is_heap_until*>(_Context));
     }
 };
 
 template <class _ExPo, class _RanIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _RanIt is_heap_until(_ExPo&&, _RanIt _First, _RanIt _Last, _Pr _Pred) noexcept {
+_NODISCARD _RanIt is_heap_until(_ExPo&&, _RanIt _First, _RanIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // find extent of range that is a heap ordered by _Pred
     _REQUIRE_PARALLEL_ITERATOR(_RanIt);
     _Adl_verify_range(_First, _Last);
@@ -3565,13 +3548,13 @@ struct _Static_partitioned_partition2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_partition2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt, class _Pr, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_FwdIt partition(_ExPo&&, _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept {
+_FwdIt partition(_ExPo&&, _FwdIt _First, const _FwdIt _Last, _Pr _Pred) noexcept /* terminates */ {
     // move elements satisfying _Pred to beginning of sequence
     _Adl_verify_range(_First, _Last);
     const auto _UFirst = _Get_unwrapped(_First);
@@ -3702,7 +3685,7 @@ template <class _Ty>
 struct _Casty_plus {
     // Adds the two arguments together and casts the result back to _Ty.
     // pre: the result from adding the two arguments together can fit in _Ty
-    _NODISCARD constexpr _Ty operator()(_Ty _Val1, _Ty _Val2) const noexcept {
+    _NODISCARD constexpr _Ty operator()(_Ty _Val1, _Ty _Val2) const noexcept /* terminates */ {
         return static_cast<_Ty>(_Val1 + _Val2);
     }
 };
@@ -3747,7 +3730,7 @@ void _Place_elements_from_indices(
     const auto _Last_index = _Indices_first + _Num_results;
     for (; _Indices_first != _Last_index; ++_Indices_first) {
         const auto _Curr_index = *_Indices_first;
-        *_Dest                 = _First[static_cast<_Iter_diff_t<_RanIt1>>(_Curr_index)];
+        *_Dest                 = *(_First + static_cast<_Iter_diff_t<_RanIt1>>(_Curr_index));
         ++_Dest;
     }
 }
@@ -3788,8 +3771,8 @@ struct _Static_partitioned_set_subtraction {
         auto [_Range1_chunk_first, _Range1_chunk_last] = _Basis._Get_chunk(_Key);
         const bool _Last_chunk                         = _Chunk_number == _Team._Chunks - 1;
 
-        // Get appropriate range for _Range1. We don't want any spans of equal elements to reach across chunk
-        // boundaries.
+        // Get appropriate range for _Range1.
+        // We don't want any spans of equal elements to reach across chunk boundaries.
         if (!_Last_chunk) {
             // Slide _Range1_chunk_last to the left so that there are no copies of *_Range1_chunk_last in _Range1_chunk.
             // Note that we know that this chunk is not the last, so we can look at the element at _Range1_chunk_last.
@@ -3814,8 +3797,8 @@ struct _Static_partitioned_set_subtraction {
 
         // Publish results to rest of chunks.
         if (_Chunk_number == 0) {
-            // Chunk 0 is special as it has no predecessor; its local and total sums are the same and we can immediately
-            // put its results in _Dest.
+            // Chunk 0 is special as it has no predecessor;
+            // its local and total sums are the same and we can immediately put its results in _Dest.
             const auto _Num_results = _Set_oper_per_chunk._Update_dest(
                 _Range1_chunk_first, _Range1_chunk_last, _Range2_chunk_first, _Range2_chunk_last, _Dest, _Pred);
 
@@ -3867,7 +3850,7 @@ struct _Static_partitioned_set_subtraction {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_set_subtraction*>(_Context));
     }
 };
@@ -3897,10 +3880,10 @@ struct _Set_intersection_per_chunk {
         const auto _Range1_dist                  = _Last1 - _First1;
         const auto _Range2_dist                  = _Last2 - _First2;
         while (_Curr_range1_index < _Range1_dist && _Curr_range1_index < _Range2_dist) {
-            if (_DEBUG_LT_PRED(_Pred, _First1[_Curr_range1_index], _First2[_Curr_range2_index])) {
+            if (_DEBUG_LT_PRED(_Pred, *(_First1 + _Curr_range1_index), *(_First2 + _Curr_range2_index))) {
                 ++_Curr_range1_index;
             } else {
-                if (!_Pred(_First2[_Curr_range2_index], _First1[_Curr_range1_index])) {
+                if (!_Pred(*(_First2 + _Curr_range2_index), *(_First1 + _Curr_range1_index))) {
                     *_Index_chunk_first = static_cast<_Iter_value_t<_BidIt>>(_Curr_range1_index);
                     ++_Index_chunk_first;
                     ++_Curr_range1_index;
@@ -3916,8 +3899,8 @@ struct _Set_intersection_per_chunk {
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _FwdIt3, class _Pr,
     _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_FwdIt3 set_intersection(
-    _ExPo&&, _FwdIt1 _First1, _FwdIt1 _Last1, _FwdIt2 _First2, _FwdIt2 _Last2, _FwdIt3 _Dest, _Pr _Pred) noexcept {
+_FwdIt3 set_intersection(_ExPo&&, _FwdIt1 _First1, _FwdIt1 _Last1, _FwdIt2 _First2, _FwdIt2 _Last2, _FwdIt3 _Dest,
+    _Pr _Pred) noexcept /* terminates */ {
     // AND sets [_First1, _Last1) and [_First2, _Last2), using _Pred
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -3961,8 +3944,8 @@ struct _Set_difference_per_chunk {
     template <class _RanIt1, class _RanIt2, class _RanIt3, class _Pr>
     _Common_diff_t<_RanIt1, _RanIt2, _RanIt3> _Update_dest(
         _RanIt1 _First1, const _RanIt1 _Last1, _RanIt2 _First2, _RanIt2 _Last2, _RanIt3 _Dest, _Pr _Pred) {
-        // Copy elements from [_First1, _Last1), except those in [_First2, _Last2) according to _Pred, to _Dest. Returns
-        // the number of elements stored.
+        // Copy elements from [_First1, _Last1), except those in [_First2, _Last2) according to _Pred, to _Dest.
+        // Returns the number of elements stored.
         return _STD set_difference(_First1, _Last1, _First2, _Last2, _Dest, _Pred) - _Dest;
     }
 
@@ -3982,12 +3965,12 @@ struct _Set_difference_per_chunk {
         const auto _Range1_dist                  = _Last1 - _First1;
         const auto _Range2_dist                  = _Last2 - _First2;
         while (_Curr_range1_index < _Range1_dist && _Curr_range2_index < _Range2_dist) {
-            if (_DEBUG_LT_PRED(_Pred, _First1[_Curr_range1_index], _First2[_Curr_range2_index])) {
+            if (_DEBUG_LT_PRED(_Pred, *(_First1 + _Curr_range1_index), *(_First2 + _Curr_range2_index))) {
                 *_Index_chunk_first = static_cast<_Iter_value_t<_BidIt>>(_Curr_range1_index);
                 ++_Index_chunk_first;
                 ++_Curr_range1_index;
             } else {
-                if (!_Pred(_First2[_Curr_range2_index], _First1[_Curr_range1_index])) {
+                if (!_Pred(*(_First2 + _Curr_range2_index), *(_First1 + _Curr_range1_index))) {
                     ++_Curr_range1_index;
                 }
 
@@ -4007,8 +3990,8 @@ struct _Set_difference_per_chunk {
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _FwdIt3, class _Pr,
     _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_FwdIt3 set_difference(
-    _ExPo&&, _FwdIt1 _First1, _FwdIt1 _Last1, _FwdIt2 _First2, _FwdIt2 _Last2, _FwdIt3 _Dest, _Pr _Pred) noexcept {
+_FwdIt3 set_difference(_ExPo&&, _FwdIt1 _First1, _FwdIt1 _Last1, _FwdIt2 _First2, _FwdIt2 _Last2, _FwdIt3 _Dest,
+    _Pr _Pred) noexcept /* terminates */ {
     // take set [_First2, _Last2) from [_First1, _Last1), using _Pred
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -4050,8 +4033,7 @@ _FwdIt3 set_difference(
 template <class _InIt, class _Ty, class _BinOp>
 _Ty _Reduce_move_unchecked(_InIt _First, const _InIt _Last, _Ty _Val, _BinOp _Reduce_op) {
     // return reduction, choose optimization
-    if constexpr (_Plus_on_arithmetic_ranges_reduction_v<_Unwrapped_t<_InIt>, _Ty, _BinOp>) {
-        (void) _Reduce_op; // TRANSITION, VSO#486357
+    if constexpr (_Plus_on_arithmetic_ranges_reduction_v<_Unwrapped_t<const _InIt&>, _Ty, _BinOp>) {
         return _Reduce_plus_arithmetic_ranges(_First, _Last, _Val);
     } else {
         for (; _First != _Last; ++_First) {
@@ -4067,7 +4049,6 @@ _Ty _Reduce_at_least_two(const _FwdIt _First, const _FwdIt _Last, _BinOp _Reduce
     // return reduction with no initial value
     // pre: distance(_First, _Last) >= 2
     if constexpr (_Plus_on_arithmetic_ranges_reduction_v<_FwdIt, _Ty, _BinOp>) {
-        (void) _Reduce_op; // TRANSITION, VSO#486357
         return _Reduce_plus_arithmetic_ranges(_First, _Last, _Ty{0});
     } else {
         auto _Next = _First;
@@ -4095,7 +4076,7 @@ struct _Static_partitioned_reduce2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         const auto _This = static_cast<_Static_partitioned_reduce2*>(_Context);
         auto _Key        = _This->_Team._Get_next_key();
         if (_Key) {
@@ -4112,7 +4093,8 @@ struct _Static_partitioned_reduce2 {
 };
 
 template <class _ExPo, class _FwdIt, class _Ty, class _BinOp, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_NODISCARD _Ty reduce(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Ty _Val, _BinOp _Reduce_op) noexcept {
+_NODISCARD _Ty reduce(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Ty _Val, _BinOp _Reduce_op) noexcept
+/* terminates */ {
     // return commutative and associative reduction of _Val and [_First, _Last), using _Reduce_op
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Adl_verify_range(_First, _Last);
@@ -4129,9 +4111,8 @@ _NODISCARD _Ty reduce(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Ty _Val
                 _Static_partitioned_reduce2<decltype(_UFirst), _Ty, decltype(_Passed_fn)> _Operation{
                     _Count, _Chunks, _UFirst, _Passed_fn};
                 {
-                    // we don't use _Run_chunked_parallel_work here because the initial value
-                    // on background threads is synthesized from the input, but on this thread
-                    // the initial value is _Val
+                    // we don't use _Run_chunked_parallel_work here because the initial value on background threads
+                    // is synthesized from the input, but on this thread the initial value is _Val
                     const _Work_ptr _Work{_Operation};
                     // setup complete, hereafter nothrow or terminate
                     _Work._Submit_for_chunks(_Hw_threads, _Chunks);
@@ -4173,7 +4154,7 @@ struct _Static_partitioned_transform_reduce_binary2 { // transform-reduction tas
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         const auto _This = static_cast<_Static_partitioned_transform_reduce_binary2*>(_Context);
         auto _Key        = _This->_Team._Get_next_key();
         if (_Key) {
@@ -4214,7 +4195,7 @@ struct _Static_partitioned_transform_reduce_binary2 { // transform-reduction tas
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Ty, class _BinOp1, class _BinOp2,
     _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
 _NODISCARD _Ty transform_reduce(_ExPo&&, _FwdIt1 _First1, _FwdIt1 _Last1, _FwdIt2 _First2, _Ty _Val, _BinOp1 _Reduce_op,
-    _BinOp2 _Transform_op) noexcept { // strengthened
+    _BinOp2 _Transform_op) noexcept /* terminates */ {
     // return commutative and associative transform-reduction of sequences, using _Reduce_op and _Transform_op
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -4281,7 +4262,7 @@ struct _Static_partitioned_transform_reduce2 { // transformed reduction task sch
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         const auto _This = static_cast<_Static_partitioned_transform_reduce2*>(_Context);
         auto _Key        = _This->_Team._Get_next_key();
         if (_Key) {
@@ -4310,7 +4291,7 @@ struct _Static_partitioned_transform_reduce2 { // transformed reduction task sch
 template <class _ExPo, class _FwdIt, class _Ty, class _BinOp, class _UnaryOp,
     _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
 _NODISCARD _Ty transform_reduce(_ExPo&&, const _FwdIt _First, const _FwdIt _Last, _Ty _Val, _BinOp _Reduce_op,
-    _UnaryOp _Transform_op) noexcept { // strengthened
+    _UnaryOp _Transform_op) noexcept /* terminates */ {
     // return commutative and associative reduction of transformed sequence, using _Reduce_op and _Transform_op
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt);
     _Adl_verify_range(_First, _Last);
@@ -4353,8 +4334,9 @@ _NODISCARD _Ty transform_reduce(_ExPo&&, const _FwdIt _First, const _FwdIt _Last
 }
 
 // PARALLEL FUNCTION TEMPLATE exclusive_scan
-struct _No_init_tag { // tag to indicate that no initial value is to be used
-};
+struct _No_init_tag {
+    explicit _No_init_tag() = default;
+}; // tag to indicate that no initial value is to be used
 
 template <class _FwdIt1, class _FwdIt2, class _BinOp, class _Ty>
 _FwdIt2 _Exclusive_scan_per_chunk(_FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _Dest, _BinOp _Reduce_op, _Ty& _Val) {
@@ -4452,15 +4434,15 @@ struct _Static_partitioned_exclusive_scan2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_exclusive_scan2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Ty, class _BinOp,
     _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_FwdIt2 exclusive_scan(
-    _ExPo&&, const _FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _Dest, _Ty _Val, _BinOp _Reduce_op) noexcept {
+_FwdIt2 exclusive_scan(_ExPo&&, const _FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _Dest, _Ty _Val,
+    _BinOp _Reduce_op) noexcept /* terminates */ {
     // set each value in [_Dest, _Dest + (_Last - _First)) to the associative reduction of predecessors and _Val
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -4597,14 +4579,15 @@ struct _Static_partitioned_inclusive_scan2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_inclusive_scan2*>(_Context));
     }
 };
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _BinOp, class _Ty,
     _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_FwdIt2 inclusive_scan(_ExPo&&, _FwdIt1 _First, _FwdIt1 _Last, _FwdIt2 _Dest, _BinOp _Reduce_op, _Ty _Val) noexcept {
+_FwdIt2 inclusive_scan(_ExPo&&, _FwdIt1 _First, _FwdIt1 _Last, _FwdIt2 _Dest, _BinOp _Reduce_op, _Ty _Val) noexcept
+/* terminates */ {
     // compute partial noncommutative and associative reductions including _Val into _Dest, using _Reduce_op
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -4619,7 +4602,7 @@ _FwdIt2 inclusive_scan(_ExPo&&, _FwdIt1 _First, _FwdIt1 _Last, _FwdIt2 _Dest, _B
             if (_Count >= 2) { // ... with at least 2 elements
                 _TRY_BEGIN
                 auto _Passed_op = _Pass_fn(_Reduce_op);
-                _Static_partitioned_inclusive_scan2<_Ty, _Ty, _Unwrapped_t<_FwdIt1>, decltype(_UDest),
+                _Static_partitioned_inclusive_scan2<_Ty, _Ty, _Unwrapped_t<const _FwdIt1&>, decltype(_UDest),
                     decltype(_Passed_op)>
                     _Operation{_Hw_threads, _Count, _Passed_op, _Val};
                 _Operation._Basis1._Populate(_Operation._Team, _UFirst);
@@ -4646,7 +4629,8 @@ _FwdIt2 inclusive_scan(_ExPo&&, _FwdIt1 _First, _FwdIt1 _Last, _FwdIt2 _Dest, _B
 }
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _BinOp, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_FwdIt2 inclusive_scan(_ExPo&&, _FwdIt1 _First, _FwdIt1 _Last, _FwdIt2 _Dest, _BinOp _Reduce_op) noexcept {
+_FwdIt2 inclusive_scan(_ExPo&&, _FwdIt1 _First, _FwdIt1 _Last, _FwdIt2 _Dest, _BinOp _Reduce_op) noexcept
+/* terminates */ {
     // compute partial noncommutative and associative reductions into _Dest, using _Reduce_op
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -4662,7 +4646,7 @@ _FwdIt2 inclusive_scan(_ExPo&&, _FwdIt1 _First, _FwdIt1 _Last, _FwdIt2 _Dest, _B
                 _TRY_BEGIN
                 _No_init_tag _Tag;
                 auto _Passed_op = _Pass_fn(_Reduce_op);
-                _Static_partitioned_inclusive_scan2<_Iter_value_t<_FwdIt1>, _No_init_tag, _Unwrapped_t<_FwdIt1>,
+                _Static_partitioned_inclusive_scan2<_Iter_value_t<_FwdIt1>, _No_init_tag, _Unwrapped_t<const _FwdIt1&>,
                     decltype(_UDest), decltype(_Passed_op)>
                     _Operation{_Hw_threads, _Count, _Passed_op, _Tag};
                 _Operation._Basis1._Populate(_Operation._Team, _UFirst);
@@ -4783,7 +4767,7 @@ struct _Static_partitioned_transform_exclusive_scan2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_transform_exclusive_scan2*>(_Context));
     }
 };
@@ -4791,7 +4775,7 @@ struct _Static_partitioned_transform_exclusive_scan2 {
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Ty, class _BinOp, class _UnaryOp,
     _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
 _FwdIt2 transform_exclusive_scan(_ExPo&&, const _FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _Dest, _Ty _Val,
-    _BinOp _Reduce_op, _UnaryOp _Transform_op) noexcept {
+    _BinOp _Reduce_op, _UnaryOp _Transform_op) noexcept /* terminates */ {
     // set each value in [_Dest, _Dest + (_Last - _First)) to the associative reduction of transformed predecessors
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -4930,7 +4914,7 @@ struct _Static_partitioned_transform_inclusive_scan2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_transform_inclusive_scan2*>(_Context));
     }
 };
@@ -4938,7 +4922,7 @@ struct _Static_partitioned_transform_inclusive_scan2 {
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _Ty, class _BinOp, class _UnaryOp,
     _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
 _FwdIt2 transform_inclusive_scan(_ExPo&&, const _FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _Dest, _BinOp _Reduce_op,
-    _UnaryOp _Transform_op, _Ty _Val) noexcept {
+    _UnaryOp _Transform_op, _Ty _Val) noexcept /* terminates */ {
     // compute partial noncommutative and associative transformed reductions including _Val into _Dest
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -4954,7 +4938,7 @@ _FwdIt2 transform_inclusive_scan(_ExPo&&, const _FwdIt1 _First, const _FwdIt1 _L
                 _TRY_BEGIN
                 auto _Passed_reduce    = _Pass_fn(_Reduce_op);
                 auto _Passed_transform = _Pass_fn(_Transform_op);
-                _Static_partitioned_transform_inclusive_scan2<_Ty, _Ty, _Unwrapped_t<_FwdIt1>, decltype(_UDest),
+                _Static_partitioned_transform_inclusive_scan2<_Ty, _Ty, _Unwrapped_t<const _FwdIt1&>, decltype(_UDest),
                     decltype(_Passed_reduce), decltype(_Passed_transform)>
                     _Operation{_Hw_threads, _Count, _Passed_reduce, _Passed_transform, _Val};
                 _Operation._Basis1._Populate(_Operation._Team, _UFirst);
@@ -4984,7 +4968,7 @@ _FwdIt2 transform_inclusive_scan(_ExPo&&, const _FwdIt1 _First, const _FwdIt1 _L
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _BinOp, class _UnaryOp,
     _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
 _FwdIt2 transform_inclusive_scan(_ExPo&&, const _FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _Dest, _BinOp _Reduce_op,
-    _UnaryOp _Transform_op) noexcept {
+    _UnaryOp _Transform_op) noexcept /* terminates */ {
     // compute partial noncommutative and associative transformed reductions into _Dest
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -5002,8 +4986,9 @@ _FwdIt2 transform_inclusive_scan(_ExPo&&, const _FwdIt1 _First, const _FwdIt1 _L
                 auto _Passed_reduce    = _Pass_fn(_Reduce_op);
                 auto _Passed_transform = _Pass_fn(_Transform_op);
                 using _Intermediate_t  = decay_t<decltype(_Transform_op(*_UFirst))>;
-                _Static_partitioned_transform_inclusive_scan2<_Intermediate_t, _No_init_tag, _Unwrapped_t<_FwdIt1>,
-                    decltype(_UDest), decltype(_Passed_reduce), decltype(_Passed_transform)>
+                _Static_partitioned_transform_inclusive_scan2<_Intermediate_t, _No_init_tag,
+                    _Unwrapped_t<const _FwdIt1&>, decltype(_UDest), decltype(_Passed_reduce),
+                    decltype(_Passed_transform)>
                     _Operation{_Hw_threads, _Count, _Passed_reduce, _Passed_transform, _Tag};
                 _Operation._Basis1._Populate(_Operation._Team, _UFirst);
                 _Seek_wrapped(_Dest, _Operation._Basis2._Populate(_Operation._Team, _UDest));
@@ -5063,7 +5048,7 @@ struct _Static_partitioned_adjacent_difference2 {
     }
 
     static void __stdcall _Threadpool_callback(
-        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept {
+        __std_PTP_CALLBACK_INSTANCE, void* const _Context, __std_PTP_WORK) noexcept /* terminates */ {
         _Run_available_chunked_work(*static_cast<_Static_partitioned_adjacent_difference2*>(_Context));
     }
 };
@@ -5084,8 +5069,8 @@ _FwdIt2 _Adjacent_difference_seq(_FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _D
 }
 
 template <class _ExPo, class _FwdIt1, class _FwdIt2, class _BinOp, _Enable_if_execution_policy_t<_ExPo> /* = 0 */>
-_FwdIt2 adjacent_difference(
-    _ExPo&&, const _FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _Dest, _BinOp _Diff_op) noexcept {
+_FwdIt2 adjacent_difference(_ExPo&&, const _FwdIt1 _First, const _FwdIt1 _Last, _FwdIt2 _Dest, _BinOp _Diff_op) noexcept
+/* terminates */ {
     // compute adjacent differences into _Dest
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt1);
     _REQUIRE_PARALLEL_ITERATOR(_FwdIt2);
@@ -5131,8 +5116,6 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#else // ^^^ _HAS_CXX17 / !_HAS_CXX17 vvv
-#pragma message("Parallel algorithms are only available with C++17 or later.")
 #endif // _HAS_CXX17
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _EXECUTION_

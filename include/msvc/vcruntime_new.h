@@ -9,13 +9,14 @@
 
 #include <vcruntime.h>
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+#pragma warning(disable: 4985) // attributes not present on previous declaration
+
 #ifdef __cplusplus
 extern "C++" {
 
 #pragma pack(push, _CRT_PACKING)
-
-#pragma warning(push)
-#pragma warning(disable: 4985) // attributes not present on previous declaration
 
 #pragma push_macro("new")
 #undef new
@@ -32,9 +33,7 @@ namespace std
     namespace std
     {
         struct nothrow_t {
-#ifndef _CRTBLD // TRANSITION, VSO#406237
             explicit nothrow_t() = default;
-#endif // _CRTBLD
         };
 
         #ifdef _CRT_ENABLE_SELECTANY_NOTHROW
@@ -194,8 +193,9 @@ void __CRTDECL operator delete[](
 
 #pragma pop_macro("new")
 
-#pragma warning(pop)
 #pragma pack(pop)
 
 } // extern "C++"
 #endif // __cplusplus
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS

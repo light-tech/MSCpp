@@ -1,15 +1,7 @@
-/***
- *use_ansi.h - pragmas for ANSI Standard C++ libraries
- *
- * Copyright (c) Microsoft Corporation. All rights reserved.
- *
- *Purpose:
- *       This header is intended to force the use of the appropriate ANSI
- *       Standard C++ libraries whenever it is included.
- *
- *       [Public]
- *
- ****/
+// use_ansi.h internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #pragma once
 
@@ -24,7 +16,7 @@
 
 #ifndef _CRT_NOPRAGMA_LIBS
 
-#if !defined(_M_CEE_PURE) && !defined(MRTDLL)
+#ifndef _M_CEE_PURE
 
 #undef _DEBUG_AFFIX
 #undef _IDL_AFFIX
@@ -61,7 +53,7 @@
 #undef _IDL_DEFAULT
 #undef _LIB_STEM
 
-#endif // !defined(_M_CEE_PURE) && !defined(MRTDLL)
+#endif // _M_CEE_PURE
 
 #endif // _CRT_NOPRAGMA_LIBS
 

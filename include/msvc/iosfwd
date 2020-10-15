@@ -1,4 +1,8 @@
 // iosfwd standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _IOSFWD_
 #define _IOSFWD_
@@ -35,8 +39,8 @@ _STD_BEGIN
     _CATCH_END
 
 #else // _HAS_EXCEPTIONS
-#define _TRY_IO_BEGIN { // begin try block
-#define _CATCH_IO_END } // catch block for _Myios
+#define _TRY_IO_BEGIN        { // begin try block
+#define _CATCH_IO_END        } // catch block for _Myios
 #define _CATCH_IO_(xtype, x) } // catch block for basic_ios x
 #endif // _HAS_EXCEPTIONS
 
@@ -48,24 +52,21 @@ using streamsize = long long;
 template <class _Statetype>
 class fpos { // store arbitrary file position
 public:
-    /* implicit */ fpos(streamoff _Off = 0) : _Myoff(_Off), _Fpos(0), _Mystate() { // construct with stream offset
-    }
+    /* implicit */ fpos(streamoff _Off = 0) : _Myoff(_Off), _Fpos(0), _Mystate() {}
 
-    fpos(_Statetype _State, fpos_t _Fileposition)
-        : _Myoff(_Fileposition), _Fpos(0), _Mystate(_State) { // construct with conversion state and C file position
-    }
+    fpos(_Statetype _State, fpos_t _Fileposition) : _Myoff(_Fileposition), _Fpos(0), _Mystate(_State) {}
 
-    _NODISCARD _Statetype state() const { // return conversion state
+    _NODISCARD _Statetype state() const {
         return _Mystate;
     }
 
-    void state(_Statetype _State) { // set conversion state
+    void state(_Statetype _State) {
         _Mystate = _State;
     }
 
-    operator streamoff() const { // return offset
-                                 // TRANSITION, ABI: We currently always set _Fpos to 0 but older .objs containing old
-                                 // basic_filebuf would set _Fpos.
+    operator streamoff() const {
+        // TRANSITION, ABI: We currently always set _Fpos to 0 but older .objs containing old
+        // basic_filebuf would set _Fpos.
         return _Myoff + _Fpos;
     }
 
@@ -75,7 +76,7 @@ public:
     }
 #endif // _REMOVE_FPOS_SEEKPOS
 
-    _NODISCARD streamoff operator-(const fpos& _Right) const { // return difference of file positions as an offset
+    _NODISCARD streamoff operator-(const fpos& _Right) const {
         return static_cast<streamoff>(*this) - static_cast<streamoff>(_Right);
     }
 
@@ -89,13 +90,13 @@ public:
         return *this;
     }
 
-    _NODISCARD fpos operator+(streamoff _Off) const { // return this + offset
+    _NODISCARD fpos operator+(streamoff _Off) const {
         fpos _Tmp = *this;
         _Tmp += _Off;
         return _Tmp;
     }
 
-    _NODISCARD fpos operator-(streamoff _Off) const { // return this - offset
+    _NODISCARD fpos operator-(streamoff _Off) const {
         fpos _Tmp = *this;
         _Tmp -= _Off;
         return _Tmp;
@@ -147,10 +148,10 @@ template <class _Elem>
 struct char_traits;
 template <>
 struct char_traits<char>;
-#if _HAS_CHAR8_T
+#ifdef __cpp_char8_t
 template <>
 struct char_traits<char8_t>;
-#endif // _HAS_CHAR8_T
+#endif // __cpp_char8_t
 template <>
 struct char_traits<char16_t>;
 template <>
@@ -253,8 +254,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _IOSFWD_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

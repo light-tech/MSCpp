@@ -13,7 +13,11 @@
 #pragma once
 #define __INTRIN0_H_
 #include <vcruntime.h>
+
 #if _VCRT_COMPILER_PREPROCESSOR && !defined(__midl)
+
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -27,6 +31,7 @@ extern "C" {
 ** __MACHINEARM           : ARM only
 ** __MACHINEARM64         : ARM64 only
 ** __MACHINEARM_ARM64     : ARM and ARM64 only
+** __MACHINEX86_ARM_ARM64 : x86, ARM and ARM64 only
 ** __MACHINEARM_ARM64_X64 : ARM and 64-bit Arch only
 ** __MACHINEARM64_X64     : ARM64 and x64 only
 ** __MACHINECHPEX86ARM64  : CHPE x86 on arm64 only
@@ -41,6 +46,7 @@ extern "C" {
 #define __MACHINEARM64         __MACHINE
 #define __MACHINEARM_ARM64     __MACHINE
 #define __MACHINEARM_ARM64_X64 __MACHINE
+#define __MACHINEX86_ARM_ARM64 __MACHINE
 #define __MACHINEARM64_X64     __MACHINE
 #define __MACHINECHPEX86ARM64  __MACHINE
 
@@ -82,22 +88,27 @@ extern "C" {
 #define __MACHINECALL_CDECL_OR_DEFAULT __cdecl
 #endif
 
-#if !defined(_M_ARM64) && !defined(_M_HYBRID_X86_ARM64)
+#if !defined(_M_ARM64) && !defined(_M_HYBRID_X86_ARM64) && !defined(_M_ARM64EC)
 #undef  __MACHINEARM64
 #define __MACHINEARM64      __MACHINEZ
 #endif
 
-#if !(defined(_M_ARM) || defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64))
+#if !(defined(_M_ARM) || defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64) || defined(_M_ARM64EC))
 #undef __MACHINEARM_ARM64
 #define __MACHINEARM_ARM64  __MACHINEZ
 #endif
 
-#if !(defined(_M_ARM) || defined(_M_X64) || defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64))
+#if !(defined(_M_IX86) || defined(_CHPE_ONLY_) || defined(_M_ARM) || defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64) || defined(_M_ARM64EC))
+#undef __MACHINEX86_ARM_ARM64
+#define __MACHINEX86_ARM_ARM64     __MACHINEZ
+#endif
+
+#if !(defined(_M_ARM) || defined(_M_X64) || defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64) || defined(_M_ARM64EC))
 #undef __MACHINEARM_ARM64_X64
 #define __MACHINEARM_ARM64_X64     __MACHINEZ
 #endif
 
-#if !(defined(_M_X64) || defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64))
+#if !(defined(_M_X64) || defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64) || defined(_M_ARM64EC))
 #undef __MACHINEARM64_X64
 #define __MACHINEARM64_X64     __MACHINEZ
 #endif
@@ -127,7 +138,7 @@ __MACHINE(short _InterlockedAnd16(short volatile * _Value, short _Mask))
 __MACHINEARM_ARM64(short _InterlockedAnd16_acq(short volatile * _Value, short _Mask))
 __MACHINEARM_ARM64(short _InterlockedAnd16_nf(short volatile * _Value, short _Mask))
 __MACHINEARM_ARM64(short _InterlockedAnd16_rel(short volatile * _Value, short _Mask))
-__MACHINEARM_ARM64_X64(__int64 _InterlockedAnd64(__int64 volatile * _Value, __int64 _Mask))
+__MACHINE(__int64 _InterlockedAnd64(__int64 volatile * _Value, __int64 _Mask))
 __MACHINEARM_ARM64(__int64 _InterlockedAnd64_acq(__int64 volatile * _Value, __int64 _Mask))
 __MACHINEARM_ARM64(__int64 _InterlockedAnd64_nf(__int64 volatile * _Value, __int64 _Mask))
 __MACHINEARM_ARM64(__int64 _InterlockedAnd64_rel(__int64 volatile * _Value, __int64 _Mask))
@@ -158,14 +169,14 @@ __MACHINEARM_ARM64(long _InterlockedCompareExchange_rel(long volatile * _Destina
 __MACHINE(long __MACHINECALL_CDECL_OR_DEFAULT _InterlockedDecrement(long volatile * _Addend))
 __MACHINEWVMPURE(long _InterlockedDecrement(long volatile * _Addend))
 __MACHINE(short _InterlockedDecrement16(short volatile * _Addend))
-__MACHINEARM_ARM64_X64(__int64 _InterlockedDecrement64(__int64 volatile * _Addend))
+__MACHINE(__int64 _InterlockedDecrement64(__int64 volatile * _Addend))
 __MACHINE(long __MACHINECALL_CDECL_OR_DEFAULT _InterlockedExchange(long volatile * _Target, long _Value))
 __MACHINEWVMPURE(long __MACHINECALL_CDECL_OR_DEFAULT _InterlockedExchange(long volatile * _Target, long _Value))
 __MACHINE(short _InterlockedExchange16(short volatile * _Target, short _Value))
 __MACHINEARM_ARM64(short _InterlockedExchange16_acq(short volatile * _Target, short _Value))
 __MACHINEARM_ARM64(short _InterlockedExchange16_nf(short volatile * _Target, short _Value))
 __MACHINEARM_ARM64(short _InterlockedExchange16_rel(short volatile * _Target, short _Value))
-__MACHINEARM_ARM64_X64(__int64 _InterlockedExchange64(__int64 volatile * _Target, __int64 _Value))
+__MACHINE(__int64 _InterlockedExchange64(__int64 volatile * _Target, __int64 _Value))
 __MACHINEARM_ARM64(__int64 _InterlockedExchange64_acq(__int64 volatile * _Target, __int64 _Value))
 __MACHINEARM_ARM64(__int64 _InterlockedExchange64_nf(__int64 volatile * _Target, __int64 _Value))
 __MACHINEARM_ARM64(__int64 _InterlockedExchange64_rel(__int64 volatile * _Target, __int64 _Value))
@@ -178,7 +189,7 @@ __MACHINE(short _InterlockedExchangeAdd16(short volatile * _Addend, short _Value
 __MACHINEARM_ARM64(short _InterlockedExchangeAdd16_acq(short volatile * _Addend, short _Value))
 __MACHINEARM_ARM64(short _InterlockedExchangeAdd16_nf(short volatile * _Addend, short _Value))
 __MACHINEARM_ARM64(short _InterlockedExchangeAdd16_rel(short volatile * _Addend, short _Value))
-__MACHINEARM_ARM64_X64(__int64 _InterlockedExchangeAdd64(__int64 volatile * _Addend, __int64 _Value))
+__MACHINE(__int64 _InterlockedExchangeAdd64(__int64 volatile * _Addend, __int64 _Value))
 __MACHINEARM_ARM64(__int64 _InterlockedExchangeAdd64_acq(__int64 volatile * _Addend, __int64 _Value))
 __MACHINEARM_ARM64(__int64 _InterlockedExchangeAdd64_nf(__int64 volatile * _Addend, __int64 _Value))
 __MACHINEARM_ARM64(__int64 _InterlockedExchangeAdd64_rel(__int64 volatile * _Addend, __int64 _Value))
@@ -195,14 +206,14 @@ __MACHINEARM_ARM64(long _InterlockedExchange_rel(long volatile * _Target, long _
 __MACHINE(long __MACHINECALL_CDECL_OR_DEFAULT _InterlockedIncrement(long volatile * _Addend))
 __MACHINEWVMPURE(long _InterlockedIncrement(long volatile * _Addend))
 __MACHINE(short _InterlockedIncrement16(short volatile * _Addend))
-__MACHINEARM_ARM64_X64(__int64 _InterlockedIncrement64(__int64 volatile * _Addend))
+__MACHINE(__int64 _InterlockedIncrement64(__int64 volatile * _Addend))
 __MACHINEARM_ARM64(long _InterlockedIncrement_nf(long volatile * _Addend))
 __MACHINE(long _InterlockedOr(long volatile * _Value, long _Mask))
 __MACHINE(short _InterlockedOr16(short volatile * _Value, short _Mask))
 __MACHINEARM_ARM64(short _InterlockedOr16_acq(short volatile * _Value, short _Mask))
 __MACHINEARM_ARM64(short _InterlockedOr16_nf(short volatile * _Value, short _Mask))
 __MACHINEARM_ARM64(short _InterlockedOr16_rel(short volatile * _Value, short _Mask))
-__MACHINEARM_ARM64_X64(__int64 _InterlockedOr64(__int64 volatile * _Value, __int64 _Mask))
+__MACHINE(__int64 _InterlockedOr64(__int64 volatile * _Value, __int64 _Mask))
 __MACHINEARM_ARM64(__int64 _InterlockedOr64_acq(__int64 volatile * _Value, __int64 _Mask))
 __MACHINEARM_ARM64(__int64 _InterlockedOr64_nf(__int64 volatile * _Value, __int64 _Mask))
 __MACHINEARM_ARM64(__int64 _InterlockedOr64_rel(__int64 volatile * _Value, __int64 _Mask))
@@ -218,7 +229,7 @@ __MACHINE(short _InterlockedXor16(short volatile * _Value, short _Mask))
 __MACHINEARM_ARM64(short _InterlockedXor16_acq(short volatile * _Value, short _Mask))
 __MACHINEARM_ARM64(short _InterlockedXor16_nf(short volatile * _Value, short _Mask))
 __MACHINEARM_ARM64(short _InterlockedXor16_rel(short volatile * _Value, short _Mask))
-__MACHINEARM_ARM64_X64(__int64 _InterlockedXor64(__int64 volatile * _Value, __int64 _Mask))
+__MACHINE(__int64 _InterlockedXor64(__int64 volatile * _Value, __int64 _Mask))
 __MACHINEARM_ARM64(__int64 _InterlockedXor64_acq(__int64 volatile * _Value, __int64 _Mask))
 __MACHINEARM_ARM64(__int64 _InterlockedXor64_nf(__int64 volatile * _Value, __int64 _Mask))
 __MACHINEARM_ARM64(__int64 _InterlockedXor64_rel(__int64 volatile * _Value, __int64 _Mask))
@@ -263,4 +274,5 @@ __MACHINE(void * __cdecl __builtin_assume_aligned(const void *, size_t, ...) noe
 #if defined(__cplusplus)
 }
 #endif
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 #endif /* _VCRT_COMPILER_PREPROCESSOR && !defined(__midl) */

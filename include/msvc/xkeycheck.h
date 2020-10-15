@@ -1,11 +1,15 @@
 // xkeycheck.h internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XKEYCHECK_H
 #define _XKEYCHECK_H
 #include <yvals_core.h>
 #if _STL_COMPILER_PREPROCESSOR
 
-#if !defined(_ALLOW_KEYWORD_MACROS) && !defined(__INTELLISENSE__)
+#if defined(__cplusplus) && !defined(_ALLOW_KEYWORD_MACROS) && !defined(__INTELLISENSE__)
 
 // clang-format off
 // #if defined($KEYWORD)
@@ -119,6 +123,12 @@ Enable warning C4005 to find the forbidden define.
 #error The C++ Standard Library forbids macroizing the keyword "constexpr". \
 Enable warning C4005 to find the forbidden define.
 #endif // constexpr
+
+#if defined(constinit) && _HAS_CXX20
+#define constinit EMIT WARNING C4005
+#error The C++ Standard Library forbids macroizing the keyword "constinit". \
+Enable warning C4005 to find the forbidden define.
+#endif // constinit
 
 #if defined(const_cast)
 #define const_cast EMIT WARNING C4005
@@ -285,7 +295,7 @@ Enable warning C4005 to find the forbidden define.
 #if defined(new) && defined(_ENFORCE_BAN_OF_MACRO_NEW)
 #define new EMIT WARNING C4005
 #error The C++ Standard Library forbids macroizing the keyword "new", though macroized new is supported on this \
-implementation as a nonstandard extension. Enable warning C4005 to find the forbidden define, or reenable the \
+implementation as a nonstandard extension. Enable warning C4005 to find the forbidden define, or re-enable the \
 extension by removing _ENFORCE_BAN_OF_MACRO_NEW.
 #endif // new
 
@@ -427,7 +437,7 @@ Enable warning C4005 to find the forbidden define.
 Enable warning C4005 to find the forbidden define.
 #endif // true
 
-#if defined(try) && defined(__cplusplus)
+#if defined(try)
 #define try EMIT WARNING C4005
 #error The C++ Standard Library forbids macroizing the keyword "try". \
 Enable warning C4005 to find the forbidden define.
@@ -500,18 +510,6 @@ Enable warning C4005 to find the forbidden define.
 #endif // while
 
 // contextual keywords (a.k.a. "identifiers with special meaning"):
-#if defined(audit) && _HAS_CXX20
-#define audit EMIT WARNING C4005
-#error The C++ Standard Library forbids macroizing the contextual keyword "audit". \
-Enable warning C4005 to find the forbidden define.
-#endif // audit
-
-#if defined(axiom) && _HAS_CXX20
-#define axiom EMIT WARNING C4005
-#error The C++ Standard Library forbids macroizing the contextual keyword "axiom". \
-Enable warning C4005 to find the forbidden define.
-#endif // axiom
-
 #if defined(final)
 #define final EMIT WARNING C4005
 #error The C++ Standard Library forbids macroizing the contextual keyword "final". \
@@ -549,18 +547,6 @@ Enable warning C4005 to find the forbidden define.
 Enable warning C4005 to find the forbidden define.
 #endif // deprecated
 
-#if defined(ensures) && _HAS_CXX20
-#define ensures EMIT WARNING C4005
-#error The C++ Standard Library forbids macroizing the attribute-token "ensures". \
-Enable warning C4005 to find the forbidden define.
-#endif // ensures
-
-#if defined(expects) && _HAS_CXX20
-#define expects EMIT WARNING C4005
-#error The C++ Standard Library forbids macroizing the attribute-token "expects". \
-Enable warning C4005 to find the forbidden define.
-#endif // expects
-
 #if defined(fallthrough) && _HAS_CXX17
 #define fallthrough EMIT WARNING C4005
 #error The C++ Standard Library forbids macroizing the attribute-token "fallthrough". \
@@ -575,7 +561,7 @@ Enable warning C4005 to find the forbidden define.
 Enable warning C4005 to find the forbidden define.
 #endif // maybe_unused
 
-#if defined(nodiscard) && _HAS_CXX17
+#if defined(nodiscard) // C++17 attribute-token, also enforced in C++14 mode
 #define nodiscard EMIT WARNING C4005
 #error The C++ Standard Library forbids macroizing the attribute-token "nodiscard". \
 Enable warning C4005 to find the forbidden define.
@@ -595,11 +581,7 @@ Enable warning C4005 to find the forbidden define.
 
 // not checking "unlikely" because it is commonly defined as a function-like macro
 
-#endif // !defined(_ALLOW_KEYWORD_MACROS) && !defined(__INTELLISENSE__)
+#endif // defined(__cplusplus) && !defined(_ALLOW_KEYWORD_MACROS) && !defined(__INTELLISENSE__)
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XKEYCHECK_H
-
-// Copyright (c) by P.J. Plauger. All rights reserved.
-// Consult your license regarding permissions and restrictions.
-// V6.50:0009

@@ -1,4 +1,8 @@
 // xatomic.h internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XATOMIC_H
 #define _XATOMIC_H
@@ -14,6 +18,9 @@
 _STL_DISABLE_CLANG_WARNINGS
 #pragma push_macro("new")
 #undef new
+
+#define _CONCATX(x, y) x##y
+#define _CONCAT(x, y)  _CONCATX(x, y)
 
 // Interlocked intrinsic mapping for _nf/_acq/_rel
 #if defined(_M_CEE_PURE) || defined(_M_IX86) || defined(_M_X64)
@@ -51,6 +58,31 @@ _STL_DISABLE_CLANG_WARNINGS
 
 _STD_BEGIN
 
+#if _HAS_CXX20
+// ENUM CLASS memory_order
+enum class memory_order : int {
+    relaxed,
+    consume,
+    acquire,
+    release,
+    acq_rel,
+    seq_cst,
+
+    // LWG-3268
+    memory_order_relaxed = relaxed,
+    memory_order_consume = consume,
+    memory_order_acquire = acquire,
+    memory_order_release = release,
+    memory_order_acq_rel = acq_rel,
+    memory_order_seq_cst = seq_cst
+};
+inline constexpr memory_order memory_order_relaxed = memory_order::relaxed;
+inline constexpr memory_order memory_order_consume = memory_order::consume;
+inline constexpr memory_order memory_order_acquire = memory_order::acquire;
+inline constexpr memory_order memory_order_release = memory_order::release;
+inline constexpr memory_order memory_order_acq_rel = memory_order::acq_rel;
+inline constexpr memory_order memory_order_seq_cst = memory_order::seq_cst;
+#else // _HAS_CXX20
 // ENUM memory_order
 enum memory_order {
     memory_order_relaxed,
@@ -60,6 +92,7 @@ enum memory_order {
     memory_order_acq_rel,
     memory_order_seq_cst
 };
+#endif // _HAS_CXX20
 
 using _Atomic_counter_t = unsigned long;
 
@@ -79,8 +112,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XATOMIC_H
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

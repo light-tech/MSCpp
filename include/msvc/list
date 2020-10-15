@@ -1,4 +1,8 @@
 // list standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _LIST_
 #define _LIST_
@@ -20,7 +24,7 @@ _STL_DISABLE_CLANG_WARNINGS
 _STD_BEGIN
 // CLASS TEMPLATE _List_unchecked_const_iterator
 template <class _Mylist, class _Base = _Iterator_base0>
-class _List_unchecked_const_iterator : public _Base { // unchecked iterator for nonmutable list
+class _List_unchecked_const_iterator : public _Base {
 public:
     using iterator_category = bidirectional_iterator_tag;
 
@@ -30,11 +34,9 @@ public:
     using pointer         = typename _Mylist::const_pointer;
     using reference       = const value_type&;
 
-    _List_unchecked_const_iterator() : _Ptr() { // construct with null node pointer
-    }
+    _List_unchecked_const_iterator() noexcept : _Ptr() {}
 
-    _List_unchecked_const_iterator(_Nodeptr _Pnode, const _Mylist* _Plist)
-        : _Ptr(_Pnode) { // construct with node pointer _Pnode
+    _List_unchecked_const_iterator(_Nodeptr _Pnode, const _Mylist* _Plist) noexcept : _Ptr(_Pnode) {
         this->_Adopt(_Plist);
     }
 
@@ -81,7 +83,7 @@ public:
 
 // CLASS TEMPLATE _List_unchecked_iterator
 template <class _Mylist>
-class _List_unchecked_iterator : public _List_unchecked_const_iterator<_Mylist> { // unchecked iterator for mutable list
+class _List_unchecked_iterator : public _List_unchecked_const_iterator<_Mylist> {
 public:
     using _Mybase           = _List_unchecked_const_iterator<_Mylist>;
     using iterator_category = bidirectional_iterator_tag;
@@ -92,12 +94,7 @@ public:
     using pointer         = typename _Mylist::pointer;
     using reference       = value_type&;
 
-    _List_unchecked_iterator() { // construct with null node
-    }
-
-    _List_unchecked_iterator(_Nodeptr _Pnode, const _Mylist* _Plist)
-        : _Mybase(_Pnode, _Plist) { // construct with node pointer _Pnode
-    }
+    using _Mybase::_Mybase;
 
     _NODISCARD reference operator*() const {
         return const_cast<reference>(_Mybase::operator*());
@@ -132,8 +129,7 @@ public:
 
 // CLASS TEMPLATE _List_const_iterator
 template <class _Mylist>
-class _List_const_iterator
-    : public _List_unchecked_const_iterator<_Mylist, _Iterator_base> { // iterator for nonmutable list
+class _List_const_iterator : public _List_unchecked_const_iterator<_Mylist, _Iterator_base> {
 public:
     using _Mybase           = _List_unchecked_const_iterator<_Mylist, _Iterator_base>;
     using iterator_category = bidirectional_iterator_tag;
@@ -144,12 +140,7 @@ public:
     using pointer         = typename _Mylist::const_pointer;
     using reference       = const value_type&;
 
-    _List_const_iterator() : _Mybase() { // construct with null node pointer
-    }
-
-    _List_const_iterator(_Nodeptr _Pnode, const _Mylist* _Plist)
-        : _Mybase(_Pnode, _Plist) { // construct with node pointer _Pnode
-    }
+    using _Mybase::_Mybase;
 
     _NODISCARD reference operator*() const {
 #if _ITERATOR_DEBUG_LEVEL == 2
@@ -231,7 +222,7 @@ public:
 
 // CLASS TEMPLATE _List_iterator
 template <class _Mylist>
-class _List_iterator : public _List_const_iterator<_Mylist> { // iterator for mutable list
+class _List_iterator : public _List_const_iterator<_Mylist> {
 public:
     using _Mybase           = _List_const_iterator<_Mylist>;
     using iterator_category = bidirectional_iterator_tag;
@@ -242,12 +233,7 @@ public:
     using pointer         = typename _Mylist::pointer;
     using reference       = value_type&;
 
-    _List_iterator() { // construct with null node
-    }
-
-    _List_iterator(_Nodeptr _Pnode, const _Mylist* _Plist)
-        : _Mybase(_Pnode, _Plist) { // construct with node pointer _Pnode
-    }
+    using _Mybase::_Mybase;
 
     _NODISCARD reference operator*() const {
         return const_cast<reference>(_Mybase::operator*());
@@ -289,7 +275,7 @@ public:
 // list TYPE WRAPPERS
 template <class _Value_type, class _Size_type, class _Difference_type, class _Pointer, class _Const_pointer,
     class _Reference, class _Const_reference, class _Nodeptr_type>
-struct _List_iter_types { // wraps types needed by iterators
+struct _List_iter_types {
     using value_type      = _Value_type;
     using size_type       = _Size_type;
     using difference_type = _Difference_type;
@@ -310,7 +296,7 @@ struct _List_node { // list node
     _List_node& operator=(const _List_node&) = delete;
 
     template <class _Alnode>
-    static _Nodeptr _Buyheadnode(_Alnode& _Al) noexcept {
+    static _Nodeptr _Buyheadnode(_Alnode& _Al) {
         const auto _Result = _Al.allocate(1);
         _Construct_in_place(_Result->_Next, _Result);
         _Construct_in_place(_Result->_Prev, _Result);
@@ -346,14 +332,14 @@ struct _List_node { // list node
 };
 
 template <class _Ty>
-struct _List_simple_types : public _Simple_types<_Ty> { // wraps types needed by iterators
+struct _List_simple_types : _Simple_types<_Ty> {
     using _Node    = _List_node<_Ty, void*>;
     using _Nodeptr = _Node*;
 };
 
 // CLASS TEMPLATE _List_val
 template <class _Val_types>
-class _List_val : public _Container_base { // base class for list to hold data
+class _List_val : public _Container_base {
 public:
     using _Nodeptr = typename _Val_types::_Nodeptr;
 
@@ -365,8 +351,7 @@ public:
     using reference       = value_type&;
     using const_reference = const value_type&;
 
-    _List_val() : _Myhead(), _Mysize(0) { // initialize data
-    }
+    _List_val() noexcept : _Myhead(), _Mysize(0) {} // initialize data
 
     void _Orphan_ptr2(_Nodeptr _Ptr) noexcept { // orphan iterators with specified node pointers
 #if _ITERATOR_DEBUG_LEVEL == 2
@@ -406,7 +391,7 @@ public:
 #endif // _ITERATOR_DEBUG_LEVEL == 2
     }
 
-    _Nodeptr _Unlinknode(_Nodeptr _Pnode) { // unlink node at _Where from the list
+    _Nodeptr _Unlinknode(_Nodeptr _Pnode) noexcept { // unlink node at _Where from the list
         _Orphan_ptr2(_Pnode);
         _Pnode->_Prev->_Next = _Pnode->_Next;
         _Pnode->_Next->_Prev = _Pnode->_Prev;
@@ -524,12 +509,73 @@ public:
         return _Last;
     }
 
+    template <class _Pr2>
+    static _Nodeptr _Merge_same(_Nodeptr _First, _Nodeptr _Mid, const _Nodeptr _Last, _Pr2 _Pred) {
+        // Merge the sorted ranges [_First, _Mid) and [_Mid, _Last)
+        // Returns the new beginning of the range (which won't be _First if it was spliced elsewhere)
+        _STL_INTERNAL_CHECK(_First != _Mid && _Mid != _Last);
+        _Nodeptr _Newfirst;
+        if (_DEBUG_LT_PRED(_Pred, _Mid->_Myval, _First->_Myval)) {
+            // _Mid will be spliced to the front of the range
+            _Newfirst = _Mid;
+        } else {
+            // Establish _Pred(_Mid->_Myval, _First->_Myval) by skipping over elements from the first
+            // range already in position.
+            _Newfirst = _First;
+            do {
+                _First = _First->_Next;
+                if (_First == _Mid) {
+                    return _Newfirst;
+                }
+            } while (!_DEBUG_LT_PRED(_Pred, _Mid->_Myval, _First->_Myval));
+        }
+
+        for (;;) { // process one run splice
+            auto _Run_start = _Mid;
+            do { // find the end of the "run" of elements we need to splice from the second range into the first
+                _Mid = _Mid->_Next;
+            } while (_Mid != _Last && _DEBUG_LT_PRED(_Pred, _Mid->_Myval, _First->_Myval));
+
+            // [_Run_start, _Mid) goes before _First->_Myval
+            _Unchecked_splice(_First, _Run_start, _Mid);
+            if (_Mid == _Last) {
+                return _Newfirst;
+            }
+
+            // Reestablish _Pred(_Mid->_Myval, _First->_Myval) by skipping over elements from the first
+            // range already in position.
+            do {
+                _First = _First->_Next;
+                if (_First == _Mid) {
+                    return _Newfirst;
+                }
+            } while (!_DEBUG_LT_PRED(_Pred, _Mid->_Myval, _First->_Myval));
+        }
+    }
+
+    template <class _Pr2>
+    static _Nodeptr _Sort(_Nodeptr& _First, const size_type _Size, _Pr2 _Pred) {
+        // order [_First, _Last), using _Pred, return _First + _Size
+        switch (_Size) {
+        case 0:
+            return _First;
+        case 1:
+            return _First->_Next;
+        default:
+            break;
+        }
+
+        auto _Mid        = _Sort(_First, _Size / 2, _Pred);
+        const auto _Last = _Sort(_Mid, _Size - _Size / 2, _Pred);
+        _First           = _Merge_same(_First, _Mid, _Last, _Pred);
+        return _Last;
+    }
+
     _Nodeptr _Myhead; // pointer to head node
     size_type _Mysize; // number of elements
 };
 
 // STRUCT TEMPLATE _List_node_emplace_op2
-// _List_node_emplace_op is an ABI zombie name
 template <class _Alnode>
 struct _List_node_emplace_op2 : _Alloc_construct_ptr<_Alnode> {
     using _Alnode_traits = allocator_traits<_Alnode>;
@@ -562,25 +608,37 @@ struct _List_node_emplace_op2 : _Alloc_construct_ptr<_Alnode> {
     }
 };
 
-// STRUCT TEMPLATE _List_node_insert_op
+// STRUCT TEMPLATE _List_node_insert_op2
 template <class _Alnode>
-struct _List_node_insert_op {
+struct _List_node_insert_op2 {
     // list insert operation which maintains exception safety
     using _Alnode_traits = allocator_traits<_Alnode>;
     using pointer        = typename _Alnode_traits::pointer;
     using size_type      = typename _Alnode_traits::size_type;
     using value_type     = typename _Alnode_traits::value_type;
 
-    explicit _List_node_insert_op(_Alnode& _Al_)
-        : _Al(_Al_), _Tail(pointer_traits<pointer>::pointer_to(_Base)), _Added(0) {}
+    explicit _List_node_insert_op2(_Alnode& _Al_) : _Al(_Al_), _Added(0) {}
 
-    _List_node_insert_op(const _List_node_insert_op&) = delete;
-    _List_node_insert_op& operator=(const _List_node_insert_op&) = delete;
+    _List_node_insert_op2(const _List_node_insert_op2&) = delete;
+    _List_node_insert_op2& operator=(const _List_node_insert_op2&) = delete;
 
     template <class... _CArgT>
     void _Append_n(size_type _Count, const _CArgT&... _Carg) {
-        // Append _Count Ts constructed from _Carg to this insert operation.
+        // Append _Count elements constructed from _Carg
+        if (_Count <= 0) {
+            return;
+        }
+
         _Alloc_construct_ptr<_Alnode> _Newnode(_Al);
+        if (_Added == 0) {
+            _Newnode._Allocate(); // throws
+            _Alnode_traits::construct(_Al, _STD addressof(_Newnode._Ptr->_Myval), _Carg...); // throws
+            _Head = _Newnode._Ptr;
+            _Tail = _Newnode._Ptr;
+            ++_Added;
+            --_Count;
+        }
+
         for (; 0 < _Count; --_Count) {
             _Newnode._Allocate(); // throws
             _Alnode_traits::construct(_Al, _STD addressof(_Newnode._Ptr->_Myval), _Carg...); // throws
@@ -595,92 +653,102 @@ struct _List_node_insert_op {
 
     template <class _InIt, class _Sentinel>
     void _Append_range_unchecked(_InIt _First, const _Sentinel _Last) {
-        // Append new elements constructed from [_First, _Last) to this insert operation.
+        // Append the values in [_First, _Last)
+        if (_First == _Last) { // throws
+            return;
+        }
+
         _Alloc_construct_ptr<_Alnode> _Newnode(_Al);
-        for (; _First != _Last; ++_First) {
+        if (_Added == 0) {
+            _Newnode._Allocate(); // throws
+            _Alnode_traits::construct(_Al, _STD addressof(_Newnode._Ptr->_Myval), *_First); // throws
+            const auto _Newhead = _STD exchange(_Newnode._Ptr, pointer{});
+            _Head               = _Newhead;
+            _Tail               = _Newhead;
+            ++_Added;
+            ++_First; // throws
+        }
+
+        while (_First != _Last) { // throws
             _Newnode._Allocate(); // throws
             _Alnode_traits::construct(_Al, _STD addressof(_Newnode._Ptr->_Myval), *_First); // throws
             _Construct_in_place(_Tail->_Next, _Newnode._Ptr);
             _Construct_in_place(_Newnode._Ptr->_Prev, _Tail);
-            _Tail = _Newnode._Ptr;
+            _Tail = _STD exchange(_Newnode._Ptr, pointer{});
             ++_Added;
+            ++_First; // throws
         }
-
-        _Newnode._Ptr = pointer{};
     }
 
     template <class _Val_types>
-    pointer _Attach_before(_List_val<_Val_types>& _My_data, const pointer _Insert_before) noexcept {
-        // Attach the elements in this insert operation before _Insert_before.
-        // If no elements were inserted, returns _Insert_before; otherwise returns a pointer
-        // to the first inserted list node.
-        // Resets *this to be empty.
-        if (_Added == 0) {
+    pointer _Attach_before(_List_val<_Val_types>& _List_data, const pointer _Insert_before) noexcept {
+        // Attach the elements in *this before _Insert_before.
+        // If *this is empty, returns _Insert_before; otherwise returns a pointer to the first inserted list node.
+        // Resets *this to the default-initialized state.
+
+        const auto _Local_added = _Added;
+        if (_Local_added == 0) {
             return _Insert_before;
         }
 
-        _My_data._Mysize += _STD exchange(_Added, size_type{0});
+        const auto _Local_head   = _Head;
+        const auto _Local_tail   = _Tail;
+        const auto _Insert_after = _Insert_before->_Prev;
 
-        _Construct_in_place(_Tail->_Next, _Insert_before); // assumed nothrow
-        const auto _Insert_after = _STD exchange(_Insert_before->_Prev, _Tail);
+        _Construct_in_place(_Local_head->_Prev, _Insert_after);
+        _Insert_after->_Next = _Local_head;
+        _Construct_in_place(_Local_tail->_Next, _Insert_before);
+        _Insert_before->_Prev = _Local_tail;
 
-        const auto _First_inserted = _Base._Next;
-        _Insert_after->_Next       = _First_inserted;
-        _First_inserted->_Prev     = _Insert_after;
-
-        _Destroy_in_place(_Base._Next);
-        _Tail = pointer_traits<pointer>::pointer_to(_Base);
-        return _First_inserted;
+        _List_data._Mysize += _Local_added;
+        _Added = 0;
+        return _Local_head;
     }
 
     template <class _Val_types>
-    void _Attach_at_end(_List_val<_Val_types>& _My_data) noexcept {
-        _Attach_before(_My_data, _My_data._Myhead);
+    void _Attach_at_end(_List_val<_Val_types>& _List_data) noexcept {
+        _Attach_before(_List_data, _List_data._Myhead);
     }
 
     template <class _Val_types>
-    void _Attach_head(_List_val<_Val_types>& _My_data) {
+    void _Attach_head(_List_val<_Val_types>& _List_data) {
         _Alloc_construct_ptr<_Alnode> _Newnode(_Al);
-        _Newnode._Allocate(); // throws, assumed nothrow hereafter
-        if (_Added == 0) {
+        _Newnode._Allocate(); // throws
+        const auto _Local_added = _STD exchange(_Added, size_type{0});
+        if (_Local_added == 0) {
             _Construct_in_place(_Newnode._Ptr->_Next, _Newnode._Ptr);
             _Construct_in_place(_Newnode._Ptr->_Prev, _Newnode._Ptr);
-            _My_data._Mysize = 0;
         } else {
-            _Construct_in_place(_Newnode._Ptr->_Next, _Base._Next);
-            _Construct_in_place(_Newnode._Ptr->_Prev, _Tail);
-            _Base._Next->_Prev = _Newnode._Ptr;
-            _Tail->_Next       = _Newnode._Ptr;
-            _My_data._Mysize   = _STD exchange(_Added, size_type{0});
-            _Destroy_in_place(_Tail->_Next);
-            _Tail = pointer_traits<pointer>::pointer_to(_Base);
+            const auto _Local_head = _Head;
+            const auto _Local_tail = _Tail;
+            _Construct_in_place(_Newnode._Ptr->_Next, _Local_head);
+            _Construct_in_place(_Newnode._Ptr->_Prev, _Local_tail);
+            _Construct_in_place(_Local_head->_Prev, _Newnode._Ptr);
+            _Construct_in_place(_Local_tail->_Next, _Newnode._Ptr);
         }
 
-        _My_data._Myhead = _Newnode._Release();
+        _List_data._Mysize = _Local_added;
+        _List_data._Myhead = _Newnode._Release();
     }
 
-    ~_List_node_insert_op() {
+    ~_List_node_insert_op2() {
         if (_Added == 0) {
             return;
         }
 
-        _Construct_in_place(_Tail->_Next, nullptr);
-        pointer _Subject = _Base._Next;
+        _Construct_in_place(_Head->_Prev, pointer{});
+        _Construct_in_place(_Tail->_Next, pointer{});
+        pointer _Subject = _Head;
         while (_Subject) {
             value_type::_Freenode(_Al, _STD exchange(_Subject, _Subject->_Next));
         }
-
-        _Destroy_in_place(_Base._Next);
     }
 
 private:
     _Alnode& _Al;
+    size_type _Added; // if 0, the values of _Head and _Tail are indeterminate
     pointer _Tail; // points to the most recently appended element; it doesn't have _Next constructed
-    size_type _Added;
-    union {
-        value_type _Base; // only ever uses _Next, other members not constructed
-                          // _Next points to the first appended element
-    };
+    pointer _Head; // points to the first appended element; it doesn't have _Prev constructed
 };
 
 template <class _Traits>
@@ -733,24 +801,24 @@ public:
     using reverse_iterator       = _STD reverse_iterator<iterator>;
     using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
 
-    list() : _Mypair(_Zero_then_variadic_args_t()) { // construct empty list
+    list() : _Mypair(_Zero_then_variadic_args_t{}) {
         _Alloc_sentinel_and_proxy();
     }
 
-    explicit list(const _Alloc& _Al) : _Mypair(_One_then_variadic_args_t(), _Al) { // construct empty list, allocator
+    explicit list(const _Alloc& _Al) : _Mypair(_One_then_variadic_args_t{}, _Al) {
         _Alloc_sentinel_and_proxy();
     }
 
 private:
     template <class _Any_alloc>
-    explicit list(_Move_allocator_tag, _Any_alloc& _Al) : _Mypair(_One_then_variadic_args_t(), _STD move(_Al)) {
+    explicit list(_Move_allocator_tag, _Any_alloc& _Al) : _Mypair(_One_then_variadic_args_t{}, _STD move(_Al)) {
         _Alloc_sentinel_and_proxy();
     }
 
     void _Construct_n(_CRT_GUARDOVERFLOW size_type _Count) {
         auto&& _Alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
         _Container_proxy_ptr<_Alty> _Proxy(_Alproxy, _Mypair._Myval2);
-        _List_node_insert_op<_Alnode> _Appended(_Getal());
+        _List_node_insert_op2<_Alnode> _Appended(_Getal());
         _Appended._Append_n(_Count);
         _Appended._Attach_head(_Mypair._Myval2);
         _Proxy._Release();
@@ -758,12 +826,12 @@ private:
 
 public:
     explicit list(_CRT_GUARDOVERFLOW size_type _Count)
-        : _Mypair(_Zero_then_variadic_args_t()) { // construct list from _Count * _Ty()
+        : _Mypair(_Zero_then_variadic_args_t{}) { // construct list from _Count * _Ty()
         _Construct_n(_Count);
     }
 
     explicit list(_CRT_GUARDOVERFLOW size_type _Count, const _Alloc& _Al)
-        : _Mypair(_One_then_variadic_args_t(), _Al) { // construct list from _Count * _Ty(), with allocator
+        : _Mypair(_One_then_variadic_args_t{}, _Al) { // construct list from _Count * _Ty(), with allocator
         _Construct_n(_Count);
     }
 
@@ -771,7 +839,7 @@ private:
     void _Construct_n(_CRT_GUARDOVERFLOW size_type _Count, const _Ty& _Val) {
         auto&& _Alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
         _Container_proxy_ptr<_Alty> _Proxy(_Alproxy, _Mypair._Myval2);
-        _List_node_insert_op<_Alnode> _Appended(_Getal());
+        _List_node_insert_op2<_Alnode> _Appended(_Getal());
         _Appended._Append_n(_Count, _Val);
         _Appended._Attach_head(_Mypair._Myval2);
         _Proxy._Release();
@@ -779,12 +847,12 @@ private:
 
 public:
     list(_CRT_GUARDOVERFLOW size_type _Count, const _Ty& _Val)
-        : _Mypair(_Zero_then_variadic_args_t()) { // construct list from _Count * _Val
+        : _Mypair(_Zero_then_variadic_args_t{}) { // construct list from _Count * _Val
         _Construct_n(_Count, _Val);
     }
 
     list(_CRT_GUARDOVERFLOW size_type _Count, const _Ty& _Val, const _Alloc& _Al)
-        : _Mypair(_One_then_variadic_args_t(), _Al) { // construct list from _Count * _Val, allocator
+        : _Mypair(_One_then_variadic_args_t{}, _Al) { // construct list from _Count * _Val, allocator
         _Construct_n(_Count, _Val);
     }
 
@@ -793,7 +861,7 @@ private:
     void _Construct_range_unchecked(_Iter _First, _Iter _Last) {
         auto&& _Alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
         _Container_proxy_ptr<_Alty> _Proxy(_Alproxy, _Mypair._Myval2);
-        _List_node_insert_op<_Alnode> _Appended(_Getal());
+        _List_node_insert_op2<_Alnode> _Appended(_Getal());
         _Appended._Append_range_unchecked(_First, _Last);
         _Appended._Attach_head(_Mypair._Myval2);
         _Proxy._Release();
@@ -801,45 +869,39 @@ private:
 
 public:
     list(const list& _Right)
-        : _Mypair(_One_then_variadic_args_t(), _Alnode_traits::select_on_container_copy_construction(
-                                                   _Right._Getal())) { // construct list by copying _Right
+        : _Mypair(_One_then_variadic_args_t{}, _Alnode_traits::select_on_container_copy_construction(_Right._Getal())) {
         _Construct_range_unchecked(_Right._Unchecked_begin(), _Right._Unchecked_end());
     }
 
-    list(const list& _Right, const _Alloc& _Al)
-        : _Mypair(_One_then_variadic_args_t(), _Al) { // construct list by copying _Right, allocator
+    list(const list& _Right, const _Alloc& _Al) : _Mypair(_One_then_variadic_args_t{}, _Al) {
         _Construct_range_unchecked(_Right._Unchecked_begin(), _Right._Unchecked_end());
     }
 
-    template <class _Iter, class = enable_if_t<_Is_iterator_v<_Iter>>>
-    list(_Iter _First, _Iter _Last) : _Mypair(_Zero_then_variadic_args_t()) { // construct list from [_First, _Last)
+    template <class _Iter, enable_if_t<_Is_iterator_v<_Iter>, int> = 0>
+    list(_Iter _First, _Iter _Last) : _Mypair(_Zero_then_variadic_args_t{}) {
         _Adl_verify_range(_First, _Last);
         _Construct_range_unchecked(_Get_unwrapped(_First), _Get_unwrapped(_Last));
     }
 
-    template <class _Iter, class = enable_if_t<_Is_iterator_v<_Iter>>>
-    list(_Iter _First, _Iter _Last, const _Alloc& _Al)
-        : _Mypair(_One_then_variadic_args_t(), _Al) { // construct list, allocator from [_First, _Last)
+    template <class _Iter, enable_if_t<_Is_iterator_v<_Iter>, int> = 0>
+    list(_Iter _First, _Iter _Last, const _Alloc& _Al) : _Mypair(_One_then_variadic_args_t{}, _Al) {
         _Adl_verify_range(_First, _Last);
         _Construct_range_unchecked(_Get_unwrapped(_First), _Get_unwrapped(_Last));
     }
 
-    list(list&& _Right)
-        : _Mypair(_One_then_variadic_args_t(), _STD move(_Right._Getal())) { // construct list by moving _Right
+    list(list&& _Right) : _Mypair(_One_then_variadic_args_t{}, _STD move(_Right._Getal())) {
         _Alloc_sentinel_and_proxy();
         _Swap_val(_Right);
     }
 
-    list(list&& _Right, const _Alloc& _Al)
-        : _Mypair(_One_then_variadic_args_t(), _Al) { // construct list by moving _Right, allocator
-        if
-            _CONSTEXPR_IF(!_Alnode_traits::is_always_equal::value) {
-                if (_Getal() != _Right._Getal()) {
-                    _Construct_range_unchecked(_STD make_move_iterator(_Right._Unchecked_begin()),
-                        _STD make_move_iterator(_Right._Unchecked_end()));
-                    return;
-                }
+    list(list&& _Right, const _Alloc& _Al) : _Mypair(_One_then_variadic_args_t{}, _Al) {
+        if _CONSTEXPR_IF (!_Alnode_traits::is_always_equal::value) {
+            if (_Getal() != _Right._Getal()) {
+                _Construct_range_unchecked(_STD make_move_iterator(_Right._Unchecked_begin()),
+                    _STD make_move_iterator(_Right._Unchecked_end()));
+                return;
             }
+        }
 
         _Alloc_sentinel_and_proxy();
         _Swap_val(_Right);
@@ -884,9 +946,9 @@ private:
     }
 
 public:
-    list& operator=(list&& _Right)
-        _NOEXCEPT_COND(noexcept(_Move_assign(_Right, _Choose_pocma<_Alnode>{}))) { // partially strengthened
-        if (this != _STD addressof(_Right)) { // different, assign it
+    list& operator=(list&& _Right) noexcept(
+        noexcept(_Move_assign(_Right, _Choose_pocma<_Alnode>{}))) /* strengthened */ {
+        if (this != _STD addressof(_Right)) {
             _Move_assign(_Right, _Choose_pocma<_Alnode>{});
         }
 
@@ -950,7 +1012,7 @@ public:
     _Nodeptr _Emplace(const _Nodeptr _Where, _Valty&&... _Val) { // insert element at _Where
         size_type& _Mysize = _Mypair._Myval2._Mysize;
         if (_Mysize == max_size()) {
-            _Xlength_error("list<T> too long");
+            _Xlength_error("list too long");
         }
 
         _List_node_emplace_op2<_Alnode> _Op{_Getal(), _STD forward<_Valty>(_Val)...};
@@ -958,21 +1020,20 @@ public:
         return _Op._Transfer_before(_Where);
     }
 
-    list(initializer_list<_Ty> _Ilist) : _Mypair(_Zero_then_variadic_args_t()) { // construct from initializer_list
+    list(initializer_list<_Ty> _Ilist) : _Mypair(_Zero_then_variadic_args_t{}) {
         _Construct_range_unchecked(_Ilist.begin(), _Ilist.end());
     }
 
-    list(initializer_list<_Ty> _Ilist, const _Alloc& _Al)
-        : _Mypair(_One_then_variadic_args_t(), _Al) { // construct from initializer_list, allocator
+    list(initializer_list<_Ty> _Ilist, const _Alloc& _Al) : _Mypair(_One_then_variadic_args_t{}, _Al) {
         _Construct_range_unchecked(_Ilist.begin(), _Ilist.end());
     }
 
-    list& operator=(initializer_list<_Ty> _Ilist) { // assign initializer_list
+    list& operator=(initializer_list<_Ty> _Ilist) {
         assign(_Ilist.begin(), _Ilist.end());
         return *this;
     }
 
-    void assign(initializer_list<_Ty> _Ilist) { // assign initializer_list
+    void assign(initializer_list<_Ty> _Ilist) {
         assign(_Ilist.begin(), _Ilist.end());
     }
 
@@ -986,7 +1047,7 @@ public:
 #if _ITERATOR_DEBUG_LEVEL != 0 // TRANSITION, ABI
         auto&& _Alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
         _Delete_plain_internal(_Alproxy, _Mypair._Myval2._Myproxy);
-#endif /* _ITERATOR_DEBUG_LEVEL != 0 */
+#endif // _ITERATOR_DEBUG_LEVEL != 0
     }
 
 private:
@@ -1019,93 +1080,90 @@ private:
     }
 
 public:
-    list& operator=(const list& _Right) { // assign _Right
-        if (this != _STD addressof(_Right)) { // different, assign it
+    list& operator=(const list& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Copy_assign(_Right, _Choose_pocca<_Alnode>{});
         }
 
         return *this;
     }
 
-    _NODISCARD iterator begin() noexcept { // return iterator for beginning of mutable sequence
+    _NODISCARD iterator begin() noexcept {
         return iterator(_Mypair._Myval2._Myhead->_Next, _STD addressof(_Mypair._Myval2));
     }
 
-    _NODISCARD const_iterator begin() const noexcept { // return iterator for beginning of nonmutable sequence
+    _NODISCARD const_iterator begin() const noexcept {
         return const_iterator(_Mypair._Myval2._Myhead->_Next, _STD addressof(_Mypair._Myval2));
     }
 
-    _NODISCARD iterator end() noexcept { // return iterator for end of mutable sequence
+    _NODISCARD iterator end() noexcept {
         return iterator(_Mypair._Myval2._Myhead, _STD addressof(_Mypair._Myval2));
     }
 
-    _NODISCARD const_iterator end() const noexcept { // return iterator for end of nonmutable sequence
+    _NODISCARD const_iterator end() const noexcept {
         return const_iterator(_Mypair._Myval2._Myhead, _STD addressof(_Mypair._Myval2));
     }
 
-    _Unchecked_iterator _Unchecked_begin() { // return iterator for beginning of mutable sequence
+    _Unchecked_iterator _Unchecked_begin() noexcept {
         return _Unchecked_iterator(_Mypair._Myval2._Myhead->_Next, nullptr);
     }
 
-    _Unchecked_const_iterator _Unchecked_begin() const { // return iterator for beginning of nonmutable sequence
+    _Unchecked_const_iterator _Unchecked_begin() const noexcept {
         return _Unchecked_const_iterator(_Mypair._Myval2._Myhead->_Next, nullptr);
     }
 
-    _Unchecked_iterator _Unchecked_end() { // return unchecked iterator for end of mutable sequence
+    _Unchecked_iterator _Unchecked_end() noexcept {
         return _Unchecked_iterator(_Mypair._Myval2._Myhead, nullptr);
     }
 
-    _Unchecked_const_iterator _Unchecked_end() const { // return unchecked iterator for end of nonmutable sequence
+    _Unchecked_const_iterator _Unchecked_end() const noexcept {
         return _Unchecked_const_iterator(_Mypair._Myval2._Myhead, nullptr);
     }
 
-    iterator _Make_iter(_Nodeptr _Where) const { // make iterator from node pointer
+    iterator _Make_iter(_Nodeptr _Where) const noexcept {
         return iterator(_Where, _STD addressof(_Mypair._Myval2));
     }
 
-    const_iterator _Make_const_iter(_Nodeptr _Where) const { // make const_iterator from node pointer
+    const_iterator _Make_const_iter(_Nodeptr _Where) const noexcept {
         return const_iterator(_Where, _STD addressof(_Mypair._Myval2));
     }
 
-    _NODISCARD reverse_iterator rbegin() noexcept { // return iterator for beginning of reversed mutable sequence
+    _NODISCARD reverse_iterator rbegin() noexcept {
         return reverse_iterator(end());
     }
 
-    _NODISCARD const_reverse_iterator rbegin() const
-        noexcept { // return iterator for beginning of reversed nonmutable sequence
+    _NODISCARD const_reverse_iterator rbegin() const noexcept {
         return const_reverse_iterator(end());
     }
 
-    _NODISCARD reverse_iterator rend() noexcept { // return iterator for end of reversed mutable sequence
+    _NODISCARD reverse_iterator rend() noexcept {
         return reverse_iterator(begin());
     }
 
-    _NODISCARD const_reverse_iterator rend() const noexcept { // return iterator for end of reversed nonmutable sequence
+    _NODISCARD const_reverse_iterator rend() const noexcept {
         return const_reverse_iterator(begin());
     }
 
-    _NODISCARD const_iterator cbegin() const noexcept { // return iterator for beginning of nonmutable sequence
+    _NODISCARD const_iterator cbegin() const noexcept {
         return begin();
     }
 
-    _NODISCARD const_iterator cend() const noexcept { // return iterator for end of nonmutable sequence
+    _NODISCARD const_iterator cend() const noexcept {
         return end();
     }
 
-    _NODISCARD const_reverse_iterator crbegin() const
-        noexcept { // return iterator for beginning of reversed nonmutable sequence
+    _NODISCARD const_reverse_iterator crbegin() const noexcept {
         return rbegin();
     }
 
-    _NODISCARD const_reverse_iterator crend() const
-        noexcept { // return iterator for end of reversed nonmutable sequence
+    _NODISCARD const_reverse_iterator crend() const noexcept {
         return rend();
     }
 
     void resize(_CRT_GUARDOVERFLOW size_type _Newsize) { // determine new length, padding with _Ty() elements as needed
         auto& _My_data = _Mypair._Myval2;
         if (_My_data._Mysize < _Newsize) { // pad to make larger
-            _List_node_insert_op<_Alnode> _Op(_Getal());
+            _List_node_insert_op2<_Alnode> _Op(_Getal());
             _Op._Append_n(_Newsize - _My_data._Mysize);
             _Op._Attach_at_end(_My_data);
         } else {
@@ -1119,7 +1177,7 @@ public:
         // determine new length, padding with _Val elements as needed
         auto& _My_data = _Mypair._Myval2;
         if (_My_data._Mysize < _Newsize) { // pad to make larger
-            _List_node_insert_op<_Alnode> _Op(_Getal());
+            _List_node_insert_op2<_Alnode> _Op(_Getal());
             _Op._Append_n(_Newsize - _My_data._Mysize, _Val);
             _Op._Attach_at_end(_My_data);
         } else {
@@ -1129,58 +1187,74 @@ public:
         }
     }
 
-    _NODISCARD size_type size() const noexcept { // return length of sequence
+    _NODISCARD size_type size() const noexcept {
         return _Mypair._Myval2._Mysize;
     }
 
-    _NODISCARD size_type max_size() const noexcept { // return maximum possible length of sequence
-        return _Min_value(
+    _NODISCARD size_type max_size() const noexcept {
+        return (_STD min)(
             static_cast<size_type>((numeric_limits<difference_type>::max)()), _Alnode_traits::max_size(_Getal()));
     }
 
-    _NODISCARD bool empty() const noexcept { // test if sequence is empty
+    _NODISCARD bool empty() const noexcept {
         return _Mypair._Myval2._Mysize == 0;
     }
 
-    _NODISCARD allocator_type get_allocator() const noexcept { // return allocator object for values
+    _NODISCARD allocator_type get_allocator() const noexcept {
         return static_cast<allocator_type>(_Getal());
     }
 
-    _NODISCARD reference front() {
-        return *begin();
+    _NODISCARD reference front() noexcept /* strengthened */ {
+#if _CONTAINER_DEBUG_LEVEL > 0
+        _STL_VERIFY(_Mypair._Myval2._Mysize != 0, "front() called on empty list");
+#endif // _CONTAINER_DEBUG_LEVEL > 0
+
+        return _Mypair._Myval2._Myhead->_Next->_Myval;
     }
 
-    _NODISCARD const_reference front() const {
-        return *begin();
+    _NODISCARD const_reference front() const noexcept /* strengthened */ {
+#if _CONTAINER_DEBUG_LEVEL > 0
+        _STL_VERIFY(_Mypair._Myval2._Mysize != 0, "front() called on empty list");
+#endif // _CONTAINER_DEBUG_LEVEL > 0
+
+        return _Mypair._Myval2._Myhead->_Next->_Myval;
     }
 
-    _NODISCARD reference back() {
-        return *(--end());
+    _NODISCARD reference back() noexcept /* strengthened */ {
+#if _CONTAINER_DEBUG_LEVEL > 0
+        _STL_VERIFY(_Mypair._Myval2._Mysize != 0, "back() called on empty list");
+#endif // _CONTAINER_DEBUG_LEVEL > 0
+
+        return _Mypair._Myval2._Myhead->_Prev->_Myval;
     }
 
-    _NODISCARD const_reference back() const {
-        return *(--end());
+    _NODISCARD const_reference back() const noexcept /* strengthened */ {
+#if _CONTAINER_DEBUG_LEVEL > 0
+        _STL_VERIFY(_Mypair._Myval2._Mysize != 0, "back() called on empty list");
+#endif // _CONTAINER_DEBUG_LEVEL > 0
+
+        return _Mypair._Myval2._Myhead->_Prev->_Myval;
     }
 
-    void push_front(const _Ty& _Val) { // insert element at beginning
+    void push_front(const _Ty& _Val) {
         _Emplace(_Mypair._Myval2._Myhead->_Next, _Val);
     }
 
-    void pop_front() { // erase element at beginning
+    void pop_front() noexcept /* strengthened */ {
 #if _CONTAINER_DEBUG_LEVEL > 0
-        _STL_VERIFY(_Mypair._Myval2._Mysize != 0, "pop_front called on empty list<T>");
+        _STL_VERIFY(_Mypair._Myval2._Mysize != 0, "pop_front called on empty list");
 #endif // _CONTAINER_DEBUG_LEVEL > 0
 
         _Unchecked_erase(_Mypair._Myval2._Myhead->_Next);
     }
 
-    void push_back(const _Ty& _Val) { // insert element at end
+    void push_back(const _Ty& _Val) {
         _Emplace(_Mypair._Myval2._Myhead, _Val);
     }
 
-    void pop_back() { // erase element at end
+    void pop_back() noexcept /* strengthened */ {
 #if _CONTAINER_DEBUG_LEVEL > 0
-        _STL_VERIFY(_Mypair._Myval2._Mysize != 0, "pop_back called on empty list<T>");
+        _STL_VERIFY(_Mypair._Myval2._Mysize != 0, "pop_back called on empty list");
 #endif // _CONTAINER_DEBUG_LEVEL > 0
 
         _Unchecked_erase(_Mypair._Myval2._Myhead->_Prev);
@@ -1194,7 +1268,7 @@ private:
         auto _Old         = _Myend->_Next;
         for (;;) { // attempt to reuse a node
             if (_Old == _Myend) { // no more nodes to reuse, append the rest
-                _List_node_insert_op<_Alnode> _Op(_Getal());
+                _List_node_insert_op2<_Alnode> _Op(_Getal());
                 _Op._Append_range_unchecked(_UFirst, _ULast);
                 _Op._Attach_at_end(_Mypair._Myval2);
                 return;
@@ -1214,16 +1288,33 @@ private:
     }
 
 public:
-    template <class _Iter, class = enable_if_t<_Is_iterator_v<_Iter>>>
-    void assign(_Iter _First, _Iter _Last) { // assign [_First, _Last)
+    template <class _Iter, enable_if_t<_Is_iterator_v<_Iter>, int> = 0>
+    void assign(_Iter _First, _Iter _Last) {
         _Assign_cast<reference>(_Get_unwrapped(_First), _Get_unwrapped(_Last));
     }
 
     void assign(_CRT_GUARDOVERFLOW size_type _Count, const _Ty& _Val) { // assign _Count * _Val
-        clear();
-        _List_node_insert_op<_Alnode> _Op(_Getal());
-        _Op._Append_n(_Count, _Val);
-        _Op._Attach_at_end(_Mypair._Myval2);
+        const auto _Myend = _Mypair._Myval2._Myhead;
+        auto _Old         = _Myend->_Next;
+        for (;;) { // attempt to reuse a node
+            if (_Old == _Myend) { // no more nodes to reuse, append the rest
+                _List_node_insert_op2<_Alnode> _Op(_Getal());
+                _Op._Append_n(_Count, _Val);
+                _Op._Attach_at_end(_Mypair._Myval2);
+                return;
+            }
+
+            if (_Count == 0) {
+                // input sequence was shorter than existing list, destroy and deallocate what's left
+                _Unchecked_erase(_Old, _Myend);
+                return;
+            }
+
+            // reuse the node
+            _Old->_Myval = _Val;
+            _Old         = _Old->_Next;
+            --_Count;
+        }
     }
 
     iterator insert(const_iterator _Where, const _Ty& _Val) { // insert _Val at _Where
@@ -1238,24 +1329,24 @@ public:
 #if _ITERATOR_DEBUG_LEVEL == 2
         _STL_VERIFY(_Where._Getcont() == _STD addressof(_Mypair._Myval2), "list insert iterator outside range");
 #endif // _ITERATOR_DEBUG_LEVEL == 2
-        _List_node_insert_op<_Alnode> _Op(_Getal());
+        _List_node_insert_op2<_Alnode> _Op(_Getal());
         _Op._Append_n(_Count, _Val);
         return _Make_iter(_Op._Attach_before(_Mypair._Myval2, _Where._Ptr));
     }
 
-    template <class _Iter, class = enable_if_t<_Is_iterator_v<_Iter>>>
+    template <class _Iter, enable_if_t<_Is_iterator_v<_Iter>, int> = 0>
     iterator insert(const const_iterator _Where, _Iter _First, _Iter _Last) { // insert [_First, _Last) before _Where
 #if _ITERATOR_DEBUG_LEVEL == 2
         _STL_VERIFY(_Where._Getcont() == _STD addressof(_Mypair._Myval2), "list insert iterator outside range");
 #endif // _ITERATOR_DEBUG_LEVEL == 2
         _Adl_verify_range(_First, _Last);
-        _List_node_insert_op<_Alnode> _Op(_Getal());
+        _List_node_insert_op2<_Alnode> _Op(_Getal());
         _Op._Append_range_unchecked(_Get_unwrapped(_First), _Get_unwrapped(_Last));
         return _Make_iter(_Op._Attach_before(_Mypair._Myval2, _Where._Ptr));
     }
 
 public:
-    iterator erase(const const_iterator _Where) { // erase element at _Where
+    iterator erase(const const_iterator _Where) noexcept /* strengthened */ {
 #if _ITERATOR_DEBUG_LEVEL == 2
         _STL_VERIFY(_Where._Getcont() == _STD addressof(_Mypair._Myval2), "list erase iterator outside range");
 #endif // _ITERATOR_DEBUG_LEVEL == 2
@@ -1265,34 +1356,70 @@ public:
     }
 
 private:
-    _Nodeptr _Unchecked_erase(const _Nodeptr _Pnode) { // erase element at _Pnode
-        const auto _Result   = _Pnode->_Next;
+    _Nodeptr _Unchecked_erase(const _Nodeptr _Pnode) noexcept { // erase element at _Pnode
+        const auto _Result = _Pnode->_Next;
+        _Mypair._Myval2._Orphan_ptr2(_Pnode);
+        --_Mypair._Myval2._Mysize;
         _Pnode->_Prev->_Next = _Result;
         _Result->_Prev       = _Pnode->_Prev;
         _Node::_Freenode(_Getal(), _Pnode);
-        --_Mypair._Myval2._Mysize;
         return _Result;
     }
 
 public:
-    iterator erase(const const_iterator _First, const const_iterator _Last) { // erase [_First, _Last)
+    iterator erase(const const_iterator _First, const const_iterator _Last) noexcept /* strengthened */ {
         _Adl_verify_range(_First, _Last);
         return _Make_iter(_Unchecked_erase(_First._Ptr, _Last._Ptr));
     }
 
 private:
-    _Nodeptr _Unchecked_erase(_Nodeptr _First, const _Nodeptr _Last) { // erase [_First, _Last)
-        const auto _Head = _Mypair._Myval2._Myhead;
-        if (_First == _Head->_Next && _Last == _Head) { // erase all and return fresh iterator
-            clear();
-            return _Head;
-        } else { // erase subrange
-            while (_First != _Last) {
-                _First = _Unchecked_erase(_First);
-            }
-
+    _Nodeptr _Unchecked_erase(_Nodeptr _First, const _Nodeptr _Last) noexcept { // erase [_First, _Last)
+        if (_First == _Last) {
             return _Last;
         }
+
+        const auto _Predecessor = _First->_Prev;
+#if _ITERATOR_DEBUG_LEVEL == 2
+        const auto _Head = _Mypair._Myval2._Myhead;
+        if (_First == _Head->_Next && _Last == _Head) { // orphan all non-end iterators
+            _Mypair._Myval2._Orphan_non_end();
+        } else { // orphan erased iterators
+            _Lockit _Lock(_LOCK_DEBUG);
+            for (auto _Marked = _First; _Marked != _Last; _Marked = _Marked->_Next) { // mark erased nodes
+                _Marked->_Prev = nullptr;
+            }
+
+            _Iterator_base12** _Pnext = &_Mypair._Myval2._Myproxy->_Myfirstiter;
+            while (*_Pnext) {
+                _Iterator_base12** _Pnextnext = &(*_Pnext)->_Mynextiter;
+                if (static_cast<const_iterator&>(**_Pnext)._Ptr->_Prev) { // node still has a _Prev, skip
+                    _Pnext = _Pnextnext;
+                } else { // orphan the iterator
+                    (*_Pnext)->_Myproxy = nullptr;
+                    *_Pnext             = *_Pnextnext;
+                }
+            }
+
+            // _Prev pointers not restored because we're about to delete the nodes of which they are a member anyway
+        }
+#endif // _ITERATOR_DEBUG_LEVEL == 2
+
+        // snip out the removed range
+        _Predecessor->_Next = _Last;
+        _Last->_Prev        = _Predecessor;
+
+        // count and deallocate the removed nodes
+        auto& _Al           = _Getal();
+        size_type _Erasures = 0;
+        do {
+            const auto _Next = _First->_Next;
+            _Node::_Freenode(_Al, _First);
+            _First = _Next;
+            ++_Erasures;
+        } while (_First != _Last);
+
+        _Mypair._Myval2._Mysize -= _Erasures;
+        return _Last;
     }
 
 public:
@@ -1315,9 +1442,8 @@ private:
     }
 
 public:
-    void swap(list& _Right) noexcept { // strengthened
-        // exchange contents with _Right
-        if (this != _STD addressof(_Right)) { // (maybe) swap allocators, swap control information
+    void swap(list& _Right) noexcept /* strengthened */ {
+        if (this != _STD addressof(_Right)) {
             _Pocs(_Getal(), _Right._Getal());
             _Swap_val(_Right);
         }
@@ -1386,10 +1512,9 @@ public:
                 if (_UFirst == _Right_end->_Next && _ULast == _Right_end) {
                     _Count = _Right._Mypair._Myval2._Mysize; // splice in whole list
                 } else { // count nodes and check for knot
-                    auto _Next = _UFirst;
-                    for (; _Next != _ULast; _Next = _Next->_Next, (void) ++_Count) {
+                    for (auto _To_check = _UFirst; _To_check != _ULast; _To_check = _To_check->_Next, (void) ++_Count) {
 #if _ITERATOR_DEBUG_LEVEL != 0
-                        _STL_VERIFY(_Next != _Right_end, "list<T> bad splice");
+                        _STL_VERIFY(_To_check != _Right_end, "list bad splice");
 #endif // _ITERATOR_DEBUG_LEVEL != 0
                     }
                 }
@@ -1548,30 +1673,35 @@ public:
 private:
     template <class _Pr2>
     void _Merge1(list& _Right, _Pr2 _Pred) { // merge in elements from _Right, both ordered by _Pred
+#if _ITERATOR_DEBUG_LEVEL != 0
+        _DEBUG_ORDER_UNWRAPPED(_Unchecked_begin(), _Unchecked_end(), _Pred);
+#endif // _ITERATOR_DEBUG_LEVEL != 0
         if (this == _STD addressof(_Right)) {
             return;
         }
 
-        // safe to merge, do it
-        auto _First1 = _Unchecked_begin();
-        auto _Last1  = _Unchecked_end();
-        _DEBUG_ORDER_UNWRAPPED(_First1, _Last1, _Pred);
+#if _ITERATOR_DEBUG_LEVEL != 0
+        _DEBUG_ORDER_UNWRAPPED(_Right._Unchecked_begin(), _Right._Unchecked_end(), _Pred);
+        if _CONSTEXPR_IF (!_Alnode_traits::is_always_equal::value) {
+            _STL_VERIFY(_Getal() == _Right._Getal(), "list allocators incompatible for merge");
+        }
+#endif // _ITERATOR_DEBUG_LEVEL != 0
 
-        auto _First2 = _Right._Unchecked_begin();
-        auto _Last2  = _Right._Unchecked_end();
-        _DEBUG_ORDER_UNWRAPPED(_First2, _Last2, _Pred);
-
-        while (_First1 != _Last1 && _First2 != _Last2) {
-            if (_Pred(*_First2, *_First1)) { // splice in an element from _Right
-                _First2._Ptr = _Splice(_First1._Ptr, _Right, _First2._Ptr, _First2._Ptr->_Next, 1);
-            } else {
-                ++_First1;
-            }
+        const auto _Right_size = _Right._Mypair._Myval2._Mysize;
+        if (_Right_size == 0) {
+            // nothing to do
+            return;
         }
 
-        if (_First2 != _Last2) {
-            _Splice(_Last1._Ptr, _Right, _First2._Ptr, _Last2._Ptr,
-                _Right._Mypair._Myval2._Mysize); // splice remainder of _Right
+        // splice all _Right's nodes on the end of *this
+        const auto _Myhead     = _Mypair._Myval2._Myhead;
+        const auto _Right_head = _Right._Mypair._Myval2._Myhead;
+        const auto _Mid        = _Right_head->_Next;
+        _Splice(_Myhead, _Right, _Mid, _Right_head, _Right_size);
+
+        // if *this had any elements, run the merge op between the range we just spliced and the old elements
+        if (_Myhead->_Next != _Mid) {
+            _Scary_val::_Merge_same(_Myhead->_Next, _Mid, _Myhead, _Pred);
         }
     }
 
@@ -1583,58 +1713,9 @@ public:
     template <class _Pr2>
     void sort(_Pr2 _Pred) { // order sequence, using _Pred
         auto& _My_data = _Mypair._Myval2;
-        _Sort(_My_data._Myhead->_Next, _My_data._Myhead, _Pass_fn(_Pred), _My_data._Mysize);
+        _Scary_val::_Sort(_My_data._Myhead->_Next, _My_data._Mysize, _Pass_fn(_Pred));
     }
 
-private:
-    template <class _Pr2>
-    _Nodeptr _Sort(_Nodeptr _First, const _Nodeptr _Last, _Pr2 _Pred, const size_type _Size) {
-        // order [_First, _Last), using _Pred, return new first
-        // _Size must be distance from _First to _Last
-        if (_Size < 2) {
-            return _First; // nothing to do
-        }
-
-        _Nodeptr _Mid = _First;
-        for (auto _Count = static_cast<difference_type>(_Size >> 1); 0 < _Count; --_Count) {
-            _Mid = _Mid->_Next;
-        }
-
-        _First             = _Sort(_First, _Mid, _Pred, _Size >> 1);
-        _Mid               = _Sort(_Mid, _Last, _Pred, _Size - (_Size >> 1));
-        _Nodeptr _Newfirst = _First;
-
-        // [_First, _Mid) and [_Mid, _Last) are sorted and non-empty
-
-        if (_DEBUG_LT_PRED(_Pred, _Mid->_Myval, _First->_Myval)) { // consume _Mid
-            _Newfirst = _Mid; // update return value; this is the only line that differs from the following loop
-            _Mid      = _Scary_val::_Unchecked_splice(_First, _Mid);
-            if (_Mid == _Last) {
-                return _Newfirst; // exhausted [_Mid, _Last); done
-            }
-        } else { // consume _First
-            _First = _First->_Next;
-            if (_First == _Mid) {
-                return _Newfirst; // exhausted [_First, _Mid); done
-            }
-        }
-
-        for (;;) {
-            if (_DEBUG_LT_PRED(_Pred, _Mid->_Myval, _First->_Myval)) { // consume _Mid
-                _Mid = _Scary_val::_Unchecked_splice(_First, _Mid);
-                if (_Mid == _Last) {
-                    return _Newfirst; // exhausted [_Mid, _Last); done
-                }
-            } else { // consume _First
-                _First = _First->_Next;
-                if (_First == _Mid) {
-                    return _Newfirst; // exhausted [_First, _Mid); done
-                }
-            }
-        }
-    }
-
-public:
     void reverse() noexcept { // reverse sequence
         const _Nodeptr _Phead = _Mypair._Myval2._Myhead;
         _Nodeptr _Pnode       = _Phead;
@@ -1658,31 +1739,30 @@ private:
         // splice _Right [_First, _Last) before _Where; returns _Last
         if (this != _STD addressof(_Right)) { // splicing from another list, adjust counts
 #if _ITERATOR_DEBUG_LEVEL != 0
-            if
-                _CONSTEXPR_IF(!_Alnode_traits::is_always_equal::value) {
-                    _STL_VERIFY(_Getal() == _Right._Getal(), "list containers incompatible for splice");
-                }
+            if _CONSTEXPR_IF (!_Alnode_traits::is_always_equal::value) {
+                _STL_VERIFY(_Getal() == _Right._Getal(), "list allocators incompatible for splice");
+            }
 #endif // _ITERATOR_DEBUG_LEVEL != 0
 
             auto& _My_data = _Mypair._Myval2;
             if (max_size() - _My_data._Mysize < _Count) {
-                _Xlength_error("list<T> too long");
+                _Xlength_error("list too long");
             }
 
             auto& _Right_data = _Right._Mypair._Myval2;
-            _My_data._Mysize += _Count;
-            _Right_data._Mysize -= _Count;
-
 #if _ITERATOR_DEBUG_LEVEL == 2
             // transfer ownership
             if (_Count == 1) {
                 _My_data._Adopt_unique(_Right_data, _First);
-            } else if (_Count == _Right.size()) {
+            } else if (_Count == _Right_data._Mysize) {
                 _My_data._Adopt_all(_Right_data);
             } else {
                 _My_data._Adopt_range(_Right_data, _First, _Last);
             }
 #endif // _ITERATOR_DEBUG_LEVEL == 2
+
+            _My_data._Mysize += _Count;
+            _Right_data._Mysize -= _Count;
         }
 
         return _Scary_val::_Unchecked_splice(_Where, _First, _Last);
@@ -1699,19 +1779,15 @@ private:
         _Proxy._Release();
     }
 
-    void _Freeheadnode(_Nodeptr _Pnode) { // free head node using current allocator
-        _Node::_Freenode0(_Getal(), _Pnode);
-    }
-
-    void _Orphan_all() { // orphan all iterators
+    void _Orphan_all() noexcept {
         _Mypair._Myval2._Orphan_all();
     }
 
-    _Alnode& _Getal() noexcept { // return reference to allocator
+    _Alnode& _Getal() noexcept {
         return _Mypair._Get_first();
     }
 
-    const _Alnode& _Getal() const noexcept { // return const reference to allocator
+    const _Alnode& _Getal() const noexcept {
         return _Mypair._Get_first();
     }
 
@@ -1721,49 +1797,55 @@ private:
 #if _HAS_CXX17
 template <class _Iter, class _Alloc = allocator<_Iter_value_t<_Iter>>,
     enable_if_t<conjunction_v<_Is_iterator<_Iter>, _Is_allocator<_Alloc>>, int> = 0>
-list(_Iter, _Iter, _Alloc = _Alloc())->list<_Iter_value_t<_Iter>, _Alloc>;
+list(_Iter, _Iter, _Alloc = _Alloc()) -> list<_Iter_value_t<_Iter>, _Alloc>;
 #endif // _HAS_CXX17
 
 template <class _Ty, class _Alloc>
-void swap(list<_Ty, _Alloc>& _Left, list<_Ty, _Alloc>& _Right) noexcept { // strengthened
-    // swap _Left and _Right lists
+void swap(list<_Ty, _Alloc>& _Left, list<_Ty, _Alloc>& _Right) noexcept /* strengthened */ {
     _Left.swap(_Right);
 }
 
 template <class _Ty, class _Alloc>
-_NODISCARD bool operator==(const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) { // test for list equality
+_NODISCARD bool operator==(const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) {
     return _Left.size() == _Right.size() && _STD equal(_Left.begin(), _Left.end(), _Right.begin());
 }
 
 template <class _Ty, class _Alloc>
-_NODISCARD bool operator!=(
-    const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) { // test for list inequality
+_NODISCARD bool operator!=(const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) {
     return !(_Left == _Right);
 }
 
 template <class _Ty, class _Alloc>
-_NODISCARD bool operator<(
-    const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) { // test if _Left < _Right for lists
+_NODISCARD bool operator<(const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) {
     return _STD lexicographical_compare(_Left.begin(), _Left.end(), _Right.begin(), _Right.end());
 }
 
 template <class _Ty, class _Alloc>
-_NODISCARD bool operator>(
-    const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) { // test if _Left > _Right for lists
+_NODISCARD bool operator>(const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) {
     return _Right < _Left;
 }
 
 template <class _Ty, class _Alloc>
-_NODISCARD bool operator<=(
-    const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) { // test if _Left <= _Right for lists
+_NODISCARD bool operator<=(const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) {
     return !(_Right < _Left);
 }
 
 template <class _Ty, class _Alloc>
-_NODISCARD bool operator>=(
-    const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) { // test if _Left >= _Right for lists
+_NODISCARD bool operator>=(const list<_Ty, _Alloc>& _Left, const list<_Ty, _Alloc>& _Right) {
     return !(_Left < _Right);
 }
+
+#if _HAS_CXX20
+template <class _Ty, class _Alloc, class _Uty>
+typename list<_Ty, _Alloc>::size_type erase(list<_Ty, _Alloc>& _Cont, const _Uty& _Val) {
+    return _Cont.remove_if([&](_Ty& _Elem) { return _Elem == _Val; });
+}
+
+template <class _Ty, class _Alloc, class _Pr>
+typename list<_Ty, _Alloc>::size_type erase_if(list<_Ty, _Alloc>& _Cont, _Pr _Pred) {
+    return _Cont.remove_if(_Pass_fn(_Pred));
+}
+#endif // _HAS_CXX20
 
 #if _HAS_CXX17
 namespace pmr {
@@ -1778,8 +1860,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _LIST_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

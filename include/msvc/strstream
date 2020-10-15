@@ -1,4 +1,8 @@
 // strstream standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _STRSTREAM_
 #define _STRSTREAM_
@@ -30,8 +34,11 @@ public:
     }; // set if character array ownership given away
     using _Strstate = int;
 
-    explicit __CLR_OR_THIS_CALL strstreambuf(streamsize _Count = 0) {
-        // construct with empty character array, suggested initial size
+    __CLR_OR_THIS_CALL strstreambuf() { // construct with empty character array
+        _Init(0);
+    }
+
+    explicit __CLR_OR_THIS_CALL strstreambuf(streamsize _Count) { // construct with suggested initial size
         _Init(_Count);
     }
 
@@ -75,14 +82,14 @@ public:
     }
 
     void __CLR_OR_THIS_CALL _Assign_rv(strstreambuf&& _Right) {
-        if (this != _STD addressof(_Right)) { // different, worth moving
+        if (this != _STD addressof(_Right)) {
             _Tidy();
             this->swap(_Right);
         }
     }
 
     void __CLR_OR_THIS_CALL swap(strstreambuf& _Right) {
-        if (this != _STD addressof(_Right)) { // different, worth swapping
+        if (this != _STD addressof(_Right)) {
             _Mysb::swap(_Right);
             _STD swap(_Minsize, _Right._Minsize);
             _STD swap(_Pendsave, _Right._Pendsave);
@@ -115,7 +122,7 @@ public:
         return eback();
     }
 
-    _NODISCARD streamsize __CLR_OR_THIS_CALL pcount() const { // return size of writable character array
+    _NODISCARD streamsize __CLR_OR_THIS_CALL pcount() const {
         return pptr() ? static_cast<streamsize>(pptr() - pbase()) : 0;
     }
 
@@ -216,7 +223,7 @@ protected:
                    < _Old_pptr) { // Otherwise, if the current write next pointer pnext is not a null pointer and is
                                   // greater than the current read end pointer gend, makes a read position available by
                                   // assigning to gend a value greater than gnext and no greater than pnext.
-            if (_Seekhigh < _Old_pptr) { // appears unused, maintained for ABI compat
+            if (_Seekhigh < _Old_pptr) { // TRANSITION, ABI: appears unused, maintained for ABI compat
                 _Seekhigh = _Old_pptr;
             }
 
@@ -230,7 +237,7 @@ protected:
     virtual streampos __CLR_OR_THIS_CALL seekoff(
         streamoff _Off, ios_base::seekdir _Way, ios_base::openmode _Which = ios_base::in | ios_base::out) override {
         // seek by specified offset
-        if (pptr() && _Seekhigh < pptr()) { // appears unused, maintained for ABI compat
+        if (pptr() && _Seekhigh < pptr()) { // TRANSITION, ABI: appears unused, maintained for ABI compat
             _Seekhigh = pptr(); // update high water mark
         }
 
@@ -309,7 +316,7 @@ protected:
     virtual pos_type __CLR_OR_THIS_CALL seekpos(
         pos_type _Sp, ios_base::openmode _Which = ios_base::in | ios_base::out) override {
         // seek to memorized position
-        if (pptr() && _Seekhigh < pptr()) { // appears unused, maintained for ABI compat
+        if (pptr() && _Seekhigh < pptr()) { // TRANSITION, ABI: appears unused, maintained for ABI compat
             _Seekhigh = pptr(); // update high water mark
         }
 
@@ -450,14 +457,14 @@ public:
     }
 
     void __CLR_OR_THIS_CALL _Assign_rv(istrstream&& _Right) {
-        if (this != _STD addressof(_Right)) { // different, swap base and buffer
+        if (this != _STD addressof(_Right)) {
             _Strbuffer.clear();
             this->swap(_Right);
         }
     }
 
     void __CLR_OR_THIS_CALL swap(istrstream& _Right) {
-        if (this != _STD addressof(_Right)) { // different, swap base and buffer
+        if (this != _STD addressof(_Right)) {
             _Mybase::swap(_Right);
             _Strbuffer.swap(_Right._Strbuffer);
         }
@@ -465,7 +472,7 @@ public:
 
     virtual __CLR_OR_THIS_CALL ~istrstream() noexcept {}
 
-    _NODISCARD _Mysb* __CLR_OR_THIS_CALL rdbuf() const { // return pointer to character array buffer
+    _NODISCARD _Mysb* __CLR_OR_THIS_CALL rdbuf() const {
         return const_cast<_Mysb*>(&_Strbuffer);
     }
 
@@ -506,14 +513,14 @@ public:
     }
 
     void __CLR_OR_THIS_CALL _Assign_rv(ostrstream&& _Right) {
-        if (this != _STD addressof(_Right)) { // different, swap base and buffer
+        if (this != _STD addressof(_Right)) {
             _Strbuffer.clear();
             this->swap(_Right);
         }
     }
 
     void __CLR_OR_THIS_CALL swap(ostrstream& _Right) {
-        if (this != _STD addressof(_Right)) { // different, swap base and buffer
+        if (this != _STD addressof(_Right)) {
             _Mybase::swap(_Right);
             _Strbuffer.swap(_Right._Strbuffer);
         }
@@ -521,7 +528,7 @@ public:
 
     virtual __CLR_OR_THIS_CALL ~ostrstream() noexcept {}
 
-    _NODISCARD _Mysb* __CLR_OR_THIS_CALL rdbuf() const { // return pointer to character array buffer
+    _NODISCARD _Mysb* __CLR_OR_THIS_CALL rdbuf() const {
         return const_cast<_Mysb*>(&_Strbuffer);
     }
 
@@ -533,7 +540,7 @@ public:
         return _Strbuffer.str();
     }
 
-    _NODISCARD streamsize __CLR_OR_THIS_CALL pcount() const { // return size of writable character array
+    _NODISCARD streamsize __CLR_OR_THIS_CALL pcount() const {
         return _Strbuffer.pcount();
     }
 
@@ -542,7 +549,7 @@ private:
 };
 
 // ostrstream OPERATORS
-inline void swap(ostrstream& _Left, ostrstream& _Right) { // swap _Left and _Right ostrstreams
+inline void swap(ostrstream& _Left, ostrstream& _Right) {
     _Left.swap(_Right);
 }
 
@@ -575,14 +582,14 @@ public:
     }
 
     void __CLR_OR_THIS_CALL _Assign_rv(strstream&& _Right) {
-        if (this != _STD addressof(_Right)) { // different, swap base and buffer
+        if (this != _STD addressof(_Right)) {
             _Strbuffer.clear();
             this->swap(_Right);
         }
     }
 
     void __CLR_OR_THIS_CALL swap(strstream& _Right) {
-        if (this != _STD addressof(_Right)) { // different, swap base and buffer
+        if (this != _STD addressof(_Right)) {
             _Mybase::swap(_Right);
             _Strbuffer.swap(_Right._Strbuffer);
         }
@@ -590,7 +597,7 @@ public:
 
     virtual __CLR_OR_THIS_CALL ~strstream() noexcept {}
 
-    _NODISCARD _Mysb* __CLR_OR_THIS_CALL rdbuf() const { // return pointer to character array buffer
+    _NODISCARD _Mysb* __CLR_OR_THIS_CALL rdbuf() const {
         return const_cast<_Mysb*>(&_Strbuffer);
     }
 
@@ -602,7 +609,7 @@ public:
         return _Strbuffer.str();
     }
 
-    _NODISCARD streamsize __CLR_OR_THIS_CALL pcount() const { // return size of writable character array
+    _NODISCARD streamsize __CLR_OR_THIS_CALL pcount() const {
         return _Strbuffer.pcount();
     }
 
@@ -621,8 +628,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _STRSTREAM_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

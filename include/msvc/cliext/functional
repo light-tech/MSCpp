@@ -1,4 +1,5 @@
 // functional stl/clr header
+// Copyright (c) Microsoft Corporation. All rights reserved.
 #ifndef _CLI_FUNCTIONAL_
  #define _CLI_FUNCTIONAL_
 #include <cliext/xutility>
@@ -1086,8 +1087,3 @@ inline comparer_less<System::Object^, System::Collections::IComparer>^
 	}
 }	// namespace cliext
 #endif // _CLI_FUNCTIONAL_
-
-/*
- * Copyright (c) 2004-2007 by Dinkumware, Ltd.  ALL RIGHTS RESERVED.
- * Consult your license regarding permissions and restrictions.
-V5.03:0009 */

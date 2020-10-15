@@ -1,4 +1,8 @@
 // wstring -- convert wide strings using codecvt facet
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _CVT_WSTRING_
 #define _CVT_WSTRING_
@@ -36,32 +40,27 @@ namespace stdext {
             using state_type  = typename _Codecvt::state_type;
             using int_type    = typename wide_string::traits_type::int_type;
 
-            wstring_convert()
-                : _Has_state(false), _Has_berr(false), _Has_werr(false) { // construct with no error strings
+            wstring_convert() : _Has_state(false), _Has_berr(false), _Has_werr(false) {
                 _Init();
             }
 
-            explicit wstring_convert(_Codecvt* _Pcvt_arg)
-                : _Has_state(false), _Has_berr(false), _Has_werr(false) { // construct with no error strings and codecvt
+            explicit wstring_convert(_Codecvt* _Pcvt_arg) : _Has_state(false), _Has_berr(false), _Has_werr(false) {
                 _Init(_Pcvt_arg);
             }
 
             wstring_convert(_Codecvt* _Pcvt_arg, state_type _State_arg)
-                : _Has_state(true), _Has_berr(false),
-                  _Has_werr(false) { // construct with no error strings, codecvt, and state
+                : _Has_state(true), _Has_berr(false), _Has_werr(false) {
                 _Init(_Pcvt_arg);
                 _State = _State_arg;
             }
 
             explicit wstring_convert(const byte_string& _Berr_arg)
-                : _Berr(_Berr_arg), _Has_state(false), _Has_berr(true),
-                  _Has_werr(false) { // construct with byte error string
+                : _Berr(_Berr_arg), _Has_state(false), _Has_berr(true), _Has_werr(false) {
                 _Init();
             }
 
             wstring_convert(const byte_string& _Berr_arg, const wide_string& _Werr_arg)
-                : _Berr(_Berr_arg), _Werr(_Werr_arg), _Has_state(false), _Has_berr(true),
-                  _Has_werr(true) { // construct with byte and wide error strings
+                : _Berr(_Berr_arg), _Werr(_Werr_arg), _Has_state(false), _Has_berr(true), _Has_werr(true) {
                 _Init();
             }
 
@@ -74,7 +73,7 @@ namespace stdext {
                 return _Nconv;
             }
 
-            _NODISCARD state_type state() const { // get state
+            _NODISCARD state_type state() const {
                 return _State;
             }
 
@@ -229,8 +228,3 @@ _STL_RESTORE_CLANG_WARNINGS
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_WSTRING_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

@@ -5,10 +5,7 @@
 *
 ****/
 
-#if _MSC_VER > 1000
 #pragma once
-#endif
-
 #ifdef _M_CEE_PURE
 #error comip.h header cannot be included under /clr:safe or /clr:pure
 #endif
@@ -17,17 +14,9 @@
 #define _INC_COMIP
 
 #include <Ole2.h>
-#include <malloc.h>
-
 #include <comutil.h>
-
-#pragma warning(push)
-#pragma warning(disable: 4290)
-
-#pragma push_macro("new")
-#undef new
-
-#include <new.h>
+#include <malloc.h>
+#include <type_traits>
 
 class _com_error;
 
@@ -41,17 +30,17 @@ class _com_IIID {
 public:
     typedef _Interface Interface;
 
-    static _Interface* GetInterfacePtr() throw()
+    static _Interface* GetInterfacePtr() noexcept
     {
-        return NULL;
+        return nullptr;
     }
 
-    static _Interface& GetInterface() throw()
+    static _Interface& GetInterface() noexcept
     {
         return *GetInterfacePtr();
     }
 
-    static const IID& GetIID() throw()
+    static const IID& GetIID() noexcept
     {
         return *_IID;
     }
@@ -62,23 +51,24 @@ public:
     // Declare interface type so that the type may be available outside
     // the scope of this template.
     //
-    typedef _IIID ThisIIID;
-    typedef typename _IIID::Interface Interface;
+    using ThisIIID = _IIID;
+    using Interface = typename _IIID::Interface;
 
     // When the compiler supports references in template parameters,
     // _CLSID will be changed to a reference.  To avoid conversion
     // difficulties this function should be used to obtain the
     // CLSID.
     //
-    static const IID& GetIID() throw()
+    static const IID& GetIID() noexcept
     {
         return ThisIIID::GetIID();
     }
 
     // Constructs a smart-pointer from any other smart pointer.
     //
-    template<typename _OtherIID> _com_ptr_t(const _com_ptr_t<_OtherIID>& p)
-        : m_pInterface(NULL)
+    template<typename _OtherIID, ::std::enable_if_t<!::std::is_same<_IIID, _OtherIID>::value, int> = 0>
+    _com_ptr_t(const _com_ptr_t<_OtherIID>& p)
+        : m_pInterface(nullptr)
     {
         HRESULT hr = _QueryInterface(p);
 
@@ -89,8 +79,17 @@ public:
 
     // Constructs a smart-pointer from any IUnknown-based interface pointer.
     //
-    template<typename _InterfaceType> _com_ptr_t(_InterfaceType* p)
-        : m_pInterface(NULL)
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!(
+            ::std::is_same<_InterfaceType, Interface>::value // call Interface* pInterface
+            || ::std::is_same<_InterfaceType, _com_ptr_t>::value // call _com_ptr_t* p
+            || ::std::is_same<_InterfaceType, char>::value // call PCSTR str, IUnknown* pOuter, DWORD dwClsContext
+            || ::std::is_same<_InterfaceType, const char>::value
+            || ::std::is_same<_InterfaceType, wchar_t>::value // call LPCWSTR str, IUnknown* pOuter, DWORD dwClsContext
+            || ::std::is_same<_InterfaceType, const wchar_t>::value
+        ), int> = 0>
+    _com_ptr_t(_InterfaceType* p)
+        : m_pInterface(nullptr)
     {
         HRESULT hr = _QueryInterface(p);
 
@@ -99,88 +98,48 @@ public:
         }
     }
 
-    // Make sure correct ctor is called
-    //
-    template<> _com_ptr_t(_In_ LPSTR str)
+    explicit _com_ptr_t(_com_ptr_t* p)
+        : m_pInterface(p)
     {
-        new(this) _com_ptr_t(static_cast<LPCSTR> (str), NULL);
-    }
-
-    // Make sure correct ctor is called
-    //
-    template<> _com_ptr_t(_In_ LPWSTR str)
-    {
-        new(this) _com_ptr_t(static_cast<LPCWSTR> (str), NULL);
-    }
-
-    // Disable conversion using _com_ptr_t* specialization of
-    // template<typename _InterfaceType> _com_ptr_t(_InterfaceType* p)
-    //
-    template<> explicit _com_ptr_t(_com_ptr_t* p)
-        : m_pInterface(NULL)
-    {
-        if (p == NULL) {
+        if (p == nullptr) {
             _com_issue_error(E_POINTER);
         }
         else {
-            m_pInterface = p->m_pInterface;
             AddRef();
         }
     }
 
-    // Default constructor.
-    //
-    _com_ptr_t() throw()
-        : m_pInterface(NULL)
-    {
-    }
+    _com_ptr_t() = default;
+    _com_ptr_t(decltype(nullptr)) noexcept { }
 
-    // This constructor is provided to allow NULL assignment. It will issue
-    // an error if any value other than null is assigned to the object.
-    //
     _com_ptr_t(int null)
-        : m_pInterface(NULL)
     {
-        if (null != 0) {
+        if (null != 0)
+        {
             _com_issue_error(E_POINTER);
         }
     }
 
-#if !defined(_DO_NOT_USE_NULLPTR_IN_COM_PTR_T)
-
-    // This constructor is provided to allow nullptr assignment.
-    _com_ptr_t(decltype(nullptr)) : m_pInterface(NULL) { }
-
-#endif // !defined(_DO_NOT_USE_NULLPTR_IN_COM_PTR_T)
-
-    // Copy the pointer and AddRef().
-    //
-    _com_ptr_t(const _com_ptr_t& cp) throw()
+    _com_ptr_t(const _com_ptr_t& cp) noexcept
         : m_pInterface(cp.m_pInterface)
     {
         _AddRef();
     }
 
-    // Move the pointer.
-    //
-    _com_ptr_t(_com_ptr_t&& cp) throw()
+    _com_ptr_t(_com_ptr_t&& cp) noexcept
         : m_pInterface(cp.m_pInterface)
     {
         cp.m_pInterface = nullptr;
     }
 
-    // Saves the interface.
-    //
-    template<> _com_ptr_t(Interface* pInterface) throw()
+    _com_ptr_t(Interface* pInterface) noexcept
         : m_pInterface(pInterface)
     {
         _AddRef();
     }
 
-    // Copies the pointer. If fAddRef is TRUE, the interface will
-    // be AddRef()ed.
-    //
-    _com_ptr_t(Interface* pInterface, bool fAddRef) throw()
+    // Copies the pointer. If fAddRef is TRUE, the interface will be AddRef()ed.
+    _com_ptr_t(Interface* pInterface, bool fAddRef) noexcept
         : m_pInterface(pInterface)
     {
         if (fAddRef) {
@@ -188,10 +147,7 @@ public:
         }
     }
 
-    // Construct a pointer for a _variant_t object.
-    //
     _com_ptr_t(const _variant_t& varSrc)
-        : m_pInterface(NULL)
     {
         HRESULT hr = QueryStdInterfaces(varSrc);
 
@@ -201,9 +157,7 @@ public:
     }
 
     // Calls CoCreateClass with the provided CLSID.
-    //
-    explicit _com_ptr_t(const CLSID& clsid, IUnknown* pOuter = NULL, DWORD dwClsContext = CLSCTX_ALL)
-        : m_pInterface(NULL)
+    explicit _com_ptr_t(const CLSID& clsid, IUnknown* pOuter = nullptr, DWORD dwClsContext = CLSCTX_ALL)
     {
         HRESULT hr = CreateInstance(clsid, pOuter, dwClsContext);
 
@@ -212,11 +166,8 @@ public:
         }
     }
 
-    // Calls CoCreateClass with the provided CLSID retrieved from
-    // the string.
-    //
-    explicit _com_ptr_t(LPCWSTR str, IUnknown* pOuter = NULL, DWORD dwClsContext = CLSCTX_ALL)
-        : m_pInterface(NULL)
+    // Calls CoCreateClass with the provided CLSID retrieved from the string.
+    explicit _com_ptr_t(LPCWSTR str, IUnknown* pOuter = nullptr, DWORD dwClsContext = CLSCTX_ALL)
     {
         HRESULT hr = CreateInstance(str, pOuter, dwClsContext);
 
@@ -225,11 +176,8 @@ public:
         }
     }
 
-    // Calls CoCreateClass with the provided SBCS CLSID retrieved from
-    // the string.
-    //
-    explicit _com_ptr_t(LPCSTR str, IUnknown* pOuter = NULL, DWORD dwClsContext = CLSCTX_ALL)
-        : m_pInterface(NULL)
+    // Calls CoCreateClass with the provided SBCS CLSID retrieved from the string.
+    explicit _com_ptr_t(LPCSTR str, IUnknown* pOuter = nullptr, DWORD dwClsContext = CLSCTX_ALL)
     {
         HRESULT hr = CreateInstance(str, pOuter, dwClsContext);
 
@@ -238,61 +186,17 @@ public:
         }
     }
 
-    // Queries for interface.
-    //
-    template<typename _OtherIID> _com_ptr_t& operator=(const _com_ptr_t<_OtherIID>& p)
-    {
-        HRESULT hr = _QueryInterface(p);
-
-        if (FAILED(hr) && (hr != E_NOINTERFACE)) {
-            _com_issue_error(hr);
+    _com_ptr_t& operator=(const _com_ptr_t& p) noexcept {
+        if (m_pInterface != p.m_pInterface)
+        {
+            _com_ptr_t copied{p};
+            swap(*this, copied);
         }
 
         return *this;
     }
 
-    // Queries for interface.
-    //
-    template<typename _InterfaceType> _com_ptr_t& operator=(_InterfaceType* p)
-    {
-        HRESULT hr = _QueryInterface(p);
-
-        if (FAILED(hr) && (hr != E_NOINTERFACE)) {
-            _com_issue_error(hr);
-        }
-
-        return *this;
-    }
-
-    // Saves the interface.
-    //
-    template<> _com_ptr_t& operator=(Interface* pInterface) throw()
-    {
-        if (m_pInterface != pInterface) {
-            Interface* pOldInterface = m_pInterface;
-
-            m_pInterface = pInterface;
-
-            _AddRef();
-
-            if (pOldInterface != nullptr) {
-                pOldInterface->Release();
-            }
-        }
-
-        return *this;
-    }
-
-    // Copies and AddRef()'s the interface.
-    //
-    _com_ptr_t& operator=(const _com_ptr_t& cp) throw()
-    {
-        return operator=(cp.m_pInterface);
-    }
-
-    // Moves the interface.
-    //
-    _com_ptr_t& operator=(_com_ptr_t&& cp) throw()
+    _com_ptr_t& operator=(_com_ptr_t&& cp) noexcept
     {
         if (m_pInterface != cp.m_pInterface) {
             Interface* pOldInterface = m_pInterface;
@@ -300,7 +204,7 @@ public:
             m_pInterface = cp.m_pInterface;
             cp.m_pInterface = nullptr;
 
-            if (pOldInterface != nullptr) {
+            if (pOldInterface) {
                 pOldInterface->Release();
             }
         }
@@ -308,36 +212,21 @@ public:
         return *this;
     }
 
-    // This operator is provided to permit the assignment of NULL to the class.
-    // It will issue an error if any value other than NULL is assigned to it.
-    //
-    _com_ptr_t& operator=(int null)
+    _com_ptr_t& operator=(::std::nullptr_t) noexcept
     {
-        if (null != 0) {
-            _com_issue_error(E_POINTER);
-        }
-
-        return operator=(reinterpret_cast<Interface*>(NULL));
-    }
-
-    // Construct a pointer for a _variant_t object.
-    //
-    _com_ptr_t& operator=(const _variant_t& varSrc)
-    {
-        HRESULT hr = QueryStdInterfaces(varSrc);
-
-        if (FAILED(hr) && (hr != E_NOINTERFACE)) {
-            _com_issue_error(hr);
-        }
-
+        _Release();
+        m_pInterface = nullptr;
         return *this;
     }
 
-    // If we still have an interface then Release() it. The interface
-    // may be NULL if Detach() has previously been called, or if it was
-    // never set.
-    //
-    ~_com_ptr_t() throw()
+    friend void swap(_com_ptr_t& left, _com_ptr_t& right) noexcept
+    {
+        Interface* tmp = left.m_pInterface;
+        left.m_pInterface = right.m_pInterface;
+        right.m_pInterface = tmp;
+    }
+
+    ~_com_ptr_t() noexcept
     {
         _Release();
     }
@@ -345,7 +234,7 @@ public:
     // Saves/sets the interface without AddRef()ing. This call
     // will release any previously acquired interface.
     //
-    void Attach(Interface* pInterface) throw()
+    void Attach(Interface* pInterface) noexcept
     {
         _Release();
         m_pInterface = pInterface;
@@ -354,254 +243,527 @@ public:
     // Saves/sets the interface only AddRef()ing if fAddRef is TRUE.
     // This call will release any previously acquired interface.
     //
-    void Attach(Interface* pInterface, bool fAddRef) throw()
+    void Attach(Interface* pInterface, bool fAddRef)
     {
         _Release();
         m_pInterface = pInterface;
 
         if (fAddRef) {
-            if (pInterface == NULL) {
-                _com_issue_error(E_POINTER);
+            if (pInterface) {
+                pInterface->AddRef();
             }
             else {
-                pInterface->AddRef();
+                _com_issue_error(E_POINTER);
             }
         }
     }
 
-    // Simply NULL the interface pointer so that it isn't Released()'ed.
+    // Set the interface pointer to nullptr, so that it isn't Release()'ed.
     //
-    Interface* Detach() throw()
+    Interface* Detach() noexcept
     {
         Interface* const old = m_pInterface;
-        m_pInterface = NULL;
+        m_pInterface = nullptr;
         return old;
     }
 
-    // Return the interface. This value may be NULL.
-    //
-    operator Interface*() const throw()
+    operator Interface*() const noexcept
     {
         return m_pInterface;
     }
 
-    // Queries for the unknown and return it
-    // Provides minimal level error checking before use.
-    //
     operator Interface&() const
     {
-        if (m_pInterface == NULL) {
-            _com_issue_error(E_POINTER);
+        if (m_pInterface)
+        {
+            return *m_pInterface;
         }
 
-        return *m_pInterface;
+        _com_issue_error(E_POINTER);
     }
 
-    // Allows an instance of this class to act as though it were the
-    // actual interface. Also provides minimal error checking.
-    //
+    // Allows an instance of this class to act as though it were the actual interface.
     Interface& operator*() const
     {
-        if (m_pInterface == NULL) {
-            _com_issue_error(E_POINTER);
+        if (m_pInterface)
+        {
+            return *m_pInterface;
         }
 
-        return *m_pInterface;
+        _com_issue_error(E_POINTER);
     }
 
-    // Returns the address of the interface pointer contained in this
-    // class. This is useful when using the COM/OLE interfaces to create
-    // this interface.
-    //
-    Interface** operator&() throw()
+    // Returns the address of the interface pointer contained in this class. This is useful when using the COM/OLE
+    // interfaces to create this interface.
+    Interface** operator&() noexcept
     {
         _Release();
-        m_pInterface = NULL;
+        m_pInterface = nullptr;
         return &m_pInterface;
     }
 
     // Allows this class to be used as the interface itself.
-    // Also provides simple error checking.
-    //
     Interface* operator->() const
     {
-        if (m_pInterface == NULL) {
-            _com_issue_error(E_POINTER);
+        if (m_pInterface)
+        {
+            return m_pInterface;
         }
 
-        return m_pInterface;
+        _com_issue_error(E_POINTER);
     }
 
-    // This operator is provided so that simple boolean expressions will
-    // work.  For example: "if (p) ...".
-    // Returns TRUE if the pointer is not NULL.
-    //
-    operator bool() const throw()
+    operator bool() const noexcept
     {
-        return m_pInterface != NULL;
+        return m_pInterface != nullptr;
     }
 
-    // Compare two smart pointers
-    //
-    template<typename _OtherIID> bool operator==(const _com_ptr_t<_OtherIID>& p) const
+    bool operator==(const _com_ptr_t& p) const
     {
-        return _CompareUnknown(p) == 0;
+        if (m_pInterface == p.m_pInterface)
+        {
+            return true;
+        }
+
+        return _CompareUnknown(p.m_pInterface) == 0;
     }
 
-    // Compare two pointers
-    //
-    template<typename _InterfaceType> bool operator==(_InterfaceType* p) const
+    template<typename _OtherIID, ::std::enable_if_t<!::std::is_same<_IIID, _OtherIID>::value, int> = 0>
+    bool operator==(const _com_ptr_t<_OtherIID>& p) const
     {
         return _CompareUnknown(p) == 0;
     }
 
-    // Compare with other interface
-    //
-    template<> bool operator==(Interface* p) const
+    bool operator==(Interface* p) const
     {
-        return (m_pInterface == p)
-                    ? true
-                    : _CompareUnknown(p) == 0;
+        if (m_pInterface == p)
+        {
+            return true;
+        }
+
+        return _CompareUnknown(p) == 0;
     }
 
-    // Compare two smart pointers
-    //
-    template<> bool operator==(const _com_ptr_t& p) const throw()
+    friend bool operator==(Interface* p, const _com_ptr_t& _This)
     {
-        return operator==(p.m_pInterface);
+        if (_This.m_pInterface == p)
+        {
+            return true;
+        }
+
+        return _This._CompareUnknown(p) == 0;
     }
 
-    // For comparison to NULL
-    //
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    bool operator==(_InterfaceType* p) const
+    {
+        return _CompareUnknown(p) == 0;
+    }
+
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    friend bool operator==(_InterfaceType* p, const _com_ptr_t& _This)
+    {
+        return _This._CompareUnknown(p) == 0;
+    }
+
+    bool operator==(decltype(nullptr)) const noexcept
+    {
+        return m_pInterface == nullptr;
+    }
+
+    friend bool operator==(decltype(nullptr), const _com_ptr_t& _This) noexcept
+    {
+        return _This.m_pInterface == nullptr;
+    }
+
     bool operator==(int null) const
     {
-        if (null != 0) {
+        if (null != 0)
+        {
             _com_issue_error(E_POINTER);
         }
 
-        return m_pInterface == NULL;
+        return m_pInterface == nullptr;
     }
 
-    // Compare two smart pointers
-    //
-    template<typename _OtherIID> bool operator!=(const _com_ptr_t<_OtherIID>& p) const
+    friend bool operator==(int null, const _com_ptr_t& _This)
     {
-        return !(operator==(p));
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        return _This.m_pInterface == nullptr;
     }
 
-    // Compare two pointers
-    //
-    template<typename _InterfaceType> bool operator!=(_InterfaceType* p) const
+    bool operator!=(const _com_ptr_t& p) const
     {
-        return !(operator==(p));
+        return !(*this == p);
     }
 
-    // For comparison to NULL
-    //
+    template<typename _OtherIID, ::std::enable_if_t<!::std::is_same<_IIID, _OtherIID>::value, int> = 0>
+    bool operator!=(const _com_ptr_t<_OtherIID>& p) const
+    {
+        return !(*this == p);
+    }
+
+    bool operator!=(Interface* p) const
+    {
+        return !(*this == p);
+    }
+
+    friend bool operator!=(Interface* p, const _com_ptr_t& _This)
+    {
+        return !(_This == p);
+    }
+
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    bool operator!=(_InterfaceType* p) const
+    {
+        return !(*this == p);
+    }
+
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    friend bool operator!=(_InterfaceType* p, const _com_ptr_t& _This)
+    {
+        return !(_This == p);
+    }
+
+    bool operator!=(decltype(nullptr)) const noexcept
+    {
+        return m_pInterface != nullptr;
+    }
+
+    friend bool operator!=(decltype(nullptr), const _com_ptr_t& _This) noexcept
+    {
+        return _This.m_pInterface != nullptr;
+    }
+
     bool operator!=(int null) const
     {
-        return !(operator==(null));
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        return m_pInterface != nullptr;
     }
 
-    // Compare two smart pointers
-    //
-    template<typename _OtherIID> bool operator<(const _com_ptr_t<_OtherIID>& p) const
+    friend bool operator!=(int null, const _com_ptr_t& _This)
+    {
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        return _This.m_pInterface != nullptr;
+    }
+
+    bool operator<(const _com_ptr_t& p) const
+    {
+        return _CompareUnknown(p.m_pInterface) < 0;
+    }
+
+    template<typename _OtherIID, ::std::enable_if_t<!::std::is_same<_IIID, _OtherIID>::value, int> = 0>
+    bool operator<(const _com_ptr_t<_OtherIID>& p) const
+    {
+        return _CompareUnknown(p.GetInterfacePtr()) < 0;
+    }
+
+    bool operator<(Interface* p) const
     {
         return _CompareUnknown(p) < 0;
     }
 
-    // Compare two pointers
-    //
-    template<typename _InterfaceType> bool operator<(_InterfaceType* p) const
+    friend bool operator<(Interface* p, const _com_ptr_t& _This)
+    {
+        return _This._CompareUnknown(p) > 0;
+    }
+
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    bool operator<(_InterfaceType* p) const
     {
         return _CompareUnknown(p) < 0;
     }
 
-    // Compare two smart pointers
-    //
-    template<typename _OtherIID> bool operator>(const _com_ptr_t<_OtherIID>& p) const
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    friend bool operator<(_InterfaceType* p, const _com_ptr_t& _This)
+    {
+        return _This._CompareUnknown(p) > 0;
+    }
+
+    bool operator<(decltype(nullptr)) const noexcept
+    {
+        return false;
+    }
+
+    friend bool operator<(decltype(nullptr), const _com_ptr_t& _This) noexcept
+    {
+        return _This.m_pInterface != nullptr;
+    }
+
+    bool operator<(int null) const
+    {
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        return false;
+    }
+
+    friend bool operator<(int null, const _com_ptr_t& _This)
+    {
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        return _This.m_pInterface != nullptr;
+    }
+
+    bool operator>(const _com_ptr_t& p) const
+    {
+        return _CompareUnknown(p.m_pInterface) > 0;
+    }
+
+    template<typename _OtherIID, ::std::enable_if_t<!::std::is_same<_IIID, _OtherIID>::value, int> = 0>
+    bool operator>(const _com_ptr_t<_OtherIID>& p) const
+    {
+        return _CompareUnknown(p.GetInterfacePtr()) > 0;
+    }
+
+    bool operator>(Interface* p) const
     {
         return _CompareUnknown(p) > 0;
     }
 
-    // Compare two pointers
-    //
-    template<typename _InterfaceType> bool operator>(_InterfaceType* p) const
+    friend bool operator>(Interface* p, const _com_ptr_t& _This)
+    {
+        return _This._CompareUnknown(p) < 0;
+    }
+
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    bool operator>(_InterfaceType* p) const
     {
         return _CompareUnknown(p) > 0;
     }
 
-    // Compare two smart pointers
-    //
-    template<typename _OtherIID> bool operator<=(const _com_ptr_t<_OtherIID>& p) const
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    friend bool operator>(_InterfaceType* p, const _com_ptr_t& _This)
+    {
+        return _This._CompareUnknown(p) < 0;
+    }
+
+    bool operator>(decltype(nullptr)) const noexcept
+    {
+        return m_pInterface != nullptr;
+    }
+
+    friend bool operator>(decltype(nullptr), const _com_ptr_t& _This) noexcept
+    {
+        (void)_This;
+        return false;
+    }
+
+    bool operator>(int null) const
+    {
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        return m_pInterface != nullptr;
+    }
+
+    friend bool operator>(int null, const _com_ptr_t& _This)
+    {
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        (void)_This;
+        return false;
+    }
+
+    bool operator<=(const _com_ptr_t& p) const
+    {
+        return _CompareUnknown(p.m_pInterface) <= 0;
+    }
+
+    template<typename _OtherIID, ::std::enable_if_t<!::std::is_same<_IIID, _OtherIID>::value, int> = 0>
+    bool operator<=(const _com_ptr_t<_OtherIID>& p) const
+    {
+        return _CompareUnknown(p.GetInterfacePtr()) <= 0;
+    }
+
+    bool operator<=(Interface* p) const
     {
         return _CompareUnknown(p) <= 0;
     }
 
-    // Compare two pointers
-    //
-    template<typename _InterfaceType> bool operator<=(_InterfaceType* p) const
+    friend bool operator<=(Interface* p, const _com_ptr_t& _This)
+    {
+        return _This._CompareUnknown(p) >= 0;
+    }
+
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    bool operator<=(_InterfaceType* p) const
     {
         return _CompareUnknown(p) <= 0;
     }
 
-    // Compare two smart pointers
-    //
-    template<typename _OtherIID> bool operator>=(const _com_ptr_t<_OtherIID>& p) const
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    friend bool operator<=(_InterfaceType* p, const _com_ptr_t& _This)
+    {
+        return _This._CompareUnknown(p) >= 0;
+    }
+
+    bool operator<=(decltype(nullptr)) const noexcept
+    {
+        return m_pInterface == nullptr;
+    }
+
+    friend bool operator<=(decltype(nullptr), const _com_ptr_t&) noexcept
+    {
+        return true;
+    }
+
+    bool operator<=(int null) const
+    {
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        return m_pInterface == nullptr;
+    }
+
+    friend bool operator<=(int null, const _com_ptr_t& _This)
+    {
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        (void)_This;
+        return true;
+    }
+
+    bool operator>=(const _com_ptr_t& p) const
+    {
+        return _CompareUnknown(p.m_pInterface) >= 0;
+    }
+
+    template<typename _OtherIID, ::std::enable_if_t<!::std::is_same<_IIID, _OtherIID>::value, int> = 0>
+    bool operator>=(const _com_ptr_t<_OtherIID>& p) const
+    {
+        return _CompareUnknown(p.GetInterfacePtr()) >= 0;
+    }
+
+    bool operator>=(Interface* p) const
     {
         return _CompareUnknown(p) >= 0;
     }
 
-    // Compare two pointers
-    //
-    template<typename _InterfaceType> bool operator>=(_InterfaceType* p) const
+    friend bool operator>=(Interface* p, const _com_ptr_t& _This)
+    {
+        return _This._CompareUnknown(p) <= 0;
+    }
+
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    bool operator>=(_InterfaceType* p) const
     {
         return _CompareUnknown(p) >= 0;
     }
 
-    // Provides error-checking Release()ing of this interface.
-    //
+    template<typename _InterfaceType,
+        ::std::enable_if_t<!::std::is_same<_InterfaceType, Interface>::value, int> = 0>
+    friend bool operator>=(_InterfaceType* p, const _com_ptr_t& _This)
+    {
+        return _This._CompareUnknown(p) <= 0;
+    }
+
+    bool operator>=(decltype(nullptr)) const noexcept
+    {
+        return true;
+    }
+
+    friend bool operator>=(decltype(nullptr), const _com_ptr_t& _This) noexcept
+    {
+        return _This.m_pInterface == nullptr;
+    }
+
+    bool operator>=(int null) const
+    {
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        return true;
+    }
+
+    friend bool operator>=(int null, const _com_ptr_t& _This)
+    {
+        if (null != 0)
+        {
+            _com_issue_error(E_POINTER);
+        }
+
+        return _This.m_pInterface == nullptr;
+    }
+
     void Release()
     {
-        if (m_pInterface == NULL) {
-            _com_issue_error(E_POINTER);
-        }
-        else {
+        if (m_pInterface)
+        {
             m_pInterface->Release();
-            m_pInterface = NULL;
+            m_pInterface = nullptr;
+        }
+        else
+        {
+            _com_issue_error(E_POINTER);
         }
     }
 
-    // Provides error-checking AddRef()ing of this interface.
-    //
     void AddRef()
     {
-        if (m_pInterface == NULL) {
-            _com_issue_error(E_POINTER);
-        }
-        else {
+        if (m_pInterface)
+        {
             m_pInterface->AddRef();
+        }
+        else
+        {
+            _com_issue_error(E_POINTER);
         }
     }
 
-    // Another way to get the interface pointer without casting.
-    //
-    Interface* GetInterfacePtr() const throw()
+    Interface* GetInterfacePtr() const noexcept
     {
         return m_pInterface;
     }
 
-    // Another way to get the interface pointer without casting.
-    // Use for [in, out] parameter passing
-    Interface*& GetInterfacePtr() throw()
+    Interface*& GetInterfacePtr() noexcept
     {
         return m_pInterface;
     }
 
     // Loads an interface for the provided CLSID.
     // Returns an HRESULT.  Any previous interface is unconditionally released.
-    //
-    HRESULT CreateInstance(const CLSID& rclsid, IUnknown* pOuter = NULL, DWORD dwClsContext = CLSCTX_ALL) throw()
+    HRESULT CreateInstance(const CLSID& rclsid, IUnknown* pOuter = nullptr, DWORD dwClsContext = CLSCTX_ALL) noexcept
     {
         HRESULT hr;
 
@@ -627,18 +789,16 @@ public:
 
         if (FAILED(hr)) {
             // just in case refcount = 0 and dtor gets called
-            m_pInterface = NULL;
+            m_pInterface = nullptr;
         }
 
         return hr;
     }
 
-    // Creates the class specified by clsidString.  clsidString may
-    // contain a class id, or a prog id string.
-    //
-    HRESULT CreateInstance(LPCWSTR clsidString, IUnknown* pOuter = NULL, DWORD dwClsContext = CLSCTX_ALL) throw()
+    // Creates the class specified by clsidString. clsidString may contain a class id, or a prog id string.
+    HRESULT CreateInstance(LPCWSTR clsidString, IUnknown* pOuter = nullptr, DWORD dwClsContext = CLSCTX_ALL) noexcept
     {
-        if (clsidString == NULL) {
+        if (clsidString == nullptr) {
             return E_INVALIDARG;
         }
 
@@ -659,12 +819,10 @@ public:
         return CreateInstance(clsid, pOuter, dwClsContext);
     }
 
-    // Creates the class specified by SBCS clsidString.  clsidString may
-    // contain a class id, or a prog id string.
-    //
-    HRESULT CreateInstance(LPCSTR clsidStringA, IUnknown* pOuter = NULL, DWORD dwClsContext = CLSCTX_ALL) throw()
+    // Creates the class specified by SBCS clsidString. clsidString may contain a class id, or a prog id string.
+    HRESULT CreateInstance(LPCSTR clsidStringA, IUnknown* pOuter = nullptr, DWORD dwClsContext = CLSCTX_ALL) noexcept
     {
-        if (clsidStringA == NULL) {
+        if (clsidStringA == nullptr) {
             return E_INVALIDARG;
         }
 
@@ -674,7 +832,7 @@ public:
             return E_INVALIDARG;
         }
 
-        int const destSize = MultiByteToWideChar(CP_ACP, 0, clsidStringA, static_cast<int>(size), NULL, 0);
+        int const destSize = MultiByteToWideChar(CP_ACP, 0, clsidStringA, static_cast<int>(size), nullptr, 0);
 
         if (destSize == 0) {
             return HRESULT_FROM_WIN32(GetLastError());
@@ -683,7 +841,7 @@ public:
         LPWSTR clsidStringW;
         clsidStringW = static_cast<LPWSTR>(_malloca(destSize * sizeof(WCHAR)));
 
-        if (clsidStringW == NULL) {
+        if (clsidStringW == nullptr) {
             return E_OUTOFMEMORY;
         }
 
@@ -700,13 +858,13 @@ public:
     // Attach to the active object specified by rclsid.
     // Any previous interface is released.
     //
-    HRESULT GetActiveObject(const CLSID& rclsid) throw()
+    HRESULT GetActiveObject(const CLSID& rclsid) noexcept
     {
         _Release();
 
         IUnknown* pIUnknown;
 
-        HRESULT hr = ::GetActiveObject(rclsid, NULL, &pIUnknown);
+        HRESULT hr = ::GetActiveObject(rclsid, nullptr, &pIUnknown);
 
         if (SUCCEEDED(hr)) {
             hr = pIUnknown->QueryInterface(GetIID(), reinterpret_cast<void**>(&m_pInterface));
@@ -716,7 +874,7 @@ public:
 
         if (FAILED(hr)) {
             // just in case refcount = 0 and dtor gets called
-            m_pInterface = NULL;
+            m_pInterface = nullptr;
         }
 
         return hr;
@@ -725,9 +883,9 @@ public:
     // Attach to the active object specified by clsidString.
     // First convert the LPCWSTR to a CLSID.
     //
-    HRESULT GetActiveObject(LPCWSTR clsidString) throw()
+    HRESULT GetActiveObject(LPCWSTR clsidString) noexcept
     {
-        if (clsidString == NULL) {
+        if (clsidString == nullptr) {
             return E_INVALIDARG;
         }
 
@@ -751,9 +909,9 @@ public:
     // Attach to the active object specified by clsidStringA.
     // First convert the LPCSTR to a LPCWSTR.
     //
-    HRESULT GetActiveObject(LPCSTR clsidStringA) throw()
+    HRESULT GetActiveObject(LPCSTR clsidStringA) noexcept
     {
-        if (clsidStringA == NULL) {
+        if (clsidStringA == nullptr) {
             return E_INVALIDARG;
         }
 
@@ -763,17 +921,17 @@ public:
             return E_INVALIDARG;
         }
 
-        int const destSize = MultiByteToWideChar(CP_ACP, 0, clsidStringA, static_cast<int>(size), NULL, 0);
+        int const destSize = MultiByteToWideChar(CP_ACP, 0, clsidStringA, static_cast<int>(size), nullptr, 0);
 
         LPWSTR clsidStringW;
         __try {
             clsidStringW = static_cast<LPWSTR>(_alloca(destSize * sizeof(WCHAR)));
         }
         __except (GetExceptionCode() == STATUS_STACK_OVERFLOW) {
-            clsidStringW = NULL;
+            clsidStringW = nullptr;
         }
 
-        if (clsidStringW == NULL) {
+        if (clsidStringW == nullptr) {
             return E_OUTOFMEMORY;
         }
 
@@ -787,9 +945,9 @@ public:
     // Performs the QI for the specified IID and returns it in p.
     // As with all QIs, the interface will be AddRef'd.
     //
-    template<typename _InterfaceType> HRESULT QueryInterface(const IID& iid, _InterfaceType*& p) throw ()
+    template<typename _InterfaceType> HRESULT QueryInterface(const IID& iid, _InterfaceType*& p) noexcept
     {
-        if (m_pInterface != NULL) {
+        if (m_pInterface) {
             return m_pInterface->QueryInterface(iid, reinterpret_cast<void**>(&p));
         }
 
@@ -799,7 +957,7 @@ public:
     // Performs the QI for the specified IID and returns it in p.
     // As with all QIs, the interface will be AddRef'd.
     //
-    template<typename _InterfaceType> HRESULT QueryInterface(const IID& iid, _InterfaceType** p) throw()
+    template<typename _InterfaceType> HRESULT QueryInterface(const IID& iid, _InterfaceType** p) noexcept
     {
         return QueryInterface(iid, *p);
     }
@@ -807,50 +965,50 @@ public:
 private:
     // The Interface.
     //
-    Interface* m_pInterface;
+    Interface* m_pInterface{};
 
     // Releases only if the interface is not null.
-    // The interface is not set to NULL.
+    // The interface is not set to nullptr.
     //
-    void _Release() throw()
+    void _Release() noexcept
     {
-        if (m_pInterface != NULL) {
+        if (m_pInterface) {
             m_pInterface->Release();
         }
     }
 
-    // AddRefs only if the interface is not NULL
+    // AddRefs only if the interface is not nullptr
     //
-    void _AddRef() throw()
+    void _AddRef() noexcept
     {
-        if (m_pInterface != NULL) {
+        if (m_pInterface) {
             m_pInterface->AddRef();
         }
     }
 
     // Performs a QI on pUnknown for the interface type returned
     // for this class.  The interface is stored.  If pUnknown is
-    // NULL, or the QI fails, E_NOINTERFACE is returned and
-    // _pInterface is set to NULL.
+    // nullptr, or the QI fails, E_NOINTERFACE is returned and
+    // _pInterface is set to nullptr.
     //
-    template<typename _InterfacePtr> HRESULT _QueryInterface(_InterfacePtr p) throw()
+    template<typename _InterfacePtr> HRESULT _QueryInterface(_InterfacePtr p) noexcept
     {
         HRESULT hr;
 
-        // Can't QI NULL
+        // Can't QI nullptr
         //
-        if (p != NULL) {
+        if (p) {
             // Query for this interface
             //
-            Interface* pInterface = NULL;
+            Interface* pInterface{};
             hr = p->QueryInterface(GetIID(), reinterpret_cast<void**>(&pInterface));
 
             // Save the interface without AddRef()ing.
             //
-            Attach(SUCCEEDED(hr)? pInterface: NULL);
+            Attach(SUCCEEDED(hr) ? pInterface: nullptr);
         }
         else {
-            operator=(static_cast<Interface*>(NULL));
+            operator=(static_cast<Interface*>(nullptr));
             hr = E_NOINTERFACE;
         }
 
@@ -862,14 +1020,14 @@ private:
     //
     template<typename _InterfacePtr> int _CompareUnknown(_InterfacePtr p) const
     {
-        IUnknown* pu1 = NULL;
-        IUnknown* pu2 = NULL;
+        IUnknown* pu1{};
+        IUnknown* pu2{};
 
-        if (m_pInterface != NULL) {
+        if (m_pInterface) {
             HRESULT hr = m_pInterface->QueryInterface(__uuidof(IUnknown), reinterpret_cast<void**>(&pu1));
 
             if (FAILED(hr)) {
-                pu1 = NULL;
+                pu1 = nullptr;
                 _com_issue_error(hr);
             }
             else {
@@ -877,11 +1035,11 @@ private:
             }
         }
 
-        if (p != NULL) {
+        if (p) {
             HRESULT hr = p->QueryInterface(__uuidof(IUnknown), reinterpret_cast<void**>(&pu2));
 
             if (FAILED(hr)) {
-                pu2 = NULL;
+                pu2 = nullptr;
                 _com_issue_error(hr);
             }
             else {
@@ -900,7 +1058,7 @@ private:
     // Try to extract either IDispatch* or an IUnknown* from
     // the VARIANT
     //
-    HRESULT QueryStdInterfaces(const _variant_t& varSrc) throw()
+    HRESULT QueryStdInterfaces(const _variant_t& varSrc) noexcept
     {
         if (V_VT(&varSrc) == VT_DISPATCH) {
             return _QueryInterface(V_DISPATCH(&varSrc));
@@ -936,94 +1094,4 @@ private:
         return hr;
     }
 };
-
-// Reverse comparison operators for _com_ptr_t
-//
-template<typename _InterfaceType> bool operator==(int null, const _com_ptr_t<_InterfaceType>& p)
-{
-    if (null != 0) {
-        _com_issue_error(E_POINTER);
-    }
-
-    return p == NULL;
-}
-
-template<typename _Interface, typename _InterfacePtr> bool operator==(_Interface* i, const _com_ptr_t<_InterfacePtr>& p)
-{
-    return p == i;
-}
-
-template<typename _Interface> bool operator!=(int null, const _com_ptr_t<_Interface>& p)
-{
-    if (null != 0) {
-        _com_issue_error(E_POINTER);
-    }
-
-    return p != NULL;
-}
-
-template<typename _Interface, typename _InterfacePtr> bool operator!=(_Interface* i, const _com_ptr_t<_InterfacePtr>& p)
-{
-    return p != i;
-}
-
-template<typename _Interface> bool operator<(int null, const _com_ptr_t<_Interface>& p)
-{
-    if (null != 0) {
-        _com_issue_error(E_POINTER);
-    }
-
-    return p > NULL;
-}
-
-template<typename _Interface, typename _InterfacePtr> bool operator<(_Interface* i, const _com_ptr_t<_InterfacePtr>& p)
-{
-    return p > i;
-}
-
-template<typename _Interface> bool operator>(int null, const _com_ptr_t<_Interface>& p)
-{
-    if (null != 0) {
-        _com_issue_error(E_POINTER);
-    }
-
-    return p < NULL;
-}
-
-template<typename _Interface, typename _InterfacePtr> bool operator>(_Interface* i, const _com_ptr_t<_InterfacePtr>& p)
-{
-    return p < i;
-}
-
-template<typename _Interface> bool operator<=(int null, const _com_ptr_t<_Interface>& p)
-{
-    if (null != 0) {
-        _com_issue_error(E_POINTER);
-    }
-
-    return p >= NULL;
-}
-
-template<typename _Interface, typename _InterfacePtr> bool operator<=(_Interface* i, const _com_ptr_t<_InterfacePtr>& p)
-{
-    return p >= i;
-}
-
-template<typename _Interface> bool operator>=(int null, const _com_ptr_t<_Interface>& p)
-{
-    if (null != 0) {
-        _com_issue_error(E_POINTER);
-    }
-
-    return p <= NULL;
-}
-
-template<typename _Interface, typename _InterfacePtr> bool operator>=(_Interface* i, const _com_ptr_t<_InterfacePtr>& p)
-{
-    return p <= i;
-}
-
-#pragma pop_macro("new")
-#pragma warning(pop)
-
 #endif // _INC_COMIP

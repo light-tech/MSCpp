@@ -1,4 +1,8 @@
 // scoped_allocator standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _SCOPED_ALLOCATOR_
 #define _SCOPED_ALLOCATOR_
@@ -55,32 +59,32 @@ class scoped_allocator_adaptor;
 template <class _Outer, class... _Inner>
 struct _Scoped_base;
 
-struct _Secret_scoped_allocator_construct_tag {};
+struct _Secret_scoped_allocator_construct_tag {
+    explicit _Secret_scoped_allocator_construct_tag() = default;
+};
 
 template <class _Outer, class _Inner0, class... _Inner>
-struct _Scoped_base<_Outer, _Inner0, _Inner...> : public _Outer { // nest of allocators, arbitrary depth
+struct _Scoped_base<_Outer, _Inner0, _Inner...> : _Outer { // nest of allocators, arbitrary depth
     using _Myadaptor           = scoped_allocator_adaptor<_Outer, _Inner0, _Inner...>;
     using inner_allocator_type = scoped_allocator_adaptor<_Inner0, _Inner...>;
 
     inner_allocator_type _Inner_obj;
 
-    inner_allocator_type& _Get_inner_object(_Myadaptor&) { // return _Inner_obj as inner_object
+    inner_allocator_type& _Get_inner_object(_Myadaptor&) {
         return _Inner_obj;
     }
 
-    const inner_allocator_type& _Get_inner_object(const _Myadaptor&) const { // return _Inner_obj as inner_object
+    const inner_allocator_type& _Get_inner_object(const _Myadaptor&) const {
         return _Inner_obj;
     }
 
-    _Scoped_base() : _Outer(), _Inner_obj() { // value-initialize Outer and Inner
-    }
+    _Scoped_base() : _Outer(), _Inner_obj() {} // value-initialize Outer and Inner
 
     template <class _Other1, class... _Other2,
         enable_if_t<sizeof...(_Other2) != 0 || !is_base_of_v<_Scoped_base, decay_t<_Other1>>, int> = 0>
     _Scoped_base(_Other1&& _Outer_arg, _Other2&&... _Inner_args)
-        : _Outer(_STD forward<_Other1>(_Outer_arg)),
-          _Inner_obj(_STD forward<_Other2>(_Inner_args)...) { // construct from (outer, inners...)
-                                                              // also handles rebinding
+        : _Outer(_STD forward<_Other1>(_Outer_arg)), _Inner_obj(_STD forward<_Other2>(_Inner_args)...) {
+        // also handles rebinding
     }
 
     _Scoped_base(const _Scoped_base&) = default;
@@ -96,26 +100,22 @@ struct _Scoped_base<_Outer, _Inner0, _Inner...> : public _Outer { // nest of all
 };
 
 template <class _Outer>
-struct _Scoped_base<_Outer> : public _Outer { // nest of allocators, one deep
+struct _Scoped_base<_Outer> : _Outer { // nest of allocators, one deep
     using _Myadaptor           = scoped_allocator_adaptor<_Outer>;
     using inner_allocator_type = scoped_allocator_adaptor<_Outer>;
 
-    inner_allocator_type& _Get_inner_object(_Myadaptor& _Self) { // return self as inner_object
+    inner_allocator_type& _Get_inner_object(_Myadaptor& _Self) {
         return _Self;
     }
 
-    const inner_allocator_type& _Get_inner_object(const _Myadaptor& _Self) const { // return self as inner_object
+    const inner_allocator_type& _Get_inner_object(const _Myadaptor& _Self) const {
         return _Self;
     }
 
-    _Scoped_base() : _Outer() { // value-initialize
-    }
+    _Scoped_base() : _Outer() {} // value-initialize
 
     template <class _Other1, enable_if_t<!is_base_of_v<_Scoped_base, decay_t<_Other1>>, int> = 0>
-    _Scoped_base(_Other1&& _Outer_arg)
-        : _Outer(_STD forward<_Other1>(_Outer_arg)) { // construct from (outer, inner)
-                                                      // also handles rebinding
-    }
+    _Scoped_base(_Other1&& _Outer_arg) : _Outer(_STD forward<_Other1>(_Outer_arg)) {} // also handles rebinding
 
     _Scoped_base(const _Scoped_base&) = default;
     _Scoped_base(_Scoped_base&&)      = default;
@@ -172,37 +172,27 @@ public:
 
     template <class _Other, enable_if_t<is_constructible_v<_Outer, _Other>, int> = 0>
     scoped_allocator_adaptor(_Other&& _Other_arg, const _Inner&... _Inner_args) noexcept
-        : _Mybase(_STD forward<_Other>(_Other_arg),
-            _Inner_args...) { // construct from (_Other, _Inner...)
-                              // also handles rebinding construction when sizeof...(_Inner) == 0
+        : _Mybase(_STD forward<_Other>(_Other_arg), _Inner_args...) {
+        // also handles rebinding construction when sizeof...(_Inner) == 0
     }
 
-    scoped_allocator_adaptor(const scoped_allocator_adaptor& _Right) noexcept
-        : _Mybase(_Right) { // construct from _Right
-    }
+    scoped_allocator_adaptor(const scoped_allocator_adaptor& _Right) noexcept : _Mybase(_Right) {}
 
-    scoped_allocator_adaptor(scoped_allocator_adaptor&& _Right) noexcept
-        : _Mybase(_STD move(_Right)) { // construct from _Right
-    }
+    scoped_allocator_adaptor(scoped_allocator_adaptor&& _Right) noexcept : _Mybase(_STD move(_Right)) {}
 
     template <class _Other, bool _Enabled = sizeof...(_Inner) != 0 && is_constructible_v<_Outer, const _Other&>,
         enable_if_t<_Enabled, int> = 0>
     scoped_allocator_adaptor(const scoped_allocator_adaptor<_Other, _Inner...>& _Right) noexcept
-        : _Mybase(
-            _Right.outer_allocator(), _Right.inner_allocator()) { // construct from const adaptor<_Other, _Inner...>&
-    }
+        : _Mybase(_Right.outer_allocator(), _Right.inner_allocator()) {}
 
     template <class _Other, bool _Enabled = sizeof...(_Inner) != 0 && is_constructible_v<_Outer, _Other>,
         enable_if_t<_Enabled, int> = 0>
     scoped_allocator_adaptor(scoped_allocator_adaptor<_Other, _Inner...>&& _Right) noexcept
-        : _Mybase(_STD move(_Right.outer_allocator()),
-            _STD move(_Right.inner_allocator())) { // construct from adaptor<_Other, _Inner...>&&
-    }
+        : _Mybase(_STD move(_Right.outer_allocator()), _STD move(_Right.inner_allocator())) {}
 
     scoped_allocator_adaptor(_Secret_scoped_allocator_construct_tag, const outer_allocator_type& _Outer_arg,
         const inner_allocator_type& _Inner_arg) noexcept
-        : _Mybase(_Outer_arg, _Inner_arg) { // construct from outer and inner allocators
-    }
+        : _Mybase(_Outer_arg, _Inner_arg) {}
 
     scoped_allocator_adaptor& operator=(const scoped_allocator_adaptor&) = default;
     scoped_allocator_adaptor& operator=(scoped_allocator_adaptor&&) = default;
@@ -223,12 +213,12 @@ public:
         return static_cast<const _Outer&>(*this);
     }
 
-    _NODISCARD _DECLSPEC_ALLOCATOR pointer allocate(
-        _CRT_GUARDOVERFLOW size_type _Count) { // allocate array of _Count elements, ignore hint
+    _NODISCARD __declspec(allocator) pointer
+        allocate(_CRT_GUARDOVERFLOW size_type _Count) { // allocate array of _Count elements, ignore hint
         return _Outer_traits::allocate(outer_allocator(), _Count);
     }
 
-    _NODISCARD _DECLSPEC_ALLOCATOR pointer allocate(
+    _NODISCARD __declspec(allocator) pointer allocate(
         _CRT_GUARDOVERFLOW size_type _Count, const_void_pointer _Hint) { // allocate array of _Count elements, with hint
         return _Outer_traits::allocate(outer_allocator(), _Count, _Hint);
     }
@@ -256,7 +246,7 @@ public:
 
 #if _HAS_CXX17
 template <class _Outer, class... _Inner>
-scoped_allocator_adaptor(_Outer, _Inner...)->scoped_allocator_adaptor<_Outer, _Inner...>;
+scoped_allocator_adaptor(_Outer, _Inner...) -> scoped_allocator_adaptor<_Outer, _Inner...>;
 #endif // _HAS_CXX17
 
 template <class _Outer1, class _Outer2, class _Inner1, class... _Inner>
@@ -286,8 +276,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _SCOPED_ALLOCATOR_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

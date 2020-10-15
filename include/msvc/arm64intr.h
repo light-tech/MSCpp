@@ -12,7 +12,7 @@
 #pragma once
 
 
-#if !defined(_M_ARM64) && !defined(_M_HYBRID_X86_ARM64)
+#if !defined(_M_ARM64) && !defined(_M_HYBRID_X86_ARM64) && !defined(_M_ARM64EC)
 #error This header is specific to ARM64 targets
 #endif
 
@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-// ARM64-TODO: define more. Only need barrier so far.
+// ARM64-TRANSITION: define more. Only need barrier so far.
 
 typedef enum _tag_ARM64INTR_BARRIER_TYPE
 {

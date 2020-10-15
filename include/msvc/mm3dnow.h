@@ -31,6 +31,9 @@
 #include <mmintrin.h>
 #include <xmmintrin.h>
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 #if defined __cplusplus
 extern "C" { /* Intrinsics use C name-mangling.  */
 #endif  /* defined __cplusplus */
@@ -74,5 +77,6 @@ __m64 _m_pswapd(__m64);
 #if defined __cplusplus
 }; /* End "C" */
 #endif  /* defined __cplusplus */
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 #endif  /* __midl */
 #endif  /* _MM3DNOW_H_INCLUDED */

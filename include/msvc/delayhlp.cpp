@@ -167,7 +167,7 @@ PiddFromDllName(LPCSTR szDll) {
             // Check to see if it is the DLL we want
             // Intentionally case sensitive to avoid complication of using the CRT
             // for those that don't use the CRT...the user can replace this with
-            // a variant of a case insenstive comparison routine.
+            // a variant of a case insensitive comparison routine.
             //
             LPCSTR  szDllCur = PFromRva<LPCSTR>(pidd->rvaDLLName);
             size_t  cchDllCur = __strlen(szDllCur);

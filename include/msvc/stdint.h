@@ -9,7 +9,11 @@
 #define _STDINT
 
 #include <vcruntime.h>
+
 #if _VCRT_COMPILER_PREPROCESSOR
+
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
 
 typedef signed char        int8_t;
 typedef short              int16_t;
@@ -124,9 +128,6 @@ typedef unsigned long long uintmax_t;
 #define INTMAX_C(x)  INT64_C(x)
 #define UINTMAX_C(x) UINT64_C(x)
 
-#endif // _VCRT_COMPILER_PREPROCESSOR
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 
-/*
- * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
- * Consult your license regarding permissions and restrictions.
-V6.00:0009 */
+#endif // _VCRT_COMPILER_PREPROCESSOR

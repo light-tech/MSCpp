@@ -16,13 +16,13 @@
 #endif
  
 #if !defined(_VC_CRT_MINOR_VERSION)
-#define _VC_CRT_MINOR_VERSION 23
+#define _VC_CRT_MINOR_VERSION 27
 #endif
  
 #if !defined(_VC_CRT_BUILD_VERSION)
-#define _VC_CRT_BUILD_VERSION 28105
+#define _VC_CRT_BUILD_VERSION 29110
 #endif
  
 #if !defined(_VC_CRT_RBUILD_VERSION)
-#define _VC_CRT_RBUILD_VERSION 4
+#define _VC_CRT_RBUILD_VERSION 0
 #endif

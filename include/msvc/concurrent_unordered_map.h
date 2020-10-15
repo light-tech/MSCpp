@@ -771,7 +771,7 @@ public:
 
         if (_Where == this->end())
         {
-            throw std::out_of_range("invalid concurrent_unordered_map<K, T> key");
+            _STD _Xout_of_range("invalid concurrent_unordered_map<K, T> key");
         }
 
         return ((*_Where).second);
@@ -796,7 +796,7 @@ public:
 
         if (_Where == this->end())
         {
-            throw std::out_of_range("invalid concurrent_unordered_map<K, T> key");
+            _STD _Xout_of_range("invalid concurrent_unordered_map<K, T> key");
         }
 
         return ((*_Where).second);

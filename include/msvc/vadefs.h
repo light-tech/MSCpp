@@ -14,6 +14,39 @@
 #define _CRT_PACKING 8
 #pragma pack(push, _CRT_PACKING)
 
+// C4339: '__type_info_node': use of undefined type detected in CLR meta-data (/Wall)
+#ifndef _VCRUNTIME_DISABLED_WARNING_4339
+    #ifdef _M_CEE_PURE
+        #define _VCRUNTIME_DISABLED_WARNING_4339 4339
+    #else
+        #define _VCRUNTIME_DISABLED_WARNING_4339
+    #endif
+#endif
+
+// C4412: function signature contains type '<typename>';
+//        C++ objects are unsafe to pass between pure code and mixed or native. (/Wall)
+#ifndef _VCRUNTIME_DISABLED_WARNING_4412
+    #ifdef _M_CEE_PURE
+        #define _VCRUNTIME_DISABLED_WARNING_4412 4412
+    #else
+        #define _VCRUNTIME_DISABLED_WARNING_4412
+    #endif
+#endif
+
+// Use _VCRUNTIME_EXTRA_DISABLED_WARNINGS to add additional warning suppressions to VCRuntime headers.
+#ifndef _VCRUNTIME_EXTRA_DISABLED_WARNINGS
+    #define _VCRUNTIME_EXTRA_DISABLED_WARNINGS
+#endif
+
+// C4514: unreferenced inline function has been removed (/Wall)
+// C4820: '<typename>' : 'N' bytes padding added after data member (/Wall)
+#ifndef _VCRUNTIME_DISABLED_WARNINGS
+    #define _VCRUNTIME_DISABLED_WARNINGS _VCRUNTIME_DISABLED_WARNING_4339 _VCRUNTIME_DISABLED_WARNING_4412 4514 4820 _VCRUNTIME_EXTRA_DISABLED_WARNINGS
+#endif
+
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -50,7 +83,7 @@ extern "C" {
     #define _VA_ALIGN       4
     #define _SLOTSIZEOF(t)  ((sizeof(t) + _VA_ALIGN - 1) & ~(_VA_ALIGN - 1))
     #define _APALIGN(t,ap)  (((va_list)0 - (ap)) & (__alignof(t) - 1))
-#elif defined _M_ARM64 && !defined _M_CEE_PURE
+#elif (defined _M_ARM64 || defined _M_ARM64EC) && !defined _M_CEE_PURE
     #define _VA_ALIGN       8
     #define _SLOTSIZEOF(t)  ((sizeof(t) + _VA_ALIGN - 1) & ~(_VA_ALIGN - 1))
     #define _APALIGN(t,ap)  (((va_list)0 - (ap)) & (__alignof(t) - 1))
@@ -101,11 +134,21 @@ extern "C" {
 
     #define __crt_va_start_a(ap,v) ((void)(__va_start(&ap, _ADDRESSOF(v), _SLOTSIZEOF(v), __alignof(v), _ADDRESSOF(v))))
     #define __crt_va_arg(ap, t)                                                 \
-        ((sizeof(t) > (2 * sizeof(__int64)))                                   \
-            ? **(t**)((ap += sizeof(__int64)) - sizeof(__int64))               \
-            : *(t*)((ap += _SLOTSIZEOF(t) + _APALIGN(t,ap)) - _SLOTSIZEOF(t)))
+       ((sizeof(t) > (2 * sizeof(__int64)))                                   \
+           ? **(t**)((ap += sizeof(__int64)) - sizeof(__int64))               \
+           : *(t*)((ap += _SLOTSIZEOF(t) + _APALIGN(t,ap)) - _SLOTSIZEOF(t)))
     #define __crt_va_end(ap)       ((void)(ap = (va_list)0))
 
+#elif defined _M_ARM64EC
+    void __cdecl __va_start(va_list*, ...);
+    //take the ARM64 va_start (for now)
+    #define __crt_va_start_a(ap,v) ((void)(__va_start(&ap, _ADDRESSOF(v), _SLOTSIZEOF(v), __alignof(v), _ADDRESSOF(v))))
+    //a hybrid va arg, to account for the shift in calling convention, with the alignment of ARM64
+    #define __crt_va_arg(ap, t)                                               \
+        ((sizeof(t) > sizeof(__int64) || (sizeof(t) & (sizeof(t) - 1)) != 0) \
+            ? **(t**)((ap += sizeof(__int64)) - sizeof(__int64))             \
+            : *(t*)((ap += _SLOTSIZEOF(t) + _APALIGN(t,ap)) - _SLOTSIZEOF(t)))
+    #define __crt_va_end(ap)        ((void)(ap = (va_list)0))
 
 #elif defined _M_X64
 
@@ -161,4 +204,5 @@ extern "C" {
 
 #endif
 
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 #pragma pack(pop)

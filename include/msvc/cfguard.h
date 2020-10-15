@@ -12,6 +12,9 @@
 #include <sal.h>
 #include <vadefs.h>
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 #pragma pack(push, _CRT_PACKING)
 
 #ifdef __cplusplus
@@ -40,5 +43,7 @@ extern "C" {
 #endif
 
 #pragma pack(pop)
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 
 #endif // _CFGUARD_H

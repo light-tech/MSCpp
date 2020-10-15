@@ -1,10 +1,14 @@
 // iterator standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _ITERATOR_
 #define _ITERATOR_
 #include <yvals_core.h>
 #if _STL_COMPILER_PREPROCESSOR
-#include <istream>
+#include <iosfwd>
 #include <xutility>
 
 #pragma pack(push, _CRT_PACKING)
@@ -15,20 +19,80 @@ _STL_DISABLE_CLANG_WARNINGS
 #undef new
 
 _STD_BEGIN
+// CLASS TEMPLATE back_insert_iterator
+template <class _Container>
+class back_insert_iterator { // wrap pushes to back of container as output iterator
+public:
+    using iterator_category = output_iterator_tag;
+    using value_type        = void;
+    using pointer           = void;
+    using reference         = void;
+
+    using container_type = _Container;
+
+#ifdef __cpp_lib_concepts
+    using difference_type = ptrdiff_t;
+
+    constexpr back_insert_iterator() noexcept = default;
+#else // ^^^ __cpp_lib_concepts / !__cpp_lib_concepts vvv
+    using difference_type = void;
+#endif // __cpp_lib_concepts
+
+    explicit back_insert_iterator(_Container& _Cont) noexcept /* strengthened */ : container(_STD addressof(_Cont)) {}
+
+    back_insert_iterator& operator=(const typename _Container::value_type& _Val) {
+        container->push_back(_Val);
+        return *this;
+    }
+
+    back_insert_iterator& operator=(typename _Container::value_type&& _Val) {
+        container->push_back(_STD move(_Val));
+        return *this;
+    }
+
+    _NODISCARD back_insert_iterator& operator*() noexcept /* strengthened */ {
+        return *this;
+    }
+
+    back_insert_iterator& operator++() noexcept /* strengthened */ {
+        return *this;
+    }
+
+    back_insert_iterator operator++(int) noexcept /* strengthened */ {
+        return *this;
+    }
+
+protected:
+    _Container* container = nullptr;
+};
+
+// FUNCTION TEMPLATE back_inserter
+template <class _Container>
+_NODISCARD back_insert_iterator<_Container> back_inserter(_Container& _Cont) noexcept /* strengthened */ {
+    // return a back_insert_iterator
+    return back_insert_iterator<_Container>(_Cont);
+}
+
 // CLASS TEMPLATE front_insert_iterator
 template <class _Container>
 class front_insert_iterator { // wrap pushes to front of container as output iterator
 public:
     using iterator_category = output_iterator_tag;
     using value_type        = void;
-    using difference_type   = void;
     using pointer           = void;
     using reference         = void;
 
     using container_type = _Container;
 
-    explicit front_insert_iterator(_Container& _Cont) : container(_STD addressof(_Cont)) { // construct with container
-    }
+#ifdef __cpp_lib_concepts
+    using difference_type = ptrdiff_t;
+
+    constexpr front_insert_iterator() noexcept = default;
+#else // ^^^ __cpp_lib_concepts / !__cpp_lib_concepts vvv
+    using difference_type = void;
+#endif // __cpp_lib_concepts
+
+    explicit front_insert_iterator(_Container& _Cont) : container(_STD addressof(_Cont)) {}
 
     front_insert_iterator& operator=(const typename _Container::value_type& _Val) { // push value into container
         container->push_front(_Val);
@@ -53,12 +117,12 @@ public:
     }
 
 protected:
-    _Container* container; // pointer to container
+    _Container* container = nullptr;
 };
 
 // FUNCTION TEMPLATE front_inserter
 template <class _Container>
-_NODISCARD front_insert_iterator<_Container> front_inserter(_Container& _Cont) { // return front_insert_iterator
+_NODISCARD front_insert_iterator<_Container> front_inserter(_Container& _Cont) {
     return front_insert_iterator<_Container>(_Cont);
 }
 
@@ -69,15 +133,21 @@ class insert_iterator { // wrap inserts into container as output iterator
 public:
     using iterator_category = output_iterator_tag;
     using value_type        = void;
-    using difference_type   = void;
     using pointer           = void;
     using reference         = void;
 
     using container_type = _Container;
 
+#ifdef __cpp_lib_concepts
+    using difference_type = ptrdiff_t;
+
+    insert_iterator() = default;
+#else // ^^^ __cpp_lib_concepts / !__cpp_lib_concepts vvv
+    using difference_type = void;
+#endif // __cpp_lib_concepts
+
     insert_iterator(_Container& _Cont, typename _Container::iterator _Where)
-        : container(_STD addressof(_Cont)), iter(_Where) { // construct with container and iterator
-    }
+        : container(_STD addressof(_Cont)), iter(_Where) {}
 
     insert_iterator& operator=(
         const typename _Container::value_type& _Val) { // insert into container and increment stored iterator
@@ -106,17 +176,54 @@ public:
     }
 
 protected:
-    _Container* container; // pointer to container
-    typename _Container::iterator iter; // iterator into container
+    _Container* container = nullptr;
+    typename _Container::iterator iter{};
 };
 
 // FUNCTION TEMPLATE inserter
 template <class _Container>
-_NODISCARD insert_iterator<_Container> inserter(_Container& _Cont,
-    typename _Container::iterator _Where) { // return insert_iterator
+_NODISCARD insert_iterator<_Container> inserter(_Container& _Cont, typename _Container::iterator _Where) {
     return insert_iterator<_Container>(_Cont, _Where);
 }
 
+#ifdef __cpp_lib_concepts
+// CLASS TEMPLATE move_sentinel
+template <semiregular _Se>
+class move_sentinel {
+public:
+    constexpr move_sentinel() = default;
+
+    constexpr explicit move_sentinel(_Se _Val) noexcept(is_nothrow_move_constructible_v<_Se>) // strengthened
+        : _Last{_STD move(_Val)} {}
+
+    // clang-format off
+    template <class _Se2>
+        requires convertible_to<const _Se2&, _Se>
+    constexpr move_sentinel(const move_sentinel<_Se2>& _Val)
+        noexcept(is_nothrow_constructible_v<_Se, const _Se2&>) // strengthened
+        : _Last{_Val._Get_last()} {}
+
+    template <class _Se2>
+        requires assignable_from<_Se&, const _Se2&>
+    constexpr move_sentinel& operator=(const move_sentinel<_Se2>& _Val)
+        noexcept(is_nothrow_assignable_v<_Se&, const _Se2&>) /* strengthened */ {
+        _Last = _Val._Get_last();
+        return *this;
+    }
+    // clang-format on
+
+    _NODISCARD constexpr _Se base() const noexcept(is_nothrow_copy_constructible_v<_Se>) /* strengthened */ {
+        return _Last;
+    }
+
+    _NODISCARD constexpr const _Se& _Get_last() const noexcept {
+        return _Last;
+    }
+
+private:
+    _Se _Last{};
+};
+#endif // __cpp_lib_concepts
 
 // CLASS TEMPLATE istream_iterator
 template <class _Ty, class _Elem = char, class _Traits = char_traits<_Elem>, class _Diff = ptrdiff_t>
@@ -132,18 +239,23 @@ public:
     using traits_type  = _Traits;
     using istream_type = basic_istream<_Elem, _Traits>;
 
-    constexpr istream_iterator() : _Myistr(nullptr), _Myval() { // construct singular iterator
-    }
+    static_assert(conjunction_v<is_default_constructible<_Ty>, is_copy_constructible<_Ty>, is_copy_assignable<_Ty>>,
+        "istream_iterator<T> requires T to be default constructible, copy constructible, and copy assignable. "
+        "(N4835 [istream.iterator]/2)");
 
-    istream_iterator(istream_type& _Istr) : _Myistr(_STD addressof(_Istr)) { // construct with input stream
+    constexpr istream_iterator() {}
+
+    istream_iterator(istream_type& _Istr) : _Myistr(_STD addressof(_Istr)) {
         _Getval();
     }
 
     _NODISCARD const _Ty& operator*() const {
+        _STL_ASSERT(_Myistr, "The stored stream pointer in_stream must be non-null");
         return _Myval;
     }
 
     _NODISCARD const _Ty* operator->() const {
+        _STL_ASSERT(_Myistr, "The stored stream pointer in_stream must be non-null");
         return _STD addressof(_Myval);
     }
 
@@ -162,26 +274,27 @@ public:
         return _Myistr == _Right._Myistr;
     }
 
-protected:
+private:
     void _Getval() { // get a _Ty value if possible
-        if (_Myistr && !(*_Myistr >> _Myval)) {
+        _STL_ASSERT(_Myistr, "The stored stream pointer in_stream must be non-null");
+        if (!(*_Myistr >> _Myval)) {
             _Myistr = nullptr;
         }
     }
 
-    istream_type* _Myistr; // pointer to input stream
-    _Ty _Myval; // lookahead value (valid if _Myistr is not null)
+    istream_type* _Myistr{nullptr}; // pointer to input stream
+    _Ty _Myval{}; // lookahead value (valid if _Myistr is not null)
 };
 
 template <class _Ty, class _Elem, class _Traits, class _Diff>
 _NODISCARD bool operator==(const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Left,
-    const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Right) { // test for istream_iterator equality
+    const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Right) {
     return _Left._Equal(_Right);
 }
 
 template <class _Ty, class _Elem, class _Traits, class _Diff>
 _NODISCARD bool operator!=(const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Left,
-    const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Right) { // test for istream_iterator inequality
+    const istream_iterator<_Ty, _Elem, _Traits, _Diff>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -201,8 +314,7 @@ public:
     using ostream_type = basic_ostream<_Elem, _Traits>;
 
     ostream_iterator(ostream_type& _Ostr, const _Elem* const _Delim = nullptr)
-        : _Mydelim(_Delim), _Myostr(_STD addressof(_Ostr)) { // construct from output stream and delimiter
-    }
+        : _Mydelim(_Delim), _Myostr(_STD addressof(_Ostr)) {}
 
     ostream_iterator& operator=(const _Ty& _Val) { // insert value into output stream, followed by delimiter
         *_Myostr << _Val;
@@ -229,6 +341,177 @@ protected:
     const _Elem* _Mydelim; // pointer to delimiter string (NB: not freed)
     ostream_type* _Myostr; // pointer to output stream
 };
+
+// CLASS TEMPLATE istreambuf_iterator
+template <class _Elem, class _Traits>
+class istreambuf_iterator { // wrap stream buffer as input iterator
+public:
+    using iterator_category = input_iterator_tag;
+    using value_type        = _Elem;
+    using difference_type   = typename _Traits::off_type;
+    using pointer           = const _Elem*;
+    using reference         = _Elem;
+
+    using char_type      = _Elem;
+    using traits_type    = _Traits;
+    using streambuf_type = basic_streambuf<_Elem, _Traits>;
+    using istream_type   = basic_istream<_Elem, _Traits>;
+
+    using int_type = typename traits_type::int_type;
+
+    constexpr istreambuf_iterator() noexcept : _Strbuf(nullptr), _Got(true), _Val() {}
+
+    istreambuf_iterator(streambuf_type* _Sb) noexcept : _Strbuf(_Sb), _Got(!_Sb), _Val() {}
+
+    istreambuf_iterator(istream_type& _Istr) noexcept : _Strbuf(_Istr.rdbuf()), _Got(!_Strbuf), _Val() {}
+
+private:
+    class _Istreambuf_proxy {
+    public:
+        _NODISCARD _Elem operator*() const {
+            return _Keep;
+        }
+
+    private:
+        friend istreambuf_iterator;
+        _Istreambuf_proxy(streambuf_type* _Strbuf_, _Elem _Keep_) : _Strbuf(_Strbuf_), _Keep(_Keep_) {}
+
+        streambuf_type* _Strbuf;
+        _Elem _Keep;
+    };
+
+public:
+    istreambuf_iterator(const _Istreambuf_proxy& _Px) noexcept : _Strbuf(_Px._Strbuf), _Got(!_Strbuf), _Val() {}
+
+    _NODISCARD _Elem operator*() const {
+        if (!_Got) {
+            _Peek();
+        }
+
+#if _ITERATOR_DEBUG_LEVEL == 2
+        _STL_VERIFY(_Strbuf, "istreambuf_iterator is not dereferenceable");
+#endif // _ITERATOR_DEBUG_LEVEL == 2
+
+        return _Val;
+    }
+
+    istreambuf_iterator& operator++() {
+#if _ITERATOR_DEBUG_LEVEL == 2
+        _STL_VERIFY(_Strbuf, "istreambuf_iterator is not incrementable");
+#endif // _ITERATOR_DEBUG_LEVEL == 2
+
+        _Inc();
+        return *this;
+    }
+
+    _Istreambuf_proxy operator++(int) {
+        if (!_Got) {
+            _Peek();
+        }
+
+        _Istreambuf_proxy _Tmp{_Strbuf, _Val};
+        ++*this;
+        return _Tmp;
+    }
+
+    _NODISCARD bool equal(const istreambuf_iterator& _Right) const {
+        if (!_Got) {
+            _Peek();
+        }
+
+        if (!_Right._Got) {
+            _Right._Peek();
+        }
+
+        return (!_Strbuf && !_Right._Strbuf) || (_Strbuf && _Right._Strbuf);
+    }
+
+private:
+    void _Inc() { // skip to next input element
+        if (!_Strbuf || traits_type::eq_int_type(traits_type::eof(), _Strbuf->sbumpc())) {
+            _Strbuf = nullptr;
+            _Got    = true;
+        } else {
+            _Got = false;
+        }
+    }
+
+    _Elem _Peek() const { // peek at next input element
+        int_type _Meta;
+        if (!_Strbuf || traits_type::eq_int_type(traits_type::eof(), _Meta = _Strbuf->sgetc())) {
+            _Strbuf = nullptr;
+        } else {
+            _Val = traits_type::to_char_type(_Meta);
+        }
+
+        _Got = true;
+        return _Val;
+    }
+
+    mutable streambuf_type* _Strbuf; // the wrapped stream buffer
+    mutable bool _Got; // true if _Val is valid
+    mutable _Elem _Val; // next element to deliver
+};
+
+template <class _Elem, class _Traits>
+_NODISCARD bool operator==(
+    const istreambuf_iterator<_Elem, _Traits>& _Left, const istreambuf_iterator<_Elem, _Traits>& _Right) {
+    return _Left.equal(_Right);
+}
+
+template <class _Elem, class _Traits>
+_NODISCARD bool operator!=(
+    const istreambuf_iterator<_Elem, _Traits>& _Left, const istreambuf_iterator<_Elem, _Traits>& _Right) {
+    return !(_Left == _Right);
+}
+
+// CLASS TEMPLATE ostreambuf_iterator
+template <class _Elem, class _Traits>
+class ostreambuf_iterator { // wrap stream buffer as output iterator
+public:
+    using iterator_category = output_iterator_tag;
+    using value_type        = void;
+    using difference_type   = void;
+    using pointer           = void;
+    using reference         = void;
+
+    using char_type      = _Elem;
+    using traits_type    = _Traits;
+    using streambuf_type = basic_streambuf<_Elem, _Traits>;
+    using ostream_type   = basic_ostream<_Elem, _Traits>;
+
+    ostreambuf_iterator(streambuf_type* _Sb) noexcept : _Failed(false), _Strbuf(_Sb) {}
+
+    ostreambuf_iterator(ostream_type& _Ostr) noexcept : _Failed(false), _Strbuf(_Ostr.rdbuf()) {}
+
+    ostreambuf_iterator& operator=(_Elem _Right) { // store element and increment
+        if (!_Strbuf || traits_type::eq_int_type(_Traits::eof(), _Strbuf->sputc(_Right))) {
+            _Failed = true;
+        }
+
+        return *this;
+    }
+
+    _NODISCARD ostreambuf_iterator& operator*() { // pretend to get designated element
+        return *this;
+    }
+
+    ostreambuf_iterator& operator++() { // pretend to preincrement
+        return *this;
+    }
+
+    ostreambuf_iterator& operator++(int) { // pretend to postincrement
+        return *this;
+    }
+
+    _NODISCARD bool failed() const noexcept {
+        return _Failed;
+    }
+
+private:
+    bool _Failed; // true if any stores have failed
+    streambuf_type* _Strbuf; // the wrapped stream buffer
+};
 _STD_END
 
 _STDEXT_BEGIN
@@ -250,7 +533,7 @@ public:
     constexpr checked_array_iterator() noexcept : _Myarray(nullptr), _Mysize(0), _Myindex(0) {}
 
     constexpr checked_array_iterator(const _Ptr _Array, const size_t _Size, const size_t _Index = 0) noexcept
-        : _Myarray(_Array), _Mysize(_Size), _Myindex(_Index) { // construct with array, size, and optional index
+        : _Myarray(_Array), _Mysize(_Size), _Myindex(_Index) {
         _STL_VERIFY(_Index <= _Size, "checked_array_iterator construction index out of range");
     }
 
@@ -319,8 +602,11 @@ public:
         return _Tmp;
     }
 
-    friend constexpr checked_array_iterator operator+(const difference_type _Off,
-        const checked_array_iterator<_Ptr>& _Next) noexcept { // TRANSITION, VSO#568006
+#ifndef __CUDACC__ // TRANSITION, VSO-568006
+    _NODISCARD
+#endif // TRANSITION, VSO-568006
+    friend constexpr checked_array_iterator operator+(
+        const difference_type _Off, const checked_array_iterator<_Ptr>& _Next) noexcept {
         return _Next + _Off;
     }
 
@@ -425,7 +711,7 @@ private:
 
 template <class _Ptr>
 _NODISCARD constexpr checked_array_iterator<_Ptr> make_checked_array_iterator(
-    const _Ptr _Array, const size_t _Size, const size_t _Index = 0) { // construct with array, size, and optional index
+    const _Ptr _Array, const size_t _Size, const size_t _Index = 0) {
     return checked_array_iterator<_Ptr>(_Array, _Size, _Index);
 }
 
@@ -490,8 +776,11 @@ public:
         return _Tmp;
     }
 
-    friend constexpr unchecked_array_iterator operator+(const difference_type _Off,
-        const unchecked_array_iterator& _Next) noexcept { // TRANSITION, VSO#568006
+#ifndef __CUDACC__ // TRANSITION, VSO-568006
+    _NODISCARD
+#endif // TRANSITION, VSO-568006
+    friend constexpr unchecked_array_iterator operator+(
+        const difference_type _Off, const unchecked_array_iterator& _Next) noexcept {
         return _Next + _Off;
     }
 
@@ -572,8 +861,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _ITERATOR_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

@@ -9,6 +9,9 @@
 
 #include <vcruntime.h>
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 #ifndef __midl
 
 _CRT_BEGIN_C_HEADER
@@ -106,3 +109,5 @@ _VCRTIMP wchar_t _CONST_RETURN* __cdecl wcsstr(
 _CRT_END_C_HEADER
 
 #endif // __midl
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS

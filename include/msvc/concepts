@@ -1,18 +1,19 @@
 // concepts standard header (core)
-// Copyright (c) Microsoft Corporation. All rights reserved.
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _CONCEPTS_
 #define _CONCEPTS_
 #include <yvals_core.h>
 #if _STL_COMPILER_PREPROCESSOR
 
-#ifdef __cpp_lib_concepts
-#if defined(__clang__) && !defined(_SILENCE_CLANG_CONCEPTS_MESSAGE)
-#error Despite the presence of some Clang-related bits, this header currently does not support Clang. \
-You can define _SILENCE_CLANG_CONCEPTS_MESSAGE to silence this message and acknowledge that this is unsupported.
-#endif // defined(__clang__) && !defined(_SILENCE_CLANG_CONCEPTS_MESSAGE)
-
+#ifndef __cpp_lib_concepts
+#pragma message("The contents of <concepts> are available only with C++20 concepts support.")
+#else // ^^^ !defined(__cpp_lib_concepts) / defined(__cpp_lib_concepts) vvv
 #include <type_traits>
+#include <vcruntime_new.h>
 
 #pragma pack(push, _CRT_PACKING)
 #pragma warning(push, _STL_WARNING_LEVEL)
@@ -27,7 +28,7 @@ _STD_BEGIN
 template <class _Ty1, class _Ty2>
 concept _Same_impl = // Must be a distinct concept to provide symmetric subsumption for same_as
 #ifdef __clang__
-    __is_same(_Ty1 _Ty2);
+    __is_same(_Ty1, _Ty2);
 #else // ^^^ use intrinsic / no intrinsic vvv
     is_same_v<_Ty1, _Ty2>;
 #endif // __clang__
@@ -43,11 +44,9 @@ concept derived_from = __is_base_of(_Base, _Derived)
 // CONCEPT convertible_to
 template <class _From, class _To>
 concept convertible_to = __is_convertible_to(_From, _To)
-#if 1 // Implement the PR of LWG 3151
-    && requires { static_cast<_To>(_STD declval<_From>()); };
-#else // ^^^ LWG 3151 / N4810 vvv
-    && requires(_From (&_Fn)()) { static_cast<_To>(_Fn()); };
-#endif // select LWG 3151 vs. N4810
+    && requires(add_rvalue_reference_t<_From> (&_Fn)()) {
+        static_cast<_To>(_Fn());
+    };
 
 // CONCEPT common_reference_with
 template <class _Ty1, class _Ty2>
@@ -86,16 +85,16 @@ concept signed_integral = integral<_Ty> && _Ty(-1) < _Ty(0);
 template <class _Ty>
 concept unsigned_integral = integral<_Ty> && !signed_integral<_Ty>;
 
+// CONCEPT floating_point
+template <class _Ty>
+concept floating_point = is_floating_point_v<_Ty>;
+
 // CONCEPT assignable_from
 template <class _LTy, class _RTy>
 concept assignable_from = is_lvalue_reference_v<_LTy>
     && common_reference_with<const remove_reference_t<_LTy>&, const remove_reference_t<_RTy>&>
     && requires(_LTy _Left, _RTy&& _Right) {
-#if _HAS_EXACT_COMPOUND_REQUIREMENT
         { _Left = static_cast<_RTy&&>(_Right) } -> same_as<_LTy>;
-#else // ^^^ _HAS_EXACT_COMPOUND_REQUIREMENT / !_HAS_EXACT_COMPOUND_REQUIREMENT vvv
-        _Left = static_cast<_RTy&&>(_Right); requires same_as<_LTy, decltype(_Left = static_cast<_RTy&&>(_Right))>;
-#endif // _HAS_EXACT_COMPOUND_REQUIREMENT
     };
 
 // swappable and swappable_with are defined below, since they depend on move_constructible.
@@ -110,30 +109,30 @@ concept constructible_from = destructible<_Ty>
     && __is_constructible(_Ty, _ArgTys...);
 
 // CONCEPT default_initializable
-template <class _Ty> // Per P1754R1 and LWG 3149
+template <class _Ty>
 concept default_initializable = constructible_from<_Ty>
-    && requires { _Ty{}; }; // && __is_default_initializable(_Ty); // TRANSITION, VSO#896348
+    && requires {
+        _Ty{};
+        ::new (static_cast<void*>(nullptr)) _Ty; // is-default-initializable<_Ty>
+    };
 
 // CONCEPT move_constructible
 template <class _Ty>
 concept move_constructible = constructible_from<_Ty, _Ty> && convertible_to<_Ty, _Ty>;
 
+// CONCEPT _Has_class_or_enum_type
+template <class _Ty>
+concept _Has_class_or_enum_type = __is_class(remove_reference_t<_Ty>) || __is_enum(remove_reference_t<_Ty>)
+    || __is_union(remove_reference_t<_Ty>);
+
 // CUSTOMIZATION POINT OBJECT ranges::swap
 namespace ranges {
     namespace _Swap {
-#ifndef __clang__ // TRANSITION, VSO#895622
-        void swap();
-#endif // TRANSITION
-
         template <class _Ty>
         void swap(_Ty&, _Ty&) = delete;
 
-        template <class _Ty>
-        inline constexpr bool _Is_class_or_enum = __is_class(_Ty) || __is_enum(_Ty);
-
         template <class _Ty1, class _Ty2>
-        concept _Use_ADL_swap =
-            (_Is_class_or_enum<remove_reference_t<_Ty1>> || _Is_class_or_enum<remove_reference_t<_Ty2>>)
+        concept _Use_ADL_swap = (_Has_class_or_enum_type<_Ty1> || _Has_class_or_enum_type<_Ty2>)
             && requires(_Ty1&& __t, _Ty2&& __u) {
                 swap(static_cast<_Ty1&&>(__t), static_cast<_Ty2&&>(__u));
             };
@@ -142,14 +141,14 @@ namespace ranges {
             template <class _Ty1, class _Ty2>
                 requires _Use_ADL_swap<_Ty1, _Ty2>
             constexpr void operator()(_Ty1&& __t, _Ty2&& __u) const
-                _NOEXCEPT_COND(noexcept(swap(static_cast<_Ty1&&>(__t), static_cast<_Ty2&&>(__u)))) {
+                noexcept(noexcept(swap(static_cast<_Ty1&&>(__t), static_cast<_Ty2&&>(__u)))) {
                 swap(static_cast<_Ty1&&>(__t), static_cast<_Ty2&&>(__u));
             }
 
             template <class _Ty>
                 requires (!_Use_ADL_swap<_Ty&, _Ty&> && move_constructible<_Ty> && assignable_from<_Ty&, _Ty>)
             constexpr void operator()(_Ty& __x, _Ty& __y) const
-                _NOEXCEPT_COND(is_nothrow_move_constructible_v<_Ty> && is_nothrow_move_assignable_v<_Ty>) {
+                noexcept(is_nothrow_move_constructible_v<_Ty> && is_nothrow_move_assignable_v<_Ty>) {
                 _Ty __tmp(static_cast<_Ty&&>(__x));
                 __x = static_cast<_Ty&&>(__y);
                 __y = static_cast<_Ty&&>(__tmp);
@@ -157,7 +156,7 @@ namespace ranges {
 
             template <class _Ty1, class _Ty2, size_t _Size>
             constexpr void operator()(_Ty1 (&__t)[_Size], _Ty2 (&__u)[_Size]) const
-                _NOEXCEPT_COND(noexcept((*this)(__t[0], __u[0])))
+                noexcept(noexcept((*this)(__t[0], __u[0])))
                 requires requires { (*this)(__t[0], __u[0]); } {
                 for (size_t __i = 0; __i < _Size; ++__i) {
                     (*this)(__t[__i], __u[__i]);
@@ -166,7 +165,7 @@ namespace ranges {
         };
     } // namespace _Swap
 
-    inline namespace __cpos {
+    inline namespace _Cpos {
         inline constexpr _Swap::_Cpo swap;
     }
 } // namespace ranges
@@ -174,22 +173,17 @@ namespace ranges {
 // CONCEPT swappable
 template <class _Ty>
 concept swappable = requires(_Ty& __x, _Ty& __y) {
-    _STD ranges::swap(__x, __y);
+    _RANGES swap(__x, __y);
 };
 
 // CONCEPT swappable_with
 template <class _Ty1, class _Ty2>
-concept swappable_with =
-#if 1 // Implement the PR of LWG 3175
-    common_reference_with<_Ty1, _Ty2>
-#else // ^^^ LWG 3175 / N4810 vvv
-    common_reference_with<const remove_reference_t<_Ty1>&, const remove_reference_t<_Ty2>&>
-#endif // select LWG 3175 vs. N4810
+concept swappable_with = common_reference_with<_Ty1, _Ty2>
     && requires(_Ty1&& __t, _Ty2&& __u) {
-        _STD ranges::swap(static_cast<_Ty1&&>(__t), static_cast<_Ty1&&>(__t));
-        _STD ranges::swap(static_cast<_Ty2&&>(__u), static_cast<_Ty2&&>(__u));
-        _STD ranges::swap(static_cast<_Ty1&&>(__t), static_cast<_Ty2&&>(__u));
-        _STD ranges::swap(static_cast<_Ty2&&>(__u), static_cast<_Ty1&&>(__t));
+        _RANGES swap(static_cast<_Ty1&&>(__t), static_cast<_Ty1&&>(__t));
+        _RANGES swap(static_cast<_Ty2&&>(__u), static_cast<_Ty2&&>(__u));
+        _RANGES swap(static_cast<_Ty1&&>(__t), static_cast<_Ty2&&>(__u));
+        _RANGES swap(static_cast<_Ty2&&>(__u), static_cast<_Ty1&&>(__t));
     };
 
 // CONCEPT copy_constructible
@@ -199,72 +193,31 @@ concept copy_constructible = move_constructible<_Ty>
     && constructible_from<_Ty, const _Ty&> && convertible_to<const _Ty&, _Ty>
     && constructible_from<_Ty, const _Ty> && convertible_to<const _Ty, _Ty>;
 
-// CONCEPT movable
+// CONCEPT _Boolean_testable
 template <class _Ty>
-concept movable = is_object_v<_Ty> && move_constructible<_Ty> && assignable_from<_Ty&, _Ty> && swappable<_Ty>;
+concept _Boolean_testable_impl = convertible_to<_Ty, bool>;
 
-// CONCEPT boolean
-#if _HAS_STD_BOOLEAN
-#define _STL_BOOLEAN_CONCEPT boolean
-#else
-#define _STL_BOOLEAN_CONCEPT _Boolean
-#endif
 template <class _Ty>
-concept _STL_BOOLEAN_CONCEPT = movable<remove_cvref_t<_Ty>>
-    && requires(const remove_reference_t<_Ty>& __x, const remove_reference_t<_Ty>& __y, const bool __b) {
-#if _HAS_EXACT_COMPOUND_REQUIREMENT
-        { __x } -> convertible_to<bool>;
-        { !__x } -> convertible_to<bool>;
-        { __x && __y } -> same_as<bool>;
-        { __x && __b } -> same_as<bool>;
-        { __b && __y } -> same_as<bool>;
-        { __x || __y } -> same_as<bool>;
-        { __x || __b } -> same_as<bool>;
-        { __b || __y } -> same_as<bool>;
-        { __x == __y } -> convertible_to<bool>;
-        { __x == __b } -> convertible_to<bool>;
-        { __b == __y } -> convertible_to<bool>;
-        { __x != __y } -> convertible_to<bool>;
-        { __x != __b } -> convertible_to<bool>;
-        { __b != __y } -> convertible_to<bool>;
-#else // ^^^ _HAS_EXACT_COMPOUND_REQUIREMENT / !_HAS_EXACT_COMPOUND_REQUIREMENT vvv
-        requires convertible_to<const remove_reference_t<_Ty>&, bool>;
-        !__x; requires convertible_to<decltype(!__x), bool>;
-        __x && __y; requires same_as<decltype(__x && __y), bool>;
-        __x && __b; requires same_as<decltype(__x && __b), bool>;
-        __b && __y; requires same_as<decltype(__b && __y), bool>;
-        __x || __y; requires same_as<decltype(__x || __y), bool>;
-        __x || __b; requires same_as<decltype(__x || __b), bool>;
-        __b || __y; requires same_as<decltype(__b || __y), bool>;
-        __x == __y; requires convertible_to<decltype(__x == __y), bool>;
-        __x == __b; requires convertible_to<decltype(__x == __b), bool>;
-        __b == __y; requires convertible_to<decltype(__b == __y), bool>;
-        __x != __y; requires convertible_to<decltype(__x != __y), bool>;
-        __x != __b; requires convertible_to<decltype(__x != __b), bool>;
-        __b != __y; requires convertible_to<decltype(__b != __y), bool>;
-#endif // _HAS_EXACT_COMPOUND_REQUIREMENT
+concept _Boolean_testable = _Boolean_testable_impl<_Ty>
+    && requires (_Ty&& __t) {
+        { !static_cast<_Ty&&>(__t) } -> _Boolean_testable_impl;
     };
 
 // CONCEPT _Weakly_equality_comparable_with
 template <class _Ty1, class _Ty2>
-concept _Weakly_equality_comparable_with =
-    requires(const remove_reference_t<_Ty1>& __t, const remove_reference_t<_Ty2>& __u) {
-#if _HAS_EXACT_COMPOUND_REQUIREMENT
-        { __t == __u } -> _STL_BOOLEAN_CONCEPT;
-        { __t != __u } -> _STL_BOOLEAN_CONCEPT;
-        { __u == __t } -> _STL_BOOLEAN_CONCEPT;
-        { __u != __t } -> _STL_BOOLEAN_CONCEPT;
-#else // ^^^ _HAS_EXACT_COMPOUND_REQUIREMENT / !_HAS_EXACT_COMPOUND_REQUIREMENT vvv
-        __t == __u; requires _STL_BOOLEAN_CONCEPT<decltype(__t == __u)>;
-        __t != __u; requires _STL_BOOLEAN_CONCEPT<decltype(__t != __u)>;
-        __u == __t; requires _STL_BOOLEAN_CONCEPT<decltype(__u == __t)>;
-        __u != __t; requires _STL_BOOLEAN_CONCEPT<decltype(__u != __t)>;
-#endif // _HAS_EXACT_COMPOUND_REQUIREMENT
+concept _Half_equality_comparable =
+    requires(const remove_reference_t<_Ty1>& __x, const remove_reference_t<_Ty2>& __y) {
+        { __x == __y } -> _Boolean_testable;
+        { __x != __y } -> _Boolean_testable;
     };
+
+template <class _Ty1, class _Ty2>
+concept _Weakly_equality_comparable_with =
+    _Half_equality_comparable<_Ty1, _Ty2> && _Half_equality_comparable<_Ty2, _Ty1>;
 
 // CONCEPT equality_comparable
 template <class _Ty>
-concept equality_comparable = _Weakly_equality_comparable_with<_Ty, _Ty>;
+concept equality_comparable = _Half_equality_comparable<_Ty, _Ty>;
 
 // CONCEPT equality_comparable_with
 template <class _Ty1, class _Ty2>
@@ -273,54 +226,44 @@ concept equality_comparable_with = equality_comparable<_Ty1> && equality_compara
     && equality_comparable<common_reference_t<const remove_reference_t<_Ty1>&, const remove_reference_t<_Ty2>&>>
     && _Weakly_equality_comparable_with<_Ty1, _Ty2>;
 
+
+// CONCEPT _Partially_ordered_with
+template <class _Ty1, class _Ty2>
+concept _Half_ordered = requires(const remove_reference_t<_Ty1>& __t, const remove_reference_t<_Ty2>& __u) {
+    { __t <  __u } -> _Boolean_testable;
+    { __t >  __u } -> _Boolean_testable;
+    { __t <= __u } -> _Boolean_testable;
+    { __t >= __u } -> _Boolean_testable;
+};
+
+template <class _Ty1, class _Ty2>
+concept _Partially_ordered_with = _Half_ordered<_Ty1, _Ty2> && _Half_ordered<_Ty2, _Ty1>;
+
 // CONCEPT totally_ordered
 template <class _Ty>
-concept totally_ordered = equality_comparable<_Ty>
-    && requires(const remove_reference_t<_Ty>& __x, const remove_reference_t<_Ty>& __y) {
-#if _HAS_EXACT_COMPOUND_REQUIREMENT
-        { __x <  __y } -> _STL_BOOLEAN_CONCEPT;
-        { __x >  __y } -> _STL_BOOLEAN_CONCEPT;
-        { __x <= __y } -> _STL_BOOLEAN_CONCEPT;
-        { __x >= __y } -> _STL_BOOLEAN_CONCEPT;
-#else // ^^^ _HAS_EXACT_COMPOUND_REQUIREMENT / !_HAS_EXACT_COMPOUND_REQUIREMENT vvv
-        __x <  __y; requires _STL_BOOLEAN_CONCEPT<decltype(__x < __y)>;
-        __x >  __y; requires _STL_BOOLEAN_CONCEPT<decltype(__x > __y)>;
-        __x <= __y; requires _STL_BOOLEAN_CONCEPT<decltype(__x <= __y)>;
-        __x >= __y; requires _STL_BOOLEAN_CONCEPT<decltype(__x >= __y)>;
-#endif // _HAS_EXACT_COMPOUND_REQUIREMENT
-    };
+concept totally_ordered = equality_comparable<_Ty> && _Half_ordered<_Ty, _Ty>;
 
 // CONCEPT totally_ordered_with
 template <class _Ty1, class _Ty2>
 concept totally_ordered_with = totally_ordered<_Ty1> && totally_ordered<_Ty2>
-    && common_reference_with<const remove_reference_t<_Ty1>&, const remove_reference_t<_Ty2>&>
-    && totally_ordered<common_reference_t<const remove_reference_t<_Ty1>&, const remove_reference_t<_Ty2>&>>
     && equality_comparable_with<_Ty1, _Ty2>
-    && requires(const remove_reference_t<_Ty1>& __t, const remove_reference_t<_Ty2>& __u) {
-#if _HAS_EXACT_COMPOUND_REQUIREMENT
-        { __t <  __u } -> _STL_BOOLEAN_CONCEPT;
-        { __t >  __u } -> _STL_BOOLEAN_CONCEPT;
-        { __t <= __u } -> _STL_BOOLEAN_CONCEPT;
-        { __t >= __u } -> _STL_BOOLEAN_CONCEPT;
-        { __u <  __t } -> _STL_BOOLEAN_CONCEPT;
-        { __u >  __t } -> _STL_BOOLEAN_CONCEPT;
-        { __u <= __t } -> _STL_BOOLEAN_CONCEPT;
-        { __u >= __t } -> _STL_BOOLEAN_CONCEPT;
-#else // ^^^ _HAS_EXACT_COMPOUND_REQUIREMENT / !_HAS_EXACT_COMPOUND_REQUIREMENT vvv
-        __t <  __u; requires _STL_BOOLEAN_CONCEPT<decltype(__t < __u)>;
-        __t >  __u; requires _STL_BOOLEAN_CONCEPT<decltype(__t > __u)>;
-        __t <= __u; requires _STL_BOOLEAN_CONCEPT<decltype(__t <= __u)>;
-        __t >= __u; requires _STL_BOOLEAN_CONCEPT<decltype(__t >= __u)>;
-        __u <  __t; requires _STL_BOOLEAN_CONCEPT<decltype(__u < __t)>;
-        __u >  __t; requires _STL_BOOLEAN_CONCEPT<decltype(__u > __t)>;
-        __u <= __t; requires _STL_BOOLEAN_CONCEPT<decltype(__u <= __t)>;
-        __u >= __t; requires _STL_BOOLEAN_CONCEPT<decltype(__u >= __t)>;
-#endif // _HAS_EXACT_COMPOUND_REQUIREMENT
-};
+    && totally_ordered<common_reference_t<const remove_reference_t<_Ty1>&, const remove_reference_t<_Ty2>&>>
+    && _Partially_ordered_with<_Ty1, _Ty2>;
+
+// CONCEPT movable
+template <class _Ty>
+concept movable = is_object_v<_Ty>
+    && move_constructible<_Ty>
+    && assignable_from<_Ty&, _Ty>
+    && swappable<_Ty>;
 
 // CONCEPT copyable
 template <class _Ty>
-concept copyable = copy_constructible<_Ty> && movable<_Ty> && assignable_from<_Ty&, const _Ty&>;
+concept copyable = copy_constructible<_Ty>
+    && movable<_Ty>
+    && assignable_from<_Ty&, _Ty&>
+    && assignable_from<_Ty&, const _Ty&>
+    && assignable_from<_Ty&, const _Ty>;
 
 // CONCEPT semiregular
 template <class _Ty>
@@ -342,12 +285,20 @@ concept regular_invocable = invocable<_FTy, _ArgTys...>;
 
 // CONCEPT predicate
 template <class _FTy, class... _ArgTys>
-concept predicate = regular_invocable<_FTy, _ArgTys...> && _STL_BOOLEAN_CONCEPT<invoke_result_t<_FTy, _ArgTys...>>;
+concept predicate = regular_invocable<_FTy, _ArgTys...>
+    && _Boolean_testable<invoke_result_t<_FTy, _ArgTys...>>;
 
 // CONCEPT relation
 template <class _FTy, class _Ty1, class _Ty2>
-concept relation = predicate<_FTy, _Ty1, _Ty1> && predicate<_FTy, _Ty2, _Ty2> && predicate<_FTy, _Ty1, _Ty2>
+concept relation =
+       predicate<_FTy, _Ty1, _Ty1>
+    && predicate<_FTy, _Ty2, _Ty2>
+    && predicate<_FTy, _Ty1, _Ty2>
     && predicate<_FTy, _Ty2, _Ty1>;
+
+// CONCEPT equivalence_relation
+template <class _FTy, class _Ty1, class _Ty2>
+concept equivalence_relation = relation<_FTy, _Ty1, _Ty2>;
 
 // CONCEPT strict_weak_order
 template <class _FTy, class _Ty1, class _Ty2>
@@ -360,8 +311,6 @@ _STD_END
 _STL_RESTORE_CLANG_WARNINGS
 #pragma warning(pop)
 #pragma pack(pop)
-#else // ^^^ <concepts> supported / <concepts> not supported vvv
-#pragma message("The contents of <concepts> are only available with C++20 or later.")
 #endif // __cpp_lib_concepts
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CONCEPTS_

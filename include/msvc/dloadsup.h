@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2014  Microsoft Corporation
+Copyright (c) Microsoft Corporation.  All rights reserved.
 
 Module Name:
 
@@ -32,12 +32,6 @@ Abstract:
     retain compatibility with programs customizing the behavior of the delay
     load notification hook (and the ability to perform an explicit module
     unload).
-
-Author:
-
-    Ken Johnson (kejohns) 4-Jul-2014
-
-Revision History:
 
 --*/
 
@@ -476,7 +470,7 @@ Return Value:
     // could require memory management to obtain additional commit charges -
     // which could fail in low resources conditions.  In order to maintain
     // existing contractural behaviors with delay loads it is necessary to not
-    // introduce additional low resources falure paths with protected delay
+    // introduce additional low resources failure paths with protected delay
     // load support.
     //
     // N.B.  This call to VirtualQuery cannot fail without an invalid argument
@@ -490,7 +484,7 @@ Return Value:
     }
 
     //
-    // If the page is not writeable then the loader has already assumed
+    // If the page is not writable then the loader has already assumed
     // responsibility for charging commit.  In this case, nothing must be done
     // to ensure forward progress.
     //
@@ -629,7 +623,7 @@ Routine Description:
 
     This function obtains write access to the delay load section.  Until a
     matched call to DloadReleaseSectionAccess is made the section is still
-    considered writeable.
+    considered writable.
 
 Arguments:
 
@@ -907,4 +901,3 @@ Return Value:
 #pragma warning(pop)
 
 #endif
-

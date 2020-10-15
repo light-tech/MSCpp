@@ -23,6 +23,8 @@
 #define _AMP_GRAPHICS_H
 
 #pragma warning( push )
+#pragma warning( disable : 4127 ) // conditional expression is constant
+#pragma warning( disable : 4996 ) // writeonly_texture_view is deprecated
 #pragma warning( disable : 6326 ) // Potential comparison of a constant with another constant
 
 namespace Concurrency
@@ -2202,8 +2204,6 @@ public:
     /// <param name="_Dest">
     ///     The destination writeonly_texture_view to copy to.
     /// </param>
-#pragma warning( push )
-#pragma warning( disable : 4996 ) //writeonly_texture_view is deprecated
     void copy_to(const writeonly_texture_view<_Value_type, _Rank> & _Dest) const
     {
         if (this->extent != _Dest.extent)
@@ -2436,8 +2436,6 @@ private:
 
         // special cases for 64 and for double based textures
 
-#pragma warning( push )
-#pragma warning( disable : 4127 ) // conditional expression is constant
         if (_Bits_per_scalar_element == 64 && _Short_vector_type_traits<_Value_type>::_Format_base_type_id != _Double_type)
         {
             throw runtime_exception("Invalid _Bits_per_scalar_element argument - 64 is only valid for texture of double based short vector types.", E_INVALIDARG);
@@ -2490,7 +2488,6 @@ private:
         }
 
         this->_M_texture_descriptor._Set_texture_ptr(_Tex_ptr);
-#pragma warning( pop )
     }
 
     void _Initialize(const Concurrency::accelerator_view& _Av, unsigned int _Bits_per_scalar_element) __CPU_ONLY
@@ -2594,8 +2591,6 @@ private:
 /// <param name="_Rank">
 ///     The _Rank of the corresponding extent domain.
 /// </param>
-#pragma warning( push )
-#pragma warning( disable : 4996 ) //writeonly_texture_view is deprecated
 template <typename _Value_type, int _Rank> class __declspec(deprecated("writeonly_texture_view is deprecated. Please use texture_view instead.")) writeonly_texture_view : public details::_Texture_base<_Value_type, _Rank>
 {
     static_assert(!std::is_const<_Value_type>::value, "const value type is not supported for writeonly_texture_view.");
@@ -2681,7 +2676,6 @@ public:
         _Texture_write_helper<index<_Rank>, _Rank>::func(this->_M_texture_descriptor._M_data_ptr, &_Value, _Index);
     }
 };
-#pragma warning( pop )
 
 /// <summary>
 ///     A texture_view provides read and write access to a texture.
@@ -3742,13 +3736,10 @@ _Event _Copy_async_impl(_Input_iterator _First, _Input_iterator _Last,
     _ASSERTE((_Dst_offset[1] + _Copy_extent[1]) <= _Dst->_Get_height(_Dst_mipmap_level));
     _ASSERTE((_Dst_offset[2] + _Copy_extent[2]) <= _Dst->_Get_depth(_Dst_mipmap_level));
 
-#pragma warning( push )
-#pragma warning( disable : 4127 ) // conditional expression is constant
     if ((sizeof(_Value_type) > sizeof(unsigned char)) && (_Dst->_Get_bits_per_element() != (8U * sizeof(_Value_type))))
     {
         throw runtime_exception("Iterator-based copy is not supported on textures where the size of the _Value_type is not equal to the texel size.", E_INVALIDARG);
     }
-#pragma warning( pop )
 
     // If the dest is accessible on the host we can perform the copy entirely on the host
     if (_Dst->_Get_host_ptr() != NULL)
@@ -3849,13 +3840,10 @@ _Event _Copy_async_impl(_Texture *_Tex, const size_t *_Tex_offset, unsigned int 
     _ASSERTE((_Tex_offset[1] + _Copy_extent[1]) <= _Tex->_Get_height(_Src_mipmap_level));
     _ASSERTE((_Tex_offset[2] + _Copy_extent[2]) <= _Tex->_Get_depth(_Src_mipmap_level));
 
-#pragma warning( push )
-#pragma warning( disable : 4127 ) // conditional expression is constant
     if ((sizeof(_Value_type) > sizeof(unsigned char)) && (_Tex->_Get_bits_per_element() != (8U * sizeof(_Value_type))))
     {
         throw runtime_exception("Iterator-based copy is not supported on textures where the size of the _Value_type is not equal to the texel size.", E_INVALIDARG);
     }
-#pragma warning( pop )
 
     // If the texture is available on the host then we can perform the copy entirely on the host
     if (_Tex->_Get_host_ptr() != nullptr)
@@ -4802,7 +4790,6 @@ Concurrency::extent<_Rank> _Make_texture(const Concurrency::accelerator_view &_A
     return _Ext;
 }
 
-#pragma warning( pop )
 } // namespace details
 
 namespace direct3d
@@ -4842,13 +4829,10 @@ namespace direct3d
     /// <returns>
     ///     The IUnknown interface pointer corresponding to the D3D texture underlying the texture.
     /// </returns>
-#pragma warning( push )
-#pragma warning( disable : 4996 ) //writeonly_texture_view is deprecated
     template<typename _Value_type, int _Rank> _Ret_ IUnknown *get_texture(const writeonly_texture_view<_Value_type, _Rank> &_Texture) __CPU_ONLY
     {
         return Concurrency::details::_D3D_interop::_Get_D3D_buffer(Concurrency::details::_Get_texture(_Texture));
     }
-#pragma warning( pop )
 
     /// <summary>
     ///     Get the D3D texture interface underlying a texture viewed by a texture_view.

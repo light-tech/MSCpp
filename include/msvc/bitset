@@ -1,4 +1,8 @@
 // bitset standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _BITSET_
 #define _BITSET_
@@ -13,9 +17,6 @@
 _STL_DISABLE_CLANG_WARNINGS
 #pragma push_macro("new")
 #undef new
-
-#pragma warning(disable : 6294) // Ill-defined for-loop:
-                                // initial condition does not satisfy test.  Loop body not executed.
 
 _STD_BEGIN
 // CLASS TEMPLATE bitset
@@ -32,40 +33,37 @@ public:
         friend bitset<_Bits>;
 
     public:
-        ~reference() noexcept { // TRANSITION, ABI
-        }
+        ~reference() noexcept {} // TRANSITION, ABI
 
-        reference& operator=(bool _Val) noexcept { // assign Boolean to element
+        reference& operator=(bool _Val) noexcept {
             _Pbitset->_Set_unchecked(_Mypos, _Val);
             return *this;
         }
 
-        reference& operator=(const reference& _Bitref) noexcept { // assign reference to element
+        reference& operator=(const reference& _Bitref) noexcept {
             _Pbitset->_Set_unchecked(_Mypos, static_cast<bool>(_Bitref));
             return *this;
         }
 
-        reference& flip() noexcept { // complement stored element
+        reference& flip() noexcept {
             _Pbitset->_Flip_unchecked(_Mypos);
             return *this;
         }
 
-        _NODISCARD bool operator~() const noexcept { // return complemented element
+        _NODISCARD bool operator~() const noexcept {
             return !_Pbitset->_Subscript(_Mypos);
         }
 
-        operator bool() const noexcept { // return element
+        operator bool() const noexcept {
             return _Pbitset->_Subscript(_Mypos);
         }
 
     private:
         reference() noexcept : _Pbitset(nullptr), _Mypos(0) {}
 
-        reference(bitset<_Bits>& _Bitset, size_t _Pos)
-            : _Pbitset(&_Bitset), _Mypos(_Pos) { // construct from bitset reference and position
-        }
+        reference(bitset<_Bits>& _Bitset, size_t _Pos) : _Pbitset(&_Bitset), _Mypos(_Pos) {}
 
-        bitset<_Bits>* _Pbitset; // pointer to the bitset
+        bitset<_Bits>* _Pbitset;
         size_t _Mypos; // position of element in bitset
     };
 
@@ -95,16 +93,13 @@ public:
         return reference(*this, _Pos);
     }
 
-    constexpr bitset() noexcept : _Array() { // construct with all false values
-    }
+    constexpr bitset() noexcept : _Array() {} // construct with all false values
 
     static constexpr bool _Need_mask = _Bits < CHAR_BIT * sizeof(unsigned long long);
 
     static constexpr unsigned long long _Mask = (1ULL << (_Need_mask ? _Bits : 0)) - 1ULL;
 
-    constexpr bitset(unsigned long long _Val) noexcept
-        : _Array{static_cast<_Ty>(_Need_mask ? _Val & _Mask : _Val)} { // construct from bits in unsigned long long
-    }
+    constexpr bitset(unsigned long long _Val) noexcept : _Array{static_cast<_Ty>(_Need_mask ? _Val & _Mask : _Val)} {}
 
     template <class _Traits, class _Elem>
     void _Construct(const _Elem* const _Ptr, size_t _Count, const _Elem _E0, const _Elem _E1) {
@@ -169,17 +164,16 @@ public:
     }
 
     template <class _Elem>
-    explicit bitset(const _Elem* _Ptr, typename basic_string<_Elem>::size_type _Count = basic_string<_Elem>::npos,
-        _Elem _E0 = static_cast<_Elem>('0'),
-        _Elem _E1 = static_cast<_Elem>('1')) { // initialize from NTBS
+    explicit bitset(const _Elem* _Ntcts, typename basic_string<_Elem>::size_type _Count = basic_string<_Elem>::npos,
+        _Elem _E0 = static_cast<_Elem>('0'), _Elem _E1 = static_cast<_Elem>('1')) {
         if (_Count == basic_string<_Elem>::npos) {
-            _Count = char_traits<_Elem>::length(_Ptr);
+            _Count = char_traits<_Elem>::length(_Ntcts);
         }
 
-        _Construct<char_traits<_Elem>>(_Ptr, _Count, _E0, _E1);
+        _Construct<char_traits<_Elem>>(_Ntcts, _Count, _E0, _E1);
     }
 
-    bitset& operator&=(const bitset& _Right) noexcept { // AND in _Right
+    bitset& operator&=(const bitset& _Right) noexcept {
         for (size_t _Wpos = 0; _Wpos <= _Words; ++_Wpos) {
             _Array[_Wpos] &= _Right._Array[_Wpos];
         }
@@ -187,7 +181,7 @@ public:
         return *this;
     }
 
-    bitset& operator|=(const bitset& _Right) noexcept { // OR in _Right
+    bitset& operator|=(const bitset& _Right) noexcept {
         for (size_t _Wpos = 0; _Wpos <= _Words; ++_Wpos) {
             _Array[_Wpos] |= _Right._Array[_Wpos];
         }
@@ -195,7 +189,7 @@ public:
         return *this;
     }
 
-    bitset& operator^=(const bitset& _Right) noexcept { // XOR in _Right
+    bitset& operator^=(const bitset& _Right) noexcept {
         for (size_t _Wpos = 0; _Wpos <= _Words; ++_Wpos) {
             _Array[_Wpos] ^= _Right._Array[_Wpos];
         }
@@ -284,27 +278,22 @@ public:
         return _Flip_unchecked(_Pos);
     }
 
-    _NODISCARD unsigned long to_ulong() const { // convert bitset to unsigned long
+    _NODISCARD unsigned long to_ulong() const {
         constexpr bool _Bits_zero  = _Bits == 0;
         constexpr bool _Bits_small = _Bits <= 32;
         constexpr bool _Bits_large = _Bits > 64;
-        if
-            _CONSTEXPR_IF(_Bits_zero) {
-                return 0;
-            }
-        else if
-            _CONSTEXPR_IF(_Bits_small) {
-                return static_cast<unsigned long>(_Array[0]);
-            }
-        else {
-            if
-                _CONSTEXPR_IF(_Bits_large) {
-                    for (size_t _Idx = 1; _Idx <= _Words; ++_Idx) {
-                        if (_Array[_Idx] != 0) {
-                            _Xoflo(); // fail if any high-order words are nonzero
-                        }
+        if _CONSTEXPR_IF (_Bits_zero) {
+            return 0;
+        } else if _CONSTEXPR_IF (_Bits_small) {
+            return static_cast<unsigned long>(_Array[0]);
+        } else {
+            if _CONSTEXPR_IF (_Bits_large) {
+                for (size_t _Idx = 1; _Idx <= _Words; ++_Idx) {
+                    if (_Array[_Idx] != 0) {
+                        _Xoflo(); // fail if any high-order words are nonzero
                     }
                 }
+            }
 
             if (_Array[0] > ULONG_MAX) {
                 _Xoflo();
@@ -314,22 +303,19 @@ public:
         }
     }
 
-    _NODISCARD unsigned long long to_ullong() const { // convert bitset to unsigned long long
+    _NODISCARD unsigned long long to_ullong() const {
         constexpr bool _Bits_zero  = _Bits == 0;
         constexpr bool _Bits_large = _Bits > 64;
-        if
-            _CONSTEXPR_IF(_Bits_zero) {
-                return 0;
-            }
-        else {
-            if
-                _CONSTEXPR_IF(_Bits_large) {
-                    for (size_t _Idx = 1; _Idx <= _Words; ++_Idx) {
-                        if (_Array[_Idx] != 0) {
-                            _Xoflo(); // fail if any high-order words are nonzero
-                        }
+        if _CONSTEXPR_IF (_Bits_zero) {
+            return 0;
+        } else {
+            if _CONSTEXPR_IF (_Bits_large) {
+                for (size_t _Idx = 1; _Idx <= _Words; ++_Idx) {
+                    if (_Array[_Idx] != 0) {
+                        _Xoflo(); // fail if any high-order words are nonzero
                     }
                 }
+            }
 
             return _Array[0];
         }
@@ -375,19 +361,19 @@ public:
         return _Val;
     }
 
-    _NODISCARD constexpr size_t size() const noexcept { // return size of bitset
+    _NODISCARD constexpr size_t size() const noexcept {
         return _Bits;
     }
 
-    _NODISCARD bool operator==(const bitset& _Right) const noexcept { // test for bitset equality
+    _NODISCARD bool operator==(const bitset& _Right) const noexcept {
         return _CSTD memcmp(&_Array[0], &_Right._Array[0], sizeof(_Array)) == 0;
     }
 
-    _NODISCARD bool operator!=(const bitset& _Right) const noexcept { // test for bitset inequality
+    _NODISCARD bool operator!=(const bitset& _Right) const noexcept {
         return !(*this == _Right);
     }
 
-    _NODISCARD bool test(size_t _Pos) const { // test if bit at _Pos is set
+    _NODISCARD bool test(size_t _Pos) const {
         if (_Bits <= _Pos) {
             _Xran(); // _Pos off end
         }
@@ -395,7 +381,7 @@ public:
         return _Subscript(_Pos);
     }
 
-    _NODISCARD bool any() const noexcept { // test if any bits are set
+    _NODISCARD bool any() const noexcept {
         for (size_t _Wpos = 0; _Wpos <= _Words; ++_Wpos) {
             if (_Array[_Wpos] != 0) {
                 return true;
@@ -405,19 +391,31 @@ public:
         return false;
     }
 
-    _NODISCARD bool none() const noexcept { // test if no bits are set
+    _NODISCARD bool none() const noexcept {
         return !any();
     }
 
-    _NODISCARD bool all() const noexcept { // test if all bits set
-        return count() == size();
+    _NODISCARD bool all() const noexcept {
+        constexpr bool _Zero_length = _Bits == 0;
+        if _CONSTEXPR_IF (_Zero_length) { // must test for this, otherwise would count one full word
+            return true;
+        }
+
+        constexpr bool _No_padding = _Bits % _Bitsperword == 0;
+        for (size_t _Wpos = 0; _Wpos < _Words + _No_padding; ++_Wpos) {
+            if (_Array[_Wpos] != ~static_cast<_Ty>(0)) {
+                return false;
+            }
+        }
+
+        return _No_padding || _Array[_Words] == (static_cast<_Ty>(1) << (_Bits % _Bitsperword)) - 1;
     }
 
-    _NODISCARD bitset operator<<(size_t _Pos) const noexcept { // return bitset shifted left by _Pos
+    _NODISCARD bitset operator<<(size_t _Pos) const noexcept {
         return bitset(*this) <<= _Pos;
     }
 
-    _NODISCARD bitset operator>>(size_t _Pos) const noexcept { // return bitset shifted right by _Pos
+    _NODISCARD bitset operator>>(size_t _Pos) const noexcept {
         return bitset(*this) >>= _Pos;
     }
 
@@ -433,10 +431,9 @@ private:
 
     void _Trim() noexcept { // clear any trailing bits in last word
         constexpr bool _Work_to_do = _Bits == 0 || _Bits % _Bitsperword != 0;
-        if
-            _CONSTEXPR_IF(_Work_to_do) {
-                _Array[_Words] &= (_Ty{1} << _Bits % _Bitsperword) - 1;
-            }
+        if _CONSTEXPR_IF (_Work_to_do) {
+            _Array[_Words] &= (_Ty{1} << _Bits % _Bitsperword) - 1;
+        }
     }
 
     bitset& _Set_unchecked(size_t _Pos, bool _Val) noexcept { // set bit at _Pos to _Val, no checking
@@ -456,45 +453,41 @@ private:
         return *this;
     }
 
-    [[noreturn]] void _Xinv() const { // report invalid string element in bitset conversion
-        _Xinvalid_argument("invalid bitset<N> char");
+    [[noreturn]] void _Xinv() const {
+        _Xinvalid_argument("invalid bitset char");
     }
 
-    [[noreturn]] void _Xoflo() const { // report converted value too big to represent
-        _Xoverflow_error("bitset<N> overflow");
+    [[noreturn]] void _Xoflo() const {
+        _Xoverflow_error("bitset overflow");
     }
 
-    [[noreturn]] void _Xran() const { // report bit index out of range
-        _Xout_of_range("invalid bitset<N> position");
+    [[noreturn]] void _Xran() const {
+        _Xout_of_range("invalid bitset position");
     }
 
-    _Ty _Array[_Words + 1]; // the set of bits
+    _Ty _Array[_Words + 1];
 };
 
 template <size_t _Bits>
-_NODISCARD bitset<_Bits> operator&(const bitset<_Bits>& _Left,
-    const bitset<_Bits>& _Right) noexcept { // return bitset _Left AND _Right
+_NODISCARD bitset<_Bits> operator&(const bitset<_Bits>& _Left, const bitset<_Bits>& _Right) noexcept {
     bitset<_Bits> _Ans = _Left;
     return _Ans &= _Right;
 }
 
 template <size_t _Bits>
-_NODISCARD bitset<_Bits> operator|(const bitset<_Bits>& _Left,
-    const bitset<_Bits>& _Right) noexcept { // return bitset _Left OR _Right
+_NODISCARD bitset<_Bits> operator|(const bitset<_Bits>& _Left, const bitset<_Bits>& _Right) noexcept {
     bitset<_Bits> _Ans = _Left;
     return _Ans |= _Right;
 }
 
 template <size_t _Bits>
-_NODISCARD bitset<_Bits> operator^(const bitset<_Bits>& _Left,
-    const bitset<_Bits>& _Right) noexcept { // return bitset _Left XOR _Right
+_NODISCARD bitset<_Bits> operator^(const bitset<_Bits>& _Left, const bitset<_Bits>& _Right) noexcept {
     bitset<_Bits> _Ans = _Left;
     return _Ans ^= _Right;
 }
 
 template <class _Elem, class _Tr, size_t _Bits>
-basic_ostream<_Elem, _Tr>& operator<<(
-    basic_ostream<_Elem, _Tr>& _Ostr, const bitset<_Bits>& _Right) { // insert bitset as a string
+basic_ostream<_Elem, _Tr>& operator<<(basic_ostream<_Elem, _Tr>& _Ostr, const bitset<_Bits>& _Right) {
     using _Ctype             = typename basic_ostream<_Elem, _Tr>::_Ctype;
     const _Ctype& _Ctype_fac = _STD use_facet<_Ctype>(_Ostr.getloc());
     const _Elem _E0          = _Ctype_fac.widen('0');
@@ -505,8 +498,7 @@ basic_ostream<_Elem, _Tr>& operator<<(
 
 // TEMPLATE operator>>
 template <class _Elem, class _Tr, size_t _Bits>
-basic_istream<_Elem, _Tr>& operator>>(
-    basic_istream<_Elem, _Tr>& _Istr, bitset<_Bits>& _Right) { // extract bitset as a string
+basic_istream<_Elem, _Tr>& operator>>(basic_istream<_Elem, _Tr>& _Istr, bitset<_Bits>& _Right) {
     using _Istr_t                    = basic_istream<_Elem, _Tr>;
     using _Ctype                     = typename _Istr_t::_Ctype;
     const _Ctype& _Ctype_fac         = _STD use_facet<_Ctype>(_Istr.getloc());
@@ -539,8 +531,12 @@ basic_istream<_Elem, _Tr>& operator>>(
         _CATCH_IO_(_Istr_t, _Istr)
     }
 
-    if (!_Changed) {
-        _State |= _Istr_t::failbit;
+    constexpr bool _Has_bits = _Bits > 0;
+
+    if _CONSTEXPR_IF (_Has_bits) {
+        if (!_Changed) {
+            _State |= _Istr_t::failbit;
+        }
     }
 
     _Istr.setstate(_State);
@@ -550,12 +546,11 @@ basic_istream<_Elem, _Tr>& operator>>(
 
 // STRUCT TEMPLATE SPECIALIZATION hash
 template <size_t _Bits>
-struct hash<bitset<_Bits>> { // hash functor for bitset<_Bits>
-    _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef bitset<_Bits> argument_type;
-    _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef size_t result_type;
+struct hash<bitset<_Bits>> {
+    _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef bitset<_Bits> _ARGUMENT_TYPE_NAME;
+    _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef size_t _RESULT_TYPE_NAME;
 
-    _NODISCARD size_t operator()(const bitset<_Bits>& _Keyval) const
-        noexcept { // hash _Keyval to size_t value by pseudorandomizing transform
+    _NODISCARD size_t operator()(const bitset<_Bits>& _Keyval) const noexcept {
         return _Hash_representation(_Keyval._Array);
     }
 };
@@ -567,8 +562,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _BITSET_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

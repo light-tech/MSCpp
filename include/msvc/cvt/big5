@@ -1,4 +1,8 @@
 // big5 -- one- or two-byte/wide-character tables
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 
 #ifndef _CVT_BIG5_
@@ -77,7 +81,7 @@
 // for bopomofo and is intended to be the tone mark for the first tone in
 // Mandarin Chinese.  We have selected the mapping U+02C9 MODIFIER LETTER
 // MACRON (Mandarin Chinese first tone) to reflect this semantic.
-// However, because bopomofo uses the absense of a tone mark to indicate
+// However, because bopomofo uses the absence of a tone mark to indicate
 // the first Mandarin tone, most implementations of Big Five represent
 // this character with a blank space, and so a mapping such as U+2003 EM
 // SPACE might be preferred.
@@ -106,7 +110,7 @@
 //    [v0.0d3, 11 February 1994]
 //    First release.
 //
-//  Use the Unicode reporting form <http://www.unicode.org/reporting.html>
+//  Use the Unicode reporting form <https://www.unicode.org/reporting.html>
 //    for any questions or comments or to report errors in the data.
 //
 #include <cvt/xtwo_byte>
@@ -4387,8 +4391,3 @@ _STL_RESTORE_CLANG_WARNINGS
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_BIG5_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

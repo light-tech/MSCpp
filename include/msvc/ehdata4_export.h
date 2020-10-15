@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
 // Defines the on-disk data format and higher-level logical classes to interact with __CxxFrameHandler4 metadata.
 // Valid EH state values are -1, 0 ... MAX_INT. States are always encoded as compressed integers which assumes positive values. Thus, all
 // state values are encoded as EHstate + 1 to avoid encoding a negative (a state of -1 is encoded as a compressed 0, 0 as a compressed 1 etc.)
@@ -110,6 +112,8 @@ struct HandlerTypeHeader
     };
     union
     {
+#pragma warning(push)
+#pragma warning(disable: 4201) // nonstandard extension used: nameless struct/union
         struct
         {
             uint8_t adjectives   : 1; // Existence of Handler Type adjectives (bitfield)
@@ -122,6 +126,7 @@ struct HandlerTypeHeader
                                       // 4.   11: reserved
             uint8_t unused       : 2;
         };
+#pragma warning(pop)
         uint8_t value;
     };
 };
@@ -174,6 +179,8 @@ struct FuncInfoHeader
 {
     union
     {
+#pragma warning(push)
+#pragma warning(disable: 4201) // nonstandard extension used: nameless struct/union
         struct
         {
             uint8_t isCatch        : 1;  // 1 if this represents a catch funclet, 0 otherwise
@@ -185,6 +192,7 @@ struct FuncInfoHeader
             uint8_t NoExcept       : 1;  // NoExcept flag set
             uint8_t reserved       : 1;
         };
+#pragma warning(pop)
         uint8_t value;
     };
 
@@ -272,7 +280,7 @@ inline int32_t ReadInt(uint8_t ** buffer)
     return value;
 }
 
-// TODO: make sure our overflow read is covered by xdata$aa so if we
+// TRANSITION: make sure our overflow read is covered by xdata$aa so if we
 // end up reading the first entry we don't go over a section.
 inline uint32_t ReadUnsigned(uint8_t ** pbEncoding)
 {
@@ -706,8 +714,8 @@ public:
         __ehstate_t state = -1;
 
         // Out of range
-        // TODO: error condition on exceeding max
-        // TODO: check to make sure if below min, below by 1 byte
+        // TRANSITION: error condition on exceeding max
+        // TRANSITION: check to make sure if below min, below by 1 byte
         if (toStateIter > highStateIter || lowStateIter > toStateIter)
         {
             return state;

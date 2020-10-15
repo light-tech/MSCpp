@@ -1,4 +1,8 @@
 // yvals.h internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _YVALS
 #define _YVALS
@@ -6,6 +10,7 @@
 #if _STL_COMPILER_PREPROCESSOR
 
 #include <crtdbg.h>
+#include <crtdefs.h>
 
 #pragma pack(push, _CRT_PACKING)
 #pragma warning(push, _STL_WARNING_LEVEL)
@@ -147,20 +152,6 @@ _STL_DISABLE_CLANG_WARNINGS
 #endif // _ALLOW_RUNTIME_LIBRARY_MISMATCH
 #endif // __cplusplus
 
-#ifdef _ITERATOR_DEBUG_ARRAY_OVERLOADS
-#if _ITERATOR_DEBUG_ARRAY_OVERLOADS != 0 && _ITERATOR_DEBUG_ARRAY_OVERLOADS != 1
-#error _ITERATOR_DEBUG_ARRAY_OVERLOADS must be either 0 or 1.
-#elif _ITERATOR_DEBUG_LEVEL == 0 && _ITERATOR_DEBUG_ARRAY_OVERLOADS == 1
-#error _ITERATOR_DEBUG_LEVEL == 0 must imply _ITERATOR_DEBUG_ARRAY_OVERLOADS == 0.
-#endif
-#else // _ITERATOR_DEBUG_ARRAY_OVERLOADS
-#if _ITERATOR_DEBUG_LEVEL == 0
-#define _ITERATOR_DEBUG_ARRAY_OVERLOADS 0
-#else
-#define _ITERATOR_DEBUG_ARRAY_OVERLOADS 1
-#endif
-#endif // _ITERATOR_DEBUG_ARRAY_OVERLOADS
-
 #ifndef _CONTAINER_DEBUG_LEVEL
 #if _ITERATOR_DEBUG_LEVEL == 0
 #define _CONTAINER_DEBUG_LEVEL 0
@@ -179,6 +170,19 @@ _STL_DISABLE_CLANG_WARNINGS
         _CRT_SECURE_INVALID_PARAMETER(mesg); \
     } while (false)
 
+#ifdef __clang__
+#define _STL_VERIFY(cond, mesg)                                                            \
+    _Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Wassume\"") do { \
+        if (cond) { /* contextually convertible to bool paranoia */                        \
+        } else {                                                                           \
+            _STL_REPORT_ERROR(mesg);                                                       \
+        }                                                                                  \
+                                                                                           \
+        _Analysis_assume_(cond);                                                           \
+    }                                                                                      \
+    while (false)                                                                          \
+    _Pragma("clang diagnostic pop")
+#else // ^^^ Clang // MSVC vvv
 #define _STL_VERIFY(cond, mesg)                                     \
     do {                                                            \
         if (cond) { /* contextually convertible to bool paranoia */ \
@@ -188,6 +192,7 @@ _STL_DISABLE_CLANG_WARNINGS
                                                                     \
         _Analysis_assume_(cond);                                    \
     } while (false)
+#endif // ^^^ MSVC ^^^
 
 #ifdef _DEBUG
 #define _STL_ASSERT(cond, mesg) _STL_VERIFY(cond, mesg)
@@ -196,9 +201,11 @@ _STL_DISABLE_CLANG_WARNINGS
 #endif // _DEBUG
 
 #ifdef _ENABLE_STL_INTERNAL_CHECK
-#define _STL_INTERNAL_CHECK(cond) _STL_VERIFY(cond, "STL internal check: " _CRT_STRINGIZE(cond))
+#define _STL_INTERNAL_CHECK(...)         _STL_VERIFY(__VA_ARGS__, "STL internal check: " #__VA_ARGS__)
+#define _STL_INTERNAL_STATIC_ASSERT(...) static_assert(__VA_ARGS__, #__VA_ARGS__)
 #else // ^^^ _ENABLE_STL_INTERNAL_CHECK ^^^ // vvv !_ENABLE_STL_INTERNAL_CHECK vvv
-#define _STL_INTERNAL_CHECK(cond) _Analysis_assume_(cond)
+#define _STL_INTERNAL_CHECK(...) _Analysis_assume_(__VA_ARGS__)
+#define _STL_INTERNAL_STATIC_ASSERT(...)
 #endif // _ENABLE_STL_INTERNAL_CHECK
 
 #include <use_ansi.h>
@@ -224,55 +231,30 @@ _STL_DISABLE_CLANG_WARNINGS
 #endif
 
 #ifndef _MRTIMP2_PURE
-#if defined(_M_CEE_PURE)
+#ifdef _M_CEE_PURE
 #define _MRTIMP2_PURE
 #else
 #define _MRTIMP2_PURE _MRTIMP2
 #endif
-#endif
-
-#ifndef _MRTIMP2_PURE_NPURE
-#if defined(_M_CEE_PURE)
-#define _MRTIMP2_PURE_NPURE
-#else
-#define _MRTIMP2_PURE_NPURE _MRTIMP2_NPURE
-#endif
-#endif
-
-// Define _MRTIMP2_NPURE
-#ifndef _MRTIMP2_NPURE
-#if defined(MRTDLL) && defined(_CRTBLD)
-#if !defined(_M_CEE_PURE)
-#define _MRTIMP2_NPURE __declspec(dllexport)
-#else
-#define _MRTIMP2_NPURE
-#endif
-#else // ndef MRTDLL && _CRTBLD
-#define _MRTIMP2_NPURE
-#endif // MRTDLL && _CRTBLD
-#endif // _MRTIMP2_NPURE
+#endif // _MRTIMP2_PURE
 
 #if defined(_DLL) && !defined(_STATIC_CPPLIB) && !defined(_M_CEE_PURE)
 #define _DLL_CPPLIB
 #endif
 
 #ifndef _CRTIMP2_PURE
-#if defined(MRTDLL) && defined(_CRTBLD)
-#define _CRTIMP2_PURE
-#else
 #ifdef _M_CEE_PURE
 #define _CRTIMP2_PURE
 #else
 #define _CRTIMP2_PURE _CRTIMP2
 #endif
-#endif
-#endif
+#endif // _CRTIMP2_PURE
 
 #ifdef _CRTBLD
 // These functions are for enabling STATIC_CPPLIB functionality
-#define _cpp_stdin (__acrt_iob_func(0))
-#define _cpp_stdout (__acrt_iob_func(1))
-#define _cpp_stderr (__acrt_iob_func(2))
+#define _cpp_stdin         (__acrt_iob_func(0))
+#define _cpp_stdout        (__acrt_iob_func(1))
+#define _cpp_stderr        (__acrt_iob_func(2))
 #define _cpp_isleadbyte(c) (__pctype_func()[static_cast<unsigned char>(c)] & _LEADBYTE)
 #endif // _CRTBLD
 
@@ -284,15 +266,15 @@ _STL_DISABLE_CLANG_WARNINGS
 #else
 #define _CRTIMP2_IMPORT
 #endif
-#endif
+#endif // _CRTIMP2_IMPORT
 
 #ifndef _CRTIMP2_PURE_IMPORT
-#if defined(MRTDLL) && defined(_CRTBLD) || defined(_M_CEE_PURE)
+#ifdef _M_CEE_PURE
 #define _CRTIMP2_PURE_IMPORT
 #else
 #define _CRTIMP2_PURE_IMPORT _CRTIMP2_IMPORT
 #endif
-#endif
+#endif // _CRTIMP2_PURE_IMPORT
 
 #ifndef _CRTIMP2_PURE_IMPORT_UNLESS_CODECVT_ID_SATELLITE
 #ifdef _BUILDING_SATELLITE_CODECVT_IDS
@@ -300,7 +282,7 @@ _STL_DISABLE_CLANG_WARNINGS
 #else
 #define _CRTIMP2_PURE_IMPORT_UNLESS_CODECVT_ID_SATELLITE _CRTIMP2_PURE_IMPORT
 #endif
-#endif
+#endif // _CRTIMP2_PURE_IMPORT_UNLESS_CODECVT_ID_SATELLITE
 
 #ifndef _CRTDATA2_IMPORT
 #if defined(MRTDLL) && defined(_CRTBLD)
@@ -308,28 +290,20 @@ _STL_DISABLE_CLANG_WARNINGS
 #else
 #define _CRTDATA2_IMPORT _CRTIMP2_IMPORT
 #endif
-#endif
-
-#ifndef _CRTIMP2_NCEEPURE_IMPORT
-#ifdef _M_CEE_PURE
-#define _CRTIMP2_NCEEPURE_IMPORT
-#else
-#define _CRTIMP2_NCEEPURE_IMPORT _CRTIMP2_IMPORT
-#endif
-#endif
+#endif // _CRTDATA2_IMPORT
 
 // INTEGER PROPERTIES
-#define _MAX_EXP_DIG 8 // for parsing numerics
-#define _MAX_INT_DIG 32
-#define _MAX_SIG_DIG_V1 36
+#define _MAX_EXP_DIG    8 // for parsing numerics
+#define _MAX_INT_DIG    32
+#define _MAX_SIG_DIG_V1 36 // TRANSITION, ABI
 #define _MAX_SIG_DIG_V2 768
 
 // MULTITHREAD PROPERTIES
 // LOCK MACROS
-#define _LOCK_LOCALE 0
-#define _LOCK_MALLOC 1
-#define _LOCK_STREAM 2
-#define _LOCK_DEBUG 3
+#define _LOCK_LOCALE         0
+#define _LOCK_MALLOC         1
+#define _LOCK_STREAM         2
+#define _LOCK_DEBUG          3
 #define _LOCK_AT_THREAD_EXIT 4
 
 #ifdef __cplusplus
@@ -341,12 +315,12 @@ enum _Uninitialized { // tag for suppressing initialization
 // CLASS _Lockit
 class _CRTIMP2_PURE_IMPORT _Lockit { // lock while object in existence -- MUST NEST
 public:
-#if defined(_M_CEE_PURE) || defined(MRTDLL)
-    __CLR_OR_THIS_CALL _Lockit() : _Locktype(0) {
+#ifdef _M_CEE_PURE
+    __CLR_OR_THIS_CALL _Lockit() noexcept : _Locktype(0) {
         _Lockit_ctor(this);
     }
 
-    explicit __CLR_OR_THIS_CALL _Lockit(int _Kind) { // set the lock
+    explicit __CLR_OR_THIS_CALL _Lockit(int _Kind) noexcept { // set the lock
         _Lockit_ctor(this, _Kind);
     }
 
@@ -354,19 +328,19 @@ public:
         _Lockit_dtor(this);
     }
 
-#else // defined(_M_CEE_PURE) || defined(MRTDLL)
-    __thiscall _Lockit();
-    explicit __thiscall _Lockit(int); // set the lock
+#else // _M_CEE_PURE
+    __thiscall _Lockit() noexcept;
+    explicit __thiscall _Lockit(int) noexcept; // set the lock
     __thiscall ~_Lockit() noexcept; // clear the lock
-#endif // defined(_M_CEE_PURE) || defined(MRTDLL)
+#endif // _M_CEE_PURE
 
-    static _MRTIMP2_NPURE void __cdecl _Lockit_ctor(int);
-    static _MRTIMP2_NPURE void __cdecl _Lockit_dtor(int);
+    static void __cdecl _Lockit_ctor(int) noexcept;
+    static void __cdecl _Lockit_dtor(int) noexcept;
 
 private:
-    static _MRTIMP2_NPURE void __cdecl _Lockit_ctor(_Lockit*);
-    static _MRTIMP2_NPURE void __cdecl _Lockit_ctor(_Lockit*, int);
-    static _MRTIMP2_NPURE void __cdecl _Lockit_dtor(_Lockit*);
+    static void __cdecl _Lockit_ctor(_Lockit*) noexcept;
+    static void __cdecl _Lockit_ctor(_Lockit*, int) noexcept;
+    static void __cdecl _Lockit_dtor(_Lockit*) noexcept;
 
 public:
     __CLR_OR_THIS_CALL _Lockit(const _Lockit&) = delete;
@@ -451,8 +425,8 @@ private:
 
 class _CRTIMP2_PURE_IMPORT _Init_locks { // initialize mutexes
 public:
-#if defined(_M_CEE_PURE) || defined(MRTDLL)
-    __CLR_OR_THIS_CALL _Init_locks() {
+#ifdef _M_CEE_PURE
+    __CLR_OR_THIS_CALL _Init_locks() noexcept {
         _Init_locks_ctor(this);
     }
 
@@ -460,14 +434,14 @@ public:
         _Init_locks_dtor(this);
     }
 
-#else // defined(_M_CEE_PURE) || defined(MRTDLL)
-    __thiscall _Init_locks();
+#else // _M_CEE_PURE
+    __thiscall _Init_locks() noexcept;
     __thiscall ~_Init_locks() noexcept;
-#endif // defined(_M_CEE_PURE) || defined(MRTDLL)
+#endif // _M_CEE_PURE
 
 private:
-    static _MRTIMP2_NPURE void __cdecl _Init_locks_ctor(_Init_locks*);
-    static _MRTIMP2_NPURE void __cdecl _Init_locks_dtor(_Init_locks*);
+    static void __cdecl _Init_locks_ctor(_Init_locks*) noexcept;
+    static void __cdecl _Init_locks_dtor(_Init_locks*) noexcept;
 };
 
 // EXCEPTION MACROS
@@ -481,18 +455,8 @@ private:
     catch (...) {
 #define _CATCH_END }
 
-#define _RAISE(x) throw x
-#define _RERAISE throw
-
-#if defined(MRTDLL) && defined(_M_CEE) && !defined(_M_CEE_PURE) && defined(_CRTBLD)
-#if defined(_DEBUG)
-#define _THROW(x) _invoke_watson(_CRT_WIDE(#x), __FUNCTIONW__, __FILEW__, __LINE__, 0)
-#else // defined(_DEBUG)
-#define _THROW(x) _invoke_watson(nullptr, nullptr, nullptr, 0, 0)
-#endif // defined(_DEBUG)
-#else // defined(MRTDLL) etc.
+#define _RERAISE  throw
 #define _THROW(x) throw x
-#endif // defined(MRTDLL) etc.
 
 #else // _HAS_EXCEPTIONS
 #define _TRY_BEGIN \
@@ -508,11 +472,11 @@ private:
     }              \
     }
 
-#if defined(_DEBUG)
+#ifdef _DEBUG
 #define _RAISE(x) _invoke_watson(_CRT_WIDE(#x), __FUNCTIONW__, __FILEW__, __LINE__, 0)
-#else // defined(_DEBUG)
+#else // _DEBUG
 #define _RAISE(x) _invoke_watson(nullptr, nullptr, nullptr, 0, 0)
-#endif // defined(_DEBUG)
+#endif // _DEBUG
 
 #define _RERAISE
 #define _THROW(x) x._Raise()
@@ -530,8 +494,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _YVALS
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

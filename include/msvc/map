@@ -1,4 +1,8 @@
 // map standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _MAP_
 #define _MAP_
@@ -41,13 +45,13 @@ public:
     template <class... _Args>
     using _In_place_key_extractor = _In_place_key_extract_map<_Kty, _Args...>;
 
-    class value_compare { // functor for comparing two element values
+    class value_compare {
     public:
-        _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef value_type first_argument_type;
-        _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef value_type second_argument_type;
-        _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef bool result_type;
+        _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef value_type _FIRST_ARGUMENT_TYPE_NAME;
+        _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef value_type _SECOND_ARGUMENT_TYPE_NAME;
+        _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef bool _RESULT_TYPE_NAME;
 
-        bool operator()(const value_type& _Left, const value_type& _Right) const {
+        _NODISCARD bool operator()(const value_type& _Left, const value_type& _Right) const {
             // test if _Left precedes _Right by comparing just keys
             return comp(_Left.first, _Right.first);
         }
@@ -141,8 +145,7 @@ public:
 
     map(map&& _Right, const allocator_type& _Al) : _Mybase(_STD move(_Right), _Al) {}
 
-    map& operator=(map&& _Right)
-        _NOEXCEPT_COND(_Alnode_traits::is_always_equal::value&& is_nothrow_move_assignable_v<_Pr>) {
+    map& operator=(map&& _Right) noexcept(_Alnode_traits::is_always_equal::value&& is_nothrow_move_assignable_v<_Pr>) {
         _Mybase::operator=(_STD move(_Right));
         return *this;
     }
@@ -151,18 +154,18 @@ public:
         return _Try_emplace(_STD move(_Keyval)).first->_Myval.second;
     }
 
-    void swap(map& _Right) _NOEXCEPT_COND(noexcept(_Mybase::swap(_Right))) { // strengthened
+    void swap(map& _Right) noexcept(noexcept(_Mybase::swap(_Right))) {
         _Mybase::swap(_Right);
     }
 
     using _Mybase::insert;
 
-    template <class _Valty, class = enable_if_t<is_constructible_v<value_type, _Valty>>>
+    template <class _Valty, enable_if_t<is_constructible_v<value_type, _Valty>, int> = 0>
     pair<iterator, bool> insert(_Valty&& _Val) {
         return this->emplace(_STD forward<_Valty>(_Val));
     }
 
-    template <class _Valty, class = enable_if_t<is_constructible_v<value_type, _Valty>>>
+    template <class _Valty, enable_if_t<is_constructible_v<value_type, _Valty>, int> = 0>
     iterator insert(const_iterator _Where, _Valty&& _Val) {
         return this->emplace_hint(_Where, _STD forward<_Valty>(_Val));
     }
@@ -347,24 +350,31 @@ public:
 #if _HAS_CXX17
 template <class _Iter, class _Pr = less<_Guide_key_t<_Iter>>, class _Alloc = allocator<_Guide_pair_t<_Iter>>,
     enable_if_t<conjunction_v<_Is_iterator<_Iter>, negation<_Is_allocator<_Pr>>, _Is_allocator<_Alloc>>, int> = 0>
-map(_Iter, _Iter, _Pr = _Pr(), _Alloc = _Alloc())->map<_Guide_key_t<_Iter>, _Guide_val_t<_Iter>, _Pr, _Alloc>;
+map(_Iter, _Iter, _Pr = _Pr(), _Alloc = _Alloc()) -> map<_Guide_key_t<_Iter>, _Guide_val_t<_Iter>, _Pr, _Alloc>;
 
 template <class _Kty, class _Ty, class _Pr = less<_Kty>, class _Alloc = allocator<pair<const _Kty, _Ty>>,
     enable_if_t<conjunction_v<negation<_Is_allocator<_Pr>>, _Is_allocator<_Alloc>>, int> = 0>
-map(initializer_list<pair<_Kty, _Ty>>, _Pr = _Pr(), _Alloc = _Alloc())->map<_Kty, _Ty, _Pr, _Alloc>;
+map(initializer_list<pair<_Kty, _Ty>>, _Pr = _Pr(), _Alloc = _Alloc()) -> map<_Kty, _Ty, _Pr, _Alloc>;
 
 template <class _Iter, class _Alloc, enable_if_t<conjunction_v<_Is_iterator<_Iter>, _Is_allocator<_Alloc>>, int> = 0>
-map(_Iter, _Iter, _Alloc)->map<_Guide_key_t<_Iter>, _Guide_val_t<_Iter>, less<_Guide_key_t<_Iter>>, _Alloc>;
+map(_Iter, _Iter, _Alloc) -> map<_Guide_key_t<_Iter>, _Guide_val_t<_Iter>, less<_Guide_key_t<_Iter>>, _Alloc>;
 
 template <class _Kty, class _Ty, class _Alloc, enable_if_t<_Is_allocator<_Alloc>::value, int> = 0>
-map(initializer_list<pair<_Kty, _Ty>>, _Alloc)->map<_Kty, _Ty, less<_Kty>, _Alloc>;
+map(initializer_list<pair<_Kty, _Ty>>, _Alloc) -> map<_Kty, _Ty, less<_Kty>, _Alloc>;
 #endif // _HAS_CXX17
 
 template <class _Kty, class _Ty, class _Pr, class _Alloc>
-void swap(map<_Kty, _Ty, _Pr, _Alloc>& _Left, map<_Kty, _Ty, _Pr, _Alloc>& _Right)
-    _NOEXCEPT_COND(noexcept(_Left.swap(_Right))) {
+void swap(map<_Kty, _Ty, _Pr, _Alloc>& _Left, map<_Kty, _Ty, _Pr, _Alloc>& _Right) noexcept(
+    noexcept(_Left.swap(_Right))) {
     _Left.swap(_Right);
 }
+
+#if _HAS_CXX20
+template <class _Kty, class _Ty, class _Keylt, class _Alloc, class _Pr>
+typename map<_Kty, _Ty, _Keylt, _Alloc>::size_type erase_if(map<_Kty, _Ty, _Keylt, _Alloc>& _Cont, _Pr _Pred) {
+    return _Erase_nodes_if(_Cont, _Pass_fn(_Pred));
+}
+#endif // _HAS_CXX20
 
 // CLASS TEMPLATE multimap
 template <class _Kty, class _Ty, class _Pr = less<_Kty>, class _Alloc = allocator<pair<const _Kty, _Ty>>>
@@ -437,8 +447,8 @@ public:
 
     multimap(multimap&& _Right, const allocator_type& _Al) : _Mybase(_STD move(_Right), _Al) {}
 
-    multimap& operator=(multimap&& _Right)
-        _NOEXCEPT_COND(_Alnode_traits::is_always_equal::value&& is_nothrow_move_assignable_v<_Pr>) {
+    multimap& operator=(multimap&& _Right) noexcept(
+        _Alnode_traits::is_always_equal::value&& is_nothrow_move_assignable_v<_Pr>) {
         _Mybase::operator=(_STD move(_Right));
         return *this;
     }
@@ -448,18 +458,18 @@ public:
         return _Mybase::emplace(_STD forward<_Valty>(_Val)...).first;
     }
 
-    void swap(multimap& _Right) _NOEXCEPT_COND(noexcept(_Mybase::swap(_Right))) { // strengthened
+    void swap(multimap& _Right) noexcept(noexcept(_Mybase::swap(_Right))) {
         _Mybase::swap(_Right);
     }
 
     using _Mybase::insert;
 
-    template <class _Valty, class = enable_if_t<is_constructible_v<value_type, _Valty>>>
+    template <class _Valty, enable_if_t<is_constructible_v<value_type, _Valty>, int> = 0>
     iterator insert(_Valty&& _Val) {
         return this->emplace(_STD forward<_Valty>(_Val));
     }
 
-    template <class _Valty, class = enable_if_t<is_constructible_v<value_type, _Valty>>>
+    template <class _Valty, enable_if_t<is_constructible_v<value_type, _Valty>, int> = 0>
     iterator insert(const_iterator _Where, _Valty&& _Val) {
         return this->emplace_hint(_Where, _STD forward<_Valty>(_Val));
     }
@@ -494,24 +504,33 @@ public:
 #if _HAS_CXX17
 template <class _Iter, class _Pr = less<_Guide_key_t<_Iter>>, class _Alloc = allocator<_Guide_pair_t<_Iter>>,
     enable_if_t<conjunction_v<_Is_iterator<_Iter>, negation<_Is_allocator<_Pr>>, _Is_allocator<_Alloc>>, int> = 0>
-multimap(_Iter, _Iter, _Pr = _Pr(), _Alloc = _Alloc())->multimap<_Guide_key_t<_Iter>, _Guide_val_t<_Iter>, _Pr, _Alloc>;
+multimap(_Iter, _Iter, _Pr = _Pr(), _Alloc = _Alloc())
+    -> multimap<_Guide_key_t<_Iter>, _Guide_val_t<_Iter>, _Pr, _Alloc>;
 
 template <class _Kty, class _Ty, class _Pr = less<_Kty>, class _Alloc = allocator<pair<const _Kty, _Ty>>,
     enable_if_t<conjunction_v<negation<_Is_allocator<_Pr>>, _Is_allocator<_Alloc>>, int> = 0>
-multimap(initializer_list<pair<_Kty, _Ty>>, _Pr = _Pr(), _Alloc = _Alloc())->multimap<_Kty, _Ty, _Pr, _Alloc>;
+multimap(initializer_list<pair<_Kty, _Ty>>, _Pr = _Pr(), _Alloc = _Alloc()) -> multimap<_Kty, _Ty, _Pr, _Alloc>;
 
 template <class _Iter, class _Alloc, enable_if_t<conjunction_v<_Is_iterator<_Iter>, _Is_allocator<_Alloc>>, int> = 0>
-multimap(_Iter, _Iter, _Alloc)->multimap<_Guide_key_t<_Iter>, _Guide_val_t<_Iter>, less<_Guide_key_t<_Iter>>, _Alloc>;
+multimap(_Iter, _Iter, _Alloc) -> multimap<_Guide_key_t<_Iter>, _Guide_val_t<_Iter>, less<_Guide_key_t<_Iter>>, _Alloc>;
 
 template <class _Kty, class _Ty, class _Alloc, enable_if_t<_Is_allocator<_Alloc>::value, int> = 0>
-multimap(initializer_list<pair<_Kty, _Ty>>, _Alloc)->multimap<_Kty, _Ty, less<_Kty>, _Alloc>;
+multimap(initializer_list<pair<_Kty, _Ty>>, _Alloc) -> multimap<_Kty, _Ty, less<_Kty>, _Alloc>;
 #endif // _HAS_CXX17
 
 template <class _Kty, class _Ty, class _Pr, class _Alloc>
-void swap(multimap<_Kty, _Ty, _Pr, _Alloc>& _Left, multimap<_Kty, _Ty, _Pr, _Alloc>& _Right)
-    _NOEXCEPT_COND(noexcept(_Left.swap(_Right))) {
+void swap(multimap<_Kty, _Ty, _Pr, _Alloc>& _Left, multimap<_Kty, _Ty, _Pr, _Alloc>& _Right) noexcept(
+    noexcept(_Left.swap(_Right))) {
     _Left.swap(_Right);
 }
+
+#if _HAS_CXX20
+template <class _Kty, class _Ty, class _Keylt, class _Alloc, class _Pr>
+typename multimap<_Kty, _Ty, _Keylt, _Alloc>::size_type erase_if(
+    multimap<_Kty, _Ty, _Keylt, _Alloc>& _Cont, _Pr _Pred) {
+    return _Erase_nodes_if(_Cont, _Pass_fn(_Pred));
+}
+#endif // _HAS_CXX20
 
 #if _HAS_CXX17
 namespace pmr {
@@ -529,8 +548,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _MAP_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

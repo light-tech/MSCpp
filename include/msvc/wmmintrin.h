@@ -31,9 +31,9 @@
 #include <nmmintrin.h>
 
 
-#if __cplusplus
+#if defined (__cplusplus)
 extern "C" {
-#endif  /* __cplusplus */
+#endif  /* defined (__cplusplus) */
 
 /*
  * Performs 1 round of AES decryption of the first m128i using

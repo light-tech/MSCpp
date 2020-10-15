@@ -1,4 +1,8 @@
 // shared_mutex standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _SHARED_MUTEX_
 #define _SHARED_MUTEX_
@@ -10,7 +14,7 @@
 #endif // _M_CEE_PURE
 
 #include <mutex>
-#include <thr/xthreads.h>
+#include <xthreads.h>
 #ifndef _M_CEE
 #include <condition_variable>
 #endif // _M_CEE
@@ -24,7 +28,6 @@ _STL_DISABLE_CLANG_WARNINGS
 
 
 _STD_BEGIN
-#ifdef __cpp_lib_shared_mutex
 // CLASS shared_mutex
 class shared_mutex { // class for mutual exclusion shared across threads
 public:
@@ -35,31 +38,31 @@ public:
 
     ~shared_mutex() noexcept {}
 
-    void lock() noexcept { // lock exclusive
+    void lock() noexcept /* strengthened */ { // lock exclusive
         _Smtx_lock_exclusive(&_Myhandle);
     }
 
-    _NODISCARD bool try_lock() noexcept { // try to lock exclusive
+    _NODISCARD bool try_lock() noexcept /* strengthened */ { // try to lock exclusive
         return _Smtx_try_lock_exclusive(&_Myhandle) != 0;
     }
 
-    void unlock() noexcept { // unlock exclusive
+    void unlock() noexcept /* strengthened */ { // unlock exclusive
         _Smtx_unlock_exclusive(&_Myhandle);
     }
 
-    void lock_shared() noexcept { // lock non-exclusive
+    void lock_shared() noexcept /* strengthened */ { // lock non-exclusive
         _Smtx_lock_shared(&_Myhandle);
     }
 
-    _NODISCARD bool try_lock_shared() noexcept { // try to lock non-exclusive
+    _NODISCARD bool try_lock_shared() noexcept /* strengthened */ { // try to lock non-exclusive
         return _Smtx_try_lock_shared(&_Myhandle) != 0;
     }
 
-    void unlock_shared() noexcept { // unlock non-exclusive
+    void unlock_shared() noexcept /* strengthened */ { // unlock non-exclusive
         _Smtx_unlock_shared(&_Myhandle);
     }
 
-    _NODISCARD native_handle_type native_handle() noexcept { // get native handle
+    _NODISCARD native_handle_type native_handle() noexcept /* strengthened */ { // get native handle
         return &_Myhandle;
     }
 
@@ -69,7 +72,6 @@ public:
 private:
     _Smtx_t _Myhandle;
 };
-#endif // __cpp_lib_shared_mutex
 
 // shared_timed_mutex is not supported under /clr
 #ifndef _M_CEE
@@ -238,42 +240,38 @@ public:
     }
 
     shared_lock(mutex_type& _Mtx, defer_lock_t) noexcept
-        : _Pmtx(_STD addressof(_Mtx)), _Owns(false) { // construct with unlocked mutex
-    }
+        : _Pmtx(_STD addressof(_Mtx)), _Owns(false) {} // construct with unlocked mutex
 
     shared_lock(mutex_type& _Mtx, try_to_lock_t)
-        : _Pmtx(_STD addressof(_Mtx)), _Owns(_Mtx.try_lock_shared()) { // construct with mutex and try to lock shared
-    }
+        : _Pmtx(_STD addressof(_Mtx)), _Owns(_Mtx.try_lock_shared()) {} // construct with mutex and try to lock shared
 
     shared_lock(mutex_type& _Mtx, adopt_lock_t)
-        : _Pmtx(_STD addressof(_Mtx)), _Owns(true) { // construct with mutex and adopt ownership
-    }
+        : _Pmtx(_STD addressof(_Mtx)), _Owns(true) {} // construct with mutex and adopt ownership
 
     template <class _Rep, class _Period>
     shared_lock(mutex_type& _Mtx, const chrono::duration<_Rep, _Period>& _Rel_time)
-        : _Pmtx(_STD addressof(_Mtx)),
-          _Owns(_Mtx.try_lock_shared_for(_Rel_time)) { // construct with mutex and try to lock for relative time
+        : _Pmtx(_STD addressof(_Mtx)), _Owns(_Mtx.try_lock_shared_for(_Rel_time)) {
+        // construct with mutex and try to lock for relative time
     }
 
     template <class _Clock, class _Duration>
     shared_lock(mutex_type& _Mtx, const chrono::time_point<_Clock, _Duration>& _Abs_time)
-        : _Pmtx(_STD addressof(_Mtx)),
-          _Owns(_Mtx.try_lock_shared_until(_Abs_time)) { // construct with mutex and try to lock until absolute time
+        : _Pmtx(_STD addressof(_Mtx)), _Owns(_Mtx.try_lock_shared_until(_Abs_time)) {
+        // construct with mutex and try to lock until absolute time
     }
 
-    ~shared_lock() noexcept { // destroy the lock
+    ~shared_lock() noexcept {
         if (_Owns) {
             _Pmtx->unlock_shared();
         }
     }
 
-    shared_lock(shared_lock&& _Other) noexcept
-        : _Pmtx(_Other._Pmtx), _Owns(_Other._Owns) { // construct by moving _Other
+    shared_lock(shared_lock&& _Other) noexcept : _Pmtx(_Other._Pmtx), _Owns(_Other._Owns) {
         _Other._Pmtx = nullptr;
         _Other._Owns = false;
     }
 
-    shared_lock& operator=(shared_lock&& _Right) noexcept { // copy by moving _Right
+    shared_lock& operator=(shared_lock&& _Right) noexcept {
         if (_Owns) {
             _Pmtx->unlock_shared();
         }
@@ -326,12 +324,12 @@ public:
     }
 
     // MUTATE
-    void swap(shared_lock& _Right) noexcept { // swap with _Right
+    void swap(shared_lock& _Right) noexcept {
         _STD swap(_Pmtx, _Right._Pmtx);
         _STD swap(_Owns, _Right._Owns);
     }
 
-    mutex_type* release() noexcept { // release the mutex
+    mutex_type* release() noexcept {
         _Mutex* _Res = _Pmtx;
         _Pmtx        = nullptr;
         _Owns        = false;
@@ -339,15 +337,15 @@ public:
     }
 
     // OBSERVE
-    _NODISCARD bool owns_lock() const noexcept { // return true if this object owns the lock
+    _NODISCARD bool owns_lock() const noexcept {
         return _Owns;
     }
 
-    explicit operator bool() const noexcept { // return true if this object owns the lock
+    explicit operator bool() const noexcept {
         return _Owns;
     }
 
-    _NODISCARD mutex_type* mutex() const noexcept { // return pointer to managed mutex
+    _NODISCARD mutex_type* mutex() const noexcept {
         return _Pmtx;
     }
 
@@ -368,8 +366,7 @@ private:
 
 // SWAP
 template <class _Mutex>
-void swap(shared_lock<_Mutex>& _Left,
-    shared_lock<_Mutex>& _Right) noexcept { // swap two shared locks
+void swap(shared_lock<_Mutex>& _Left, shared_lock<_Mutex>& _Right) noexcept {
     _Left.swap(_Right);
 }
 _STD_END
@@ -379,8 +376,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _SHARED_MUTEX_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

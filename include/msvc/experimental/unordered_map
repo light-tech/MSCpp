@@ -1,11 +1,14 @@
 // unordered_map experimental header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _EXPERIMENTAL_UNORDERED_MAP_
 #define _EXPERIMENTAL_UNORDERED_MAP_
 #include <yvals_core.h>
 #if _STL_COMPILER_PREPROCESSOR
 
-#include <experimental/xutility>
 #include <unordered_map>
 
 #pragma pack(push, _CRT_PACKING)
@@ -21,14 +24,14 @@ namespace experimental {
 
         // FUNCTION TEMPLATE erase_if
         template <class _Kty, class _Ty, class _Hasher, class _Keyeq, class _Alloc, class _Pr>
-        void erase_if(unordered_map<_Kty, _Ty, _Hasher, _Keyeq, _Alloc>& _Cont,
-            _Pr _Pred) { // erase each element satisfying _Pred
+        _DEPRECATE_EXPERIMENTAL_ERASE void erase_if(
+            unordered_map<_Kty, _Ty, _Hasher, _Keyeq, _Alloc>& _Cont, _Pr _Pred) {
             _Erase_nodes_if(_Cont, _Pass_fn(_Pred));
         }
 
         template <class _Kty, class _Ty, class _Hasher, class _Keyeq, class _Alloc, class _Pr>
-        void erase_if(unordered_multimap<_Kty, _Ty, _Hasher, _Keyeq, _Alloc>& _Cont,
-            _Pr _Pred) { // erase each element satisfying _Pred
+        _DEPRECATE_EXPERIMENTAL_ERASE void erase_if(
+            unordered_multimap<_Kty, _Ty, _Hasher, _Keyeq, _Alloc>& _Cont, _Pr _Pred) {
             _Erase_nodes_if(_Cont, _Pass_fn(_Pred));
         }
 
@@ -43,8 +46,3 @@ _STL_RESTORE_CLANG_WARNINGS
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _EXPERIMENTAL_UNORDERED_MAP_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

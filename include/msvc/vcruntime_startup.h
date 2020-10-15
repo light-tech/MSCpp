@@ -9,6 +9,9 @@
 
 #include <vcruntime.h>
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 _CRT_BEGIN_C_HEADER
 
 
@@ -49,3 +52,5 @@ _crt_argv_mode __CRTDECL _get_startup_argv_mode(void);
 
 
 _CRT_END_C_HEADER
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS

@@ -1,11 +1,15 @@
 // cwchar standard header (core)
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _CWCHAR_
 #define _CWCHAR_
 #include <yvals_core.h>
 #if _STL_COMPILER_PREPROCESSOR
 
-#include <cstdio> // TRANSITION, VSO#661721
+#include <cstdio> // TRANSITION, VSO-661721
 #include <wchar.h>
 
 #pragma pack(push, _CRT_PACKING)
@@ -99,8 +103,3 @@ _STL_RESTORE_CLANG_WARNINGS
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CWCHAR_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

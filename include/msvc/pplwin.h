@@ -80,18 +80,16 @@ public:
 inline ::std::shared_ptr<scheduler_interface> * _GetStaticAmbientSchedulerStorage()
 {
     // thread-unsafe local static OK here because we're guarded by ::std::call_once in the caller
-#pragma warning(suppress: 4640) // TRANSITION, VSO#406237
+#pragma warning(suppress: 4640)
     static ::std::shared_ptr<scheduler_interface> _S_scheduler;
     return &_S_scheduler;
 }
 
 inline ::std::shared_ptr<scheduler_interface> & _GetStaticAmbientSchedulerRef()
 {
-	static_assert(sizeof(void *) == sizeof(::std::once_flag), "TRANSITION, VSO#406237");
-	static_assert(alignof(void *) == alignof(::std::once_flag), "TRANSITION, VSO#406237");
-    static void * _Flag = nullptr;
+    static ::std::once_flag _Flag;
     static ::std::shared_ptr<scheduler_interface> * _S_scheduler_address;
-    ::std::call_once(reinterpret_cast< ::std::once_flag&>(_Flag), [] {
+    ::std::call_once(_Flag, [] {
         _S_scheduler_address = _GetStaticAmbientSchedulerStorage();
     });
     return *_S_scheduler_address;

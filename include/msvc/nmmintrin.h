@@ -32,9 +32,9 @@
 #include <smmintrin.h>
 
 
-#if __cplusplus
+#if defined (__cplusplus)
 extern "C" {
-#endif  /* __cplusplus */
+#endif  /* defined (__cplusplus) */
 
 /*
  * These defines are used to determine the kind of units to be compared

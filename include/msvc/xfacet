@@ -1,4 +1,8 @@
 // xfacet internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XFACET_
 #define _XFACET_
@@ -21,8 +25,7 @@ _STD_BEGIN
 // CLASS _Facet_base
 class _CRTIMP2_PURE_IMPORT _Facet_base { // code for reference counting a facet
 public:
-    virtual __CLR_OR_THIS_CALL ~_Facet_base() noexcept { // ensure that derived classes can be destroyed properly
-    }
+    virtual __CLR_OR_THIS_CALL ~_Facet_base() noexcept {} // ensure that derived classes can be destroyed properly
 
     // increment use count
     virtual void __CLR_OR_THIS_CALL _Incref() noexcept = 0;
@@ -44,8 +47,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XFACET_
-
-/*
-* Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

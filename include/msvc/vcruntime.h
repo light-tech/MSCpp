@@ -57,6 +57,9 @@
 #include <sal.h>
 #include <vadefs.h>
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 // All C headers have a common prologue and epilogue, to enclose the header in
 // an extern "C" declaration when the header is #included in a C++ translation
 // unit and to push/pop the packing.
@@ -239,6 +242,10 @@ _CRT_BEGIN_C_HEADER
     #define _UNALIGNED
 #endif
 
+#if defined _M_ARM64EC
+    #define __security_check_cookie __security_check_cookie_arm64ec
+#endif 
+
 #ifdef __cplusplus
     extern "C++"
     {
@@ -258,9 +265,11 @@ _CRT_BEGIN_C_HEADER
 #if !defined(_HAS_CXX17) && !defined(_HAS_CXX20)
     #if defined(_MSVC_LANG)
         #define _STL_LANG _MSVC_LANG
-    #else // ^^^ use _MSVC_LANG / use __cplusplus vvv
+    #elif defined(__cplusplus) // ^^^ use _MSVC_LANG / use __cplusplus vvv
         #define _STL_LANG __cplusplus
-    #endif // ^^^ use __cplusplus ^^^
+    #else  // ^^^ use __cplusplus / no C++ support vvv
+        #define _STL_LANG 0L
+    #endif // ^^^ no C++ support ^^^
 
     #if _STL_LANG > 201703L
         #define _HAS_CXX17 1
@@ -282,7 +291,9 @@ _CRT_BEGIN_C_HEADER
 
 // [[nodiscard]] attributes on STL functions
 #ifndef _HAS_NODISCARD
-    #if _HAS_CXX17 || defined(__clang__) || defined(__EDG__) // TRANSITION, VSO#939899
+    #ifndef __has_cpp_attribute
+        #define _HAS_NODISCARD 0
+    #elif __has_cpp_attribute(nodiscard) >= 201603L // TRANSITION, VSO#939899 (need toolset update)
         #define _HAS_NODISCARD 1
     #else
         #define _HAS_NODISCARD 0
@@ -348,5 +359,7 @@ extern uintptr_t __security_cookie;
 #endif
 
 _CRT_END_C_HEADER
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 
 #endif // _VCRUNTIME_H

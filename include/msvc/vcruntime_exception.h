@@ -15,6 +15,9 @@
 
 #if _VCRT_COMPILER_PREPROCESSOR && _HAS_EXCEPTIONS
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 #pragma pack(push, _CRT_PACKING)
 
 _CRT_BEGIN_C_HEADER
@@ -145,9 +148,5 @@ public:
 
 #pragma pack(pop)
 
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 #endif // _VCRT_COMPILER_PREPROCESSOR && _HAS_EXCEPTIONS
-
-/*
- * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
- * Consult your license regarding permissions and restrictions.
-  V6.00:0009 */

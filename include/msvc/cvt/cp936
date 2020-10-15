@@ -1,4 +1,8 @@
 // cp936 -- one- or two-byte/wide-character tables
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 
 #ifndef _CVT_CP936_
@@ -11,8 +15,6 @@
 //     Table version: 2.01
 //     Table format:  Format A
 //     Date:          1/7/2000
-//
-//     Contact:       cpxlate@microsoft.com
 //
 //     General notes: none
 //
@@ -6789,8 +6791,3 @@ _STL_RESTORE_CLANG_WARNINGS
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_CP936_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

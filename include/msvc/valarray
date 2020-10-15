@@ -1,4 +1,8 @@
 // valarray standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _VALARRAY_
 #define _VALARRAY_
@@ -41,11 +45,9 @@ _Ty* _Allocate_for_op_delete(size_t _Count) {
     const size_t _Bytes = _Get_size_of_n<sizeof(_Ty)>(_Count);
 #ifdef __cpp_aligned_new
     constexpr bool _Extended_alignment = alignof(_Ty) > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-    if
-        _CONSTEXPR_IF(_Extended_alignment) {
-            return static_cast<_Ty*>(::operator new (_Bytes, align_val_t{alignof(_Ty)}));
-        }
-    else
+    if _CONSTEXPR_IF (_Extended_alignment) {
+        return static_cast<_Ty*>(::operator new (_Bytes, align_val_t{alignof(_Ty)}));
+    } else
 #endif // __cpp_aligned_new
     {
         return static_cast<_Ty*>(::operator new(_Bytes));
@@ -97,42 +99,42 @@ public:
         _Grow(_Count, _Ptr, 1);
     }
 
-    valarray(const valarray& _Right) { // construct from valarray
+    valarray(const valarray& _Right) {
         _Tidy_init();
         _Grow(_Right.size(), _Right._Myptr, 1);
     }
 
-    valarray(const slice_array<_Ty>& _Slicearr) { // construct from slice_array
+    valarray(const slice_array<_Ty>& _Slicearr) {
         _Tidy_init();
         *this = _Slicearr;
     }
 
-    valarray(const gslice_array<_Ty>& _Gslicearr) { // construct from gslice_array
+    valarray(const gslice_array<_Ty>& _Gslicearr) {
         _Tidy_init();
         *this = _Gslicearr;
     }
 
-    valarray(const mask_array<_Ty>& _Maskarr) { // construct from mask_array
+    valarray(const mask_array<_Ty>& _Maskarr) {
         _Tidy_init();
         *this = _Maskarr;
     }
 
-    valarray(const indirect_array<_Ty>& _Indarr) { // construct from indirect_array
+    valarray(const indirect_array<_Ty>& _Indarr) {
         _Tidy_init();
         *this = _Indarr;
     }
 
-    valarray(valarray&& _Right) noexcept { // construct by moving _Right
+    valarray(valarray&& _Right) noexcept {
         _Tidy_init();
         _Assign_rv(_STD move(_Right));
     }
 
-    valarray& operator=(valarray&& _Right) noexcept { // assign by moving _Right
+    valarray& operator=(valarray&& _Right) noexcept {
         _Assign_rv(_STD move(_Right));
         return *this;
     }
 
-    void _Assign_rv(valarray&& _Right) { // assign by moving _Right
+    void _Assign_rv(valarray&& _Right) {
         if (this != _STD addressof(_Right)) { // clear this and steal from _Right
             _Tidy_deallocate();
             _Myptr  = _Right._Myptr;
@@ -141,18 +143,18 @@ public:
         }
     }
 
-    valarray(initializer_list<_Ty> _Ilist) { // construct from initializer_list
+    valarray(initializer_list<_Ty> _Ilist) {
         _Tidy_init();
         _Grow(_Ilist.size(), _Ilist.begin(), 1);
     }
 
-    valarray& operator=(initializer_list<_Ty> _Ilist) { // assign initializer_list
+    valarray& operator=(initializer_list<_Ty> _Ilist) {
         _Assign(_Ilist.size(), _Ilist.begin());
         return *this;
     }
 
-    void swap(valarray& _Right) noexcept { // exchange contents with _Right
-        if (this != _STD addressof(_Right)) { // swap with emptied container
+    void swap(valarray& _Right) noexcept {
+        if (this != _STD addressof(_Right)) {
             _STD swap(_Myptr, _Right._Myptr);
             _STD swap(_Mysize, _Right._Mysize);
         }
@@ -162,7 +164,7 @@ public:
         _Tidy_deallocate();
     }
 
-    valarray& operator=(const valarray& _Right) { // assign valarray _Right
+    valarray& operator=(const valarray& _Right) {
         if (this != _STD addressof(_Right)) {
             _Assign(_Right.size(), _Right._Myptr);
         }
@@ -170,7 +172,7 @@ public:
         return *this;
     }
 
-    valarray& operator=(const _Ty& _Val) { // assign _Val to each element
+    valarray& operator=(const _Ty& _Val) {
         _VALGOP(= _Val);
     }
 
@@ -288,15 +290,15 @@ public:
         _VALGOP(>>= _Right[_Idx]);
     }
 
-    _NODISCARD size_t size() const { // return length of sequence
+    _NODISCARD size_t size() const noexcept /* strengthened */ {
         return _Mysize;
     }
 
-    _NODISCARD const _Ty& operator[](size_t _Off) const {
+    _NODISCARD const _Ty& operator[](size_t _Off) const noexcept /* strengthened */ {
         return _Myptr[_Off];
     }
 
-    _NODISCARD _Ty& operator[](size_t _Off) {
+    _NODISCARD _Ty& operator[](size_t _Off) noexcept /* strengthened */ {
         return _Myptr[_Off];
     }
 
@@ -316,18 +318,18 @@ public:
 
     _NODISCARD indirect_array<_Ty> operator[](const _Sizarray& _Indarr); // defined below
 
-    _NODISCARD _Ty sum() const { // return sum of all elements
+    _NODISCARD _Ty sum() const {
         _Ty _Sum = _Myptr[0];
-        for (size_t _Idx = 0; ++_Idx < size();) {
+        for (size_t _Idx = 1; _Idx < size(); ++_Idx) {
             _Sum += _Myptr[_Idx];
         }
 
         return _Sum;
     }
 
-    _NODISCARD _Ty(min)() const { // return smallest of all elements
+    _NODISCARD _Ty(min)() const {
         _Ty _Min = _Myptr[0];
-        for (size_t _Idx = 0; ++_Idx < size();) {
+        for (size_t _Idx = 1; _Idx < size(); ++_Idx) {
             if (_Myptr[_Idx] < _Min) {
                 _Min = _Myptr[_Idx];
             }
@@ -336,9 +338,9 @@ public:
         return _Min;
     }
 
-    _NODISCARD _Ty(max)() const { // return largest of all elements
+    _NODISCARD _Ty(max)() const {
         _Ty _Max = _Myptr[0];
-        for (size_t _Idx = 0; ++_Idx < size();) {
+        for (size_t _Idx = 1; _Idx < size(); ++_Idx) {
             if (_Max < _Myptr[_Idx]) {
                 _Max = _Myptr[_Idx];
             }
@@ -347,7 +349,7 @@ public:
         return _Max;
     }
 
-    _NODISCARD valarray shift(int _Count) const { // return valarray left shifted
+    _NODISCARD valarray shift(int _Count) const {
         __PURE_APPDOMAIN_GLOBAL static _Ty _Dflt;
         _VALOP(_Ty, size(),
             (0 < _Count && size() - _Idx <= static_cast<size_t>(_Count))
@@ -356,7 +358,7 @@ public:
                 : _Myptr[_Idx + _Count]);
     }
 
-    _NODISCARD valarray cshift(int _Count) const { // return valarray left rotated
+    _NODISCARD valarray cshift(int _Count) const {
         if (size() != 0) {
             if (_Count < 0) { // right shift
                 if (size() < size_t{0} - _Count) {
@@ -373,7 +375,7 @@ public:
             size() - _Idx <= static_cast<size_t>(_Count) ? _Myptr[_Idx - size() + _Count] : _Myptr[_Idx + _Count]);
     }
 
-    _NODISCARD valarray apply(_Ty _Func(_Ty)) const { // return valarray transformed by _Func, value argument
+    _NODISCARD valarray apply(_Ty _Func(_Ty)) const {
         _VALOP(_Ty, size(), _Func(_Myptr[_Idx]));
     }
 
@@ -427,7 +429,7 @@ private:
         _Tidy_init();
     }
 
-    void _Assign(size_t _Newsize, const _Ty* _Ptr) { // assign [_Ptr, _Ptr + _Newsize)
+    void _Assign(size_t _Newsize, const _Ty* _Ptr) {
         if (size() == _Newsize) {
             for (size_t _Idx = 0; _Idx < size(); ++_Idx) {
                 _Myptr[_Idx] = _Ptr[_Idx];
@@ -444,7 +446,7 @@ private:
 
 #if _HAS_CXX17
 template <class _Ty, size_t _Nx>
-valarray(const _Ty (&)[_Nx], size_t)->valarray<_Ty>;
+valarray(const _Ty (&)[_Nx], size_t) -> valarray<_Ty>;
 #endif // _HAS_CXX17
 
 template <class _Ty>
@@ -453,22 +455,22 @@ void swap(valarray<_Ty>& _Left, valarray<_Ty>& _Right) noexcept {
 }
 
 template <class _Ty>
-_NODISCARD _Ty* begin(valarray<_Ty>& _Array) { // get beginning of valarray
+_NODISCARD _Ty* begin(valarray<_Ty>& _Array) {
     return &_Array[0];
 }
 
 template <class _Ty>
-_NODISCARD const _Ty* begin(const valarray<_Ty>& _Array) { // get beginning of valarray
+_NODISCARD const _Ty* begin(const valarray<_Ty>& _Array) {
     return &_Array[0];
 }
 
 template <class _Ty>
-_NODISCARD _Ty* end(valarray<_Ty>& _Array) { // get end of valarray
+_NODISCARD _Ty* end(valarray<_Ty>& _Array) {
     return &_Array[0] + _Array.size();
 }
 
 template <class _Ty>
-_NODISCARD const _Ty* end(const valarray<_Ty>& _Array) { // get end of valarray
+_NODISCARD const _Ty* end(const valarray<_Ty>& _Array) {
     return &_Array[0] + _Array.size();
 }
 
@@ -742,132 +744,131 @@ _NODISCARD _Boolarray operator>=(const valarray<_Ty>& _Left, const valarray<_Ty>
     _VALOP(bool, _Left.size(), _Left[_Idx] >= _Right[_Idx]);
 }
 
+// [valarray.transcend] Transcendentals
 template <class _Ty>
 _NODISCARD valarray<_Ty> abs(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), abs(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), abs(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> acos(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD acos(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), acos(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> asin(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD asin(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), asin(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> atan(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD atan(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), atan(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> atan2(const valarray<_Ty>& _Left, const valarray<_Ty>& _Right) {
-    _VALOP(_Ty, _Left.size(), _CSTD atan2(_Left[_Idx], _Right[_Idx]));
+    _VALOP(_Ty, _Left.size(), atan2(_Left[_Idx], _Right[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> atan2(const valarray<_Ty>& _Left, const typename valarray<_Ty>::value_type& _Right) {
-    _VALOP(_Ty, _Left.size(), _CSTD atan2(_Left[_Idx], _Right));
+    _VALOP(_Ty, _Left.size(), atan2(_Left[_Idx], _Right)); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> atan2(const typename valarray<_Ty>::value_type& _Left, const valarray<_Ty>& _Right) {
-    _VALOP(_Ty, _Right.size(), _CSTD atan2(_Left, _Right[_Idx]));
+    _VALOP(_Ty, _Right.size(), atan2(_Left, _Right[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> cos(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD cos(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), cos(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> cosh(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD cosh(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), cosh(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> exp(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD exp(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), exp(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> log(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD log(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), log(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> log10(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD log10(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), log10(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> pow(const valarray<_Ty>& _Left, const valarray<_Ty>& _Right) {
-    _VALOP(_Ty, _Left.size(), _CSTD pow(_Left[_Idx], _Right[_Idx]));
+    _VALOP(_Ty, _Left.size(), pow(_Left[_Idx], _Right[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> pow(const valarray<_Ty>& _Left, const typename valarray<_Ty>::value_type& _Right) {
-    _VALOP(_Ty, _Left.size(), _CSTD pow(_Left[_Idx], _Right));
+    _VALOP(_Ty, _Left.size(), pow(_Left[_Idx], _Right)); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> pow(const typename valarray<_Ty>::value_type& _Left, const valarray<_Ty>& _Right) {
-    _VALOP(_Ty, _Right.size(), _CSTD pow(_Left, _Right[_Idx]));
+    _VALOP(_Ty, _Right.size(), pow(_Left, _Right[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> sin(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD sin(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), sin(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> sinh(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD sinh(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), sinh(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> sqrt(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD sqrt(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), sqrt(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> tan(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD tan(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), tan(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 template <class _Ty>
 _NODISCARD valarray<_Ty> tanh(const valarray<_Ty>& _Left) {
-    _VALOP(_Ty, _Left.size(), _CSTD tanh(_Left[_Idx]));
+    _VALOP(_Ty, _Left.size(), tanh(_Left[_Idx])); // using ADL, N4835 [valarray.transcend]/1
 }
 
 // CLASS slice
 class slice { // define a slice of a valarray
 public:
-    slice() : _Start(0), _Len(0), _Stride(0) { // construct with all zeros
-    }
+    slice() = default;
 
-    slice(size_t _Off, size_t _Count, size_t _Inc)
-        : _Start(_Off), _Len(_Count), _Stride(_Inc) { // construct slice from starting offset, length, and stride
-    }
+    slice(size_t _Off, size_t _Count, size_t _Inc) noexcept // strengthened
+        : _Start(_Off), _Len(_Count), _Stride(_Inc) {}
 
-    _NODISCARD size_t start() const { // return starting offset of slice
+    _NODISCARD size_t start() const noexcept /* strengthened */ {
         return _Start;
     }
 
-    _NODISCARD size_t size() const { // return number of elements specified by slice
+    _NODISCARD size_t size() const noexcept /* strengthened */ {
         return _Len;
     }
 
-    _NODISCARD size_t stride() const { // return distance between elements specified by slice
+    _NODISCARD size_t stride() const noexcept /* strengthened */ {
         return _Stride;
     }
 
 protected:
-    size_t _Start; // the starting offset
-    size_t _Len; // the number of elements
-    size_t _Stride; // the distance between elements
+    size_t _Start  = 0; // the starting offset
+    size_t _Len    = 0; // the number of elements
+    size_t _Stride = 0; // the distance between elements
 };
 
 // MACROS FOR slice_array
@@ -883,55 +884,55 @@ class slice_array : public slice { // define a slice of a valarray
 public:
     using value_type = _Ty;
 
-    void operator=(const valarray<_Ty>& _Right) const { // assign a valarray to a slice
+    void operator=(const valarray<_Ty>& _Right) const {
         _SLOP(= _Right[_Idx]);
     }
 
-    void operator=(const _Ty& _Right) const { // assign a scalar to elements of a slice
+    void operator=(const _Ty& _Right) const {
         _SLOP(= _Right);
     }
 
-    void operator*=(const valarray<_Ty>& _Right) const { // multiply slice by valarray
+    void operator*=(const valarray<_Ty>& _Right) const {
         _SLOP(*= _Right[_Idx]);
     }
 
-    void operator/=(const valarray<_Ty>& _Right) const { // divide slice by valarray
+    void operator/=(const valarray<_Ty>& _Right) const {
         _SLOP(/= _Right[_Idx]);
     }
 
-    void operator%=(const valarray<_Ty>& _Right) const { // remainder slice by valarray
+    void operator%=(const valarray<_Ty>& _Right) const {
         _SLOP(%= _Right[_Idx]);
     }
 
-    void operator+=(const valarray<_Ty>& _Right) const { // add slice to valarray
+    void operator+=(const valarray<_Ty>& _Right) const {
         _SLOP(+= _Right[_Idx]);
     }
 
-    void operator-=(const valarray<_Ty>& _Right) const { // subtract valarray from slice
+    void operator-=(const valarray<_Ty>& _Right) const {
         _SLOP(-= _Right[_Idx]);
     }
 
-    void operator^=(const valarray<_Ty>& _Right) const { // XOR valarray into slice
+    void operator^=(const valarray<_Ty>& _Right) const {
         _SLOP(^= _Right[_Idx]);
     }
 
-    void operator&=(const valarray<_Ty>& _Right) const { // AND valarray into slice
+    void operator&=(const valarray<_Ty>& _Right) const {
         _SLOP(&= _Right[_Idx]);
     }
 
-    void operator|=(const valarray<_Ty>& _Right) const { // OR valarray into slice
+    void operator|=(const valarray<_Ty>& _Right) const {
         _SLOP(|= _Right[_Idx]);
     }
 
-    void operator<<=(const valarray<_Ty>& _Right) const { // left shift slice by valarray
+    void operator<<=(const valarray<_Ty>& _Right) const {
         _SLOP(<<= _Right[_Idx]);
     }
 
-    void operator>>=(const valarray<_Ty>& _Right) const { // right shift slice by valarray
+    void operator>>=(const valarray<_Ty>& _Right) const {
         _SLOP(>>= _Right[_Idx]);
     }
 
-    _Ty& _Data(size_t _Idx) const { // return reference to underlying array element
+    _Ty& _Data(size_t _Idx) const {
         return _Myptr[_Idx];
     }
 
@@ -944,9 +945,7 @@ public:
 private:
     friend valarray<_Ty>;
 
-    slice_array(const slice& _Slice, _Ty* _Pdata)
-        : slice(_Slice), _Myptr(_Pdata) { // construct from slice and pointer to valarray contents
-    }
+    slice_array(const slice& _Slice, _Ty* _Pdata) : slice(_Slice), _Myptr(_Pdata) {}
 
     _Ty* _Myptr; // pointer to valarray contents
 };
@@ -954,31 +953,28 @@ private:
 // CLASS gslice
 class gslice { // define a generalized (multidimensional) slice of a valarray
 public:
-    gslice() : _Start(0) { // construct with all zeros
-    }
+    gslice() : _Start(0) {} // construct with all zeros
 
     gslice(size_t _Off, const _Sizarray& _Lenarr, const _Sizarray& _Incarr)
-        : _Start(_Off), _Len(_Lenarr),
-          _Stride(_Incarr) { // construct from starting offset, arrays of lengths and strides
-    }
+        : _Start(_Off), _Len(_Lenarr), _Stride(_Incarr) {}
 
-    _NODISCARD size_t start() const { // return starting offset of generalized slice
+    _NODISCARD size_t start() const {
         return _Start;
     }
 
-    _NODISCARD _Sizarray size() const { // return array of lengths of slices
+    _NODISCARD _Sizarray size() const {
         return _Len;
     }
 
-    _NODISCARD _Sizarray stride() const { // return array of strides of slices
+    _NODISCARD _Sizarray stride() const {
         return _Stride;
     }
 
-    size_t _Nslice() const { // return number of slices
+    size_t _Nslice() const {
         return _Len.size();
     }
 
-    size_t _Off(_Sizarray& _Indexarr) const { // return offset for an array of indexes, then increment
+    size_t _Off(_Sizarray& _Indexarr) const {
         size_t _Idx, _Ans = _Start;
 
         for (_Idx = 0; _Idx < _Indexarr.size(); ++_Idx) {
@@ -996,13 +992,13 @@ public:
         return _Ans;
     }
 
-    size_t _Totlen() const { // return total length of generalized slice
+    size_t _Totlen() const {
         if (_Len.size() == 0) {
             return 0;
         }
 
         size_t _Count = _Len[0];
-        for (size_t _Idx = 0; ++_Idx < _Len.size();) {
+        for (size_t _Idx = 1; _Idx < _Len.size(); ++_Idx) {
             _Count *= _Len[_Idx];
         }
 
@@ -1029,11 +1025,11 @@ class gslice_array : public gslice { // define a generalized slice of a valarray
 public:
     using value_type = _Ty;
 
-    void operator=(const valarray<_Ty>& _Right) const { // assign a valarray to a generalized slice
+    void operator=(const valarray<_Ty>& _Right) const {
         _GSLOP(= _Right[_Idx]);
     }
 
-    void operator=(const _Ty& _Right) const { // assign a scalar to elements of a generalized slice
+    void operator=(const _Ty& _Right) const {
         _GSLOP(= _Right);
     }
 
@@ -1077,7 +1073,7 @@ public:
         _GSLOP(>>= _Right[_Idx]);
     }
 
-    _Ty& _Data(size_t _Idx) const { // return reference to underlying array element
+    _Ty& _Data(size_t _Idx) const {
         return _Myptr[_Idx];
     }
 
@@ -1090,9 +1086,7 @@ public:
 private:
     friend valarray<_Ty>;
 
-    gslice_array(const gslice& _Gslice, _Ty* _Ptr)
-        : gslice(_Gslice), _Myptr(_Ptr) { // construct from gslice and pointer to valarray contents
-    }
+    gslice_array(const gslice& _Gslice, _Ty* _Ptr) : gslice(_Gslice), _Myptr(_Ptr) {}
 
     _Ty* _Myptr; // pointer to valarray contents
 };
@@ -1113,11 +1107,11 @@ class mask_array { // define a subset of a valarray with an array of mask bits
 public:
     using value_type = _Ty;
 
-    void operator=(const valarray<_Ty>& _Right) const { // assign a valarray to a masked array
+    void operator=(const valarray<_Ty>& _Right) const {
         _MOP(= _Right[_Idx]);
     }
 
-    void operator=(const _Ty& _Right) const { // assign a scalar to elements of a masked array
+    void operator=(const _Ty& _Right) const {
         _MOP(= _Right);
     }
 
@@ -1161,15 +1155,15 @@ public:
         _MOP(>>= _Right[_Idx]);
     }
 
-    _Ty& _Data(size_t _Idx) const { // return reference to underlying array element
+    _Ty& _Data(size_t _Idx) const {
         return _Myptr[_Idx];
     }
 
-    bool _Mask(size_t _Idx) const { // return mask element for a given index
+    bool _Mask(size_t _Idx) const {
         return _Mybool[_Idx];
     }
 
-    size_t _Totlen() const { // return total length of masked array
+    size_t _Totlen() const {
         size_t _Count = 0;
         for (size_t _Idx = 0; _Idx < _Mybool.size(); ++_Idx) {
             if (_Mybool[_Idx]) {
@@ -1189,9 +1183,7 @@ public:
 private:
     friend valarray<_Ty>;
 
-    mask_array(const _Boolarray& _Maskarr, _Ty* _Pdata)
-        : _Mybool(_Maskarr), _Myptr(_Pdata) { // construct from mask array and pointer to valarray contents
-    }
+    mask_array(const _Boolarray& _Maskarr, _Ty* _Pdata) : _Mybool(_Maskarr), _Myptr(_Pdata) {}
 
     _Boolarray _Mybool; // array of mask bits
     _Ty* _Myptr; // pointer to valarray contents
@@ -1210,11 +1202,11 @@ class indirect_array { // define a subset of a valarray with an array of indexes
 public:
     using value_type = _Ty;
 
-    void operator=(const valarray<_Ty>& _Right) const { // assign a valarray to an indirect array
+    void operator=(const valarray<_Ty>& _Right) const {
         _IOP(= _Right[_Idx]);
     }
 
-    void operator=(const _Ty& _Right) const { // assign a scalar to elements of an indirect array
+    void operator=(const _Ty& _Right) const {
         _IOP(= _Right);
     }
 
@@ -1258,15 +1250,15 @@ public:
         _IOP(>>= _Right[_Idx]);
     }
 
-    _Ty& _Data(size_t _Idx) const { // return reference to underlying array element
+    _Ty& _Data(size_t _Idx) const {
         return _Myptr[_Idx];
     }
 
-    size_t _Indir(size_t _Idx) const { // return mapped index for a given index
+    size_t _Indir(size_t _Idx) const {
         return _Myindarr[_Idx];
     }
 
-    size_t _Totlen() const { // return total length of indirect array
+    size_t _Totlen() const {
         return _Myindarr.size();
     }
 
@@ -1279,16 +1271,14 @@ public:
 private:
     friend valarray<_Ty>;
 
-    indirect_array(const _Sizarray& _Indarr, _Ty* _Ptr)
-        : _Myindarr(_Indarr), _Myptr(_Ptr) { // construct from indirect array and pointer to valarray contents
-    }
+    indirect_array(const _Sizarray& _Indarr, _Ty* _Ptr) : _Myindarr(_Indarr), _Myptr(_Ptr) {}
 
     _Sizarray _Myindarr; // array of indirect indexes
     _Ty* _Myptr; // pointer to valarray contents
 };
 
 template <class _Ty>
-valarray<_Ty>& valarray<_Ty>::operator=(const slice_array<_Ty>& _Slicearr) { // assign slice array to valarray
+valarray<_Ty>& valarray<_Ty>::operator=(const slice_array<_Ty>& _Slicearr) {
     _Tidy_deallocate();
     _Grow(_Slicearr.size(), &_Slicearr._Data(_Slicearr.start()), _Slicearr.stride());
     return *this;
@@ -1305,8 +1295,7 @@ _NODISCARD slice_array<_Ty> valarray<_Ty>::operator[](slice _Slice) {
 }
 
 template <class _Ty>
-valarray<_Ty>& valarray<_Ty>::operator=(
-    const gslice_array<_Ty>& _Gslicearr) { // assign generalized slice array to valarray
+valarray<_Ty>& valarray<_Ty>::operator=(const gslice_array<_Ty>& _Gslicearr) {
     _Tidy_deallocate();
     _Grow(_Gslicearr._Totlen());
     _Sizarray _Indexarray(size_t{0}, _Gslicearr._Nslice());
@@ -1324,8 +1313,7 @@ _NODISCARD gslice_array<_Ty> valarray<_Ty>::operator[](const gslice& _Gslicearr)
 }
 
 template <class _Ty>
-valarray<_Ty>& valarray<_Ty>::operator=(const mask_array<_Ty>& _Maskarr) { // assign masked array to valarray
-
+valarray<_Ty>& valarray<_Ty>::operator=(const mask_array<_Ty>& _Maskarr) {
     _Tidy_deallocate();
     _Grow(_Maskarr._Totlen());
     size_t _Count = 0;
@@ -1350,7 +1338,7 @@ _NODISCARD mask_array<_Ty> valarray<_Ty>::operator[](const _Boolarray& _Boolarr)
 }
 
 template <class _Ty>
-valarray<_Ty>& valarray<_Ty>::operator=(const indirect_array<_Ty>& _Indarr) { // assign indirect array to valarray
+valarray<_Ty>& valarray<_Ty>::operator=(const indirect_array<_Ty>& _Indarr) {
     _Tidy_deallocate();
     _Grow(_Indarr._Totlen());
     _VALGOP(= _Indarr._Data(_Indarr._Indir(_Idx)));
@@ -1373,8 +1361,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _VALARRAY_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

@@ -818,7 +818,7 @@ public:
         // The _Newmax != _Newmax is a check for NaN, because NaN is != to itself
         if (_Newmax != _Newmax || _Newmax < 0)
         {
-            throw std::out_of_range("invalid hash load factor");
+            _STD _Xout_of_range("invalid hash load factor");
         }
 
         _M_maximum_bucket_size = _Newmax;
@@ -852,7 +852,7 @@ public:
         }
         else if (_Buckets <= 0 || _Buckets > unsafe_max_bucket_count())
         {
-            throw std::out_of_range("invalid number of buckets");
+            _STD _Xout_of_range("invalid number of buckets");
         }
         // Round up the number of buckets to the next largest power of 2
         _M_number_of_buckets = ((size_type) 1) << _Get_msb(_Buckets*2-1);
@@ -980,7 +980,7 @@ private:
         }
         else
         {
-            throw std::invalid_argument("swap is invalid on non-equal allocators");
+            _STD _Xinvalid_argument("swap is invalid on non-equal allocators");
         }
     }
 

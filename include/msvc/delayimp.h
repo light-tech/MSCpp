@@ -55,7 +55,7 @@ enum {
     dliFailGetProc,                 // failed to get proc address, fix it by
                                     //  returning a valid FARPROC
     dliNoteEndProcessing,           // called after all processing is done, no
-                                    //  no bypass possible at this point except
+                                    //  bypass possible at this point except
                                     //  by longjmp()/throw()/RaiseException.
     };
 

@@ -1,4 +1,8 @@
 // new standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _NEW_
 #define _NEW_
@@ -15,6 +19,14 @@ _STL_DISABLE_CLANG_WARNINGS
 #undef new
 
 _STD_BEGIN
+#ifdef __cpp_lib_destroying_delete
+// STRUCT destroying_delete_t
+struct destroying_delete_t {
+    explicit destroying_delete_t() = default;
+};
+inline constexpr destroying_delete_t destroying_delete{};
+#endif // __cpp_lib_destroying_delete
+
 #if _HAS_CXX17
 // FUNCTION TEMPLATE launder
 template <class _Ty>
@@ -51,8 +63,3 @@ _STL_RESTORE_CLANG_WARNINGS
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _NEW_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

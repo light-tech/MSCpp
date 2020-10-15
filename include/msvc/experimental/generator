@@ -1,26 +1,21 @@
 // generator experimental header
 
-/***
- *generator
- *
- *       Copyright (c) Microsoft Corporation. All rights reserved.
- *
- *       Purpose: Library support of coroutines. generator class
- *       https://wg21.link/p0057
- *
- *       [Public]
- *
- ****/
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _EXPERIMENTAL_GENERATOR_
 #define _EXPERIMENTAL_GENERATOR_
 #include <yvals_core.h>
 #if _STL_COMPILER_PREPROCESSOR
 
-#ifndef _RESUMABLE_FUNCTIONS_SUPPORTED
-#error <experimental/generator> requires /await compiler option
-#endif // _RESUMABLE_FUNCTIONS_SUPPORTED
+#ifndef __cpp_coroutines
+#error <experimental/generator> requires /std:c++latest or /await compiler option
+#endif // __cpp_coroutines
 
+#ifdef _CPPUNWIND
+#include <exception>
+#endif
 #include <experimental/resumable>
 
 #pragma pack(push, _CRT_PACKING)
@@ -38,27 +33,48 @@ namespace experimental {
     struct generator {
         struct promise_type {
             _Ty const* _CurrentValue;
+#ifdef _CPPUNWIND
+            // TRANSITION, VSO-967814
+            exception_ptr _Eptr;
+#endif // _CPPUNWIND
 
-            promise_type& get_return_object() {
-                return *this;
+            auto get_return_object() {
+                return generator{*this};
             }
 
-            bool initial_suspend() {
-                return true;
+            suspend_always initial_suspend() noexcept {
+                return {};
             }
 
-            bool final_suspend() {
-                return true;
+            suspend_always final_suspend() noexcept {
+                return {};
             }
 
-            void yield_value(_Ty const& _Value) {
+#ifdef _CPPUNWIND
+            void unhandled_exception() noexcept {
+                _Eptr = _STD current_exception();
+            }
+#endif // _CPPUNWIND
+
+            void _Rethrow_if_exception() {
+#ifdef _CPPUNWIND
+                if (_Eptr) {
+                    _STD rethrow_exception(_Eptr);
+                }
+#endif // _CPPUNWIND
+            }
+
+            auto yield_value(_Ty const& _Value) {
                 _CurrentValue = _STD addressof(_Value);
+                return suspend_always{};
             }
+
+            void return_void() {}
 
             template <typename _Uty>
             _Uty&& await_transform(_Uty&& _Whatever) {
                 static_assert(_Always_false<_Uty>,
-                    "co_await is not supported in coroutines of type std::experiemental::generator");
+                    "co_await is not supported in coroutines of type std::experimental::generator");
                 return _STD forward<_Uty>(_Whatever);
             }
 
@@ -96,7 +112,7 @@ namespace experimental {
             iterator& operator++() {
                 _Coro.resume();
                 if (_Coro.done()) {
-                    _Coro = nullptr;
+                    _STD exchange(_Coro, {}).promise()._Rethrow_if_exception();
                 }
 
                 return *this;
@@ -129,6 +145,7 @@ namespace experimental {
             if (_Coro) {
                 _Coro.resume();
                 if (_Coro.done()) {
+                    _Coro.promise()._Rethrow_if_exception();
                     return {nullptr};
                 }
             }

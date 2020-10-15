@@ -1,4 +1,8 @@
 // set standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _SET_
 #define _SET_
@@ -118,13 +122,12 @@ public:
 
     set(set&& _Right, const allocator_type& _Al) : _Mybase(_STD move(_Right), _Al) {}
 
-    set& operator=(set&& _Right)
-        _NOEXCEPT_COND(_Alnode_traits::is_always_equal::value&& is_nothrow_move_assignable_v<_Pr>) {
+    set& operator=(set&& _Right) noexcept(_Alnode_traits::is_always_equal::value&& is_nothrow_move_assignable_v<_Pr>) {
         _Mybase::operator=(_STD move(_Right));
         return *this;
     }
 
-    void swap(set& _Right) _NOEXCEPT_COND(noexcept(_Mybase::swap(_Right))) { // strengthened
+    void swap(set& _Right) noexcept(noexcept(_Mybase::swap(_Right))) {
         _Mybase::swap(_Right);
     }
 
@@ -158,23 +161,30 @@ public:
 #if _HAS_CXX17
 template <class _Iter, class _Pr = less<_Iter_value_t<_Iter>>, class _Alloc = allocator<_Iter_value_t<_Iter>>,
     enable_if_t<conjunction_v<_Is_iterator<_Iter>, negation<_Is_allocator<_Pr>>, _Is_allocator<_Alloc>>, int> = 0>
-set(_Iter, _Iter, _Pr = _Pr(), _Alloc = _Alloc())->set<_Iter_value_t<_Iter>, _Pr, _Alloc>;
+set(_Iter, _Iter, _Pr = _Pr(), _Alloc = _Alloc()) -> set<_Iter_value_t<_Iter>, _Pr, _Alloc>;
 
 template <class _Kty, class _Pr = less<_Kty>, class _Alloc = allocator<_Kty>,
     enable_if_t<conjunction_v<negation<_Is_allocator<_Pr>>, _Is_allocator<_Alloc>>, int> = 0>
-set(initializer_list<_Kty>, _Pr = _Pr(), _Alloc = _Alloc())->set<_Kty, _Pr, _Alloc>;
+set(initializer_list<_Kty>, _Pr = _Pr(), _Alloc = _Alloc()) -> set<_Kty, _Pr, _Alloc>;
 
 template <class _Iter, class _Alloc, enable_if_t<conjunction_v<_Is_iterator<_Iter>, _Is_allocator<_Alloc>>, int> = 0>
-set(_Iter, _Iter, _Alloc)->set<_Iter_value_t<_Iter>, less<_Iter_value_t<_Iter>>, _Alloc>;
+set(_Iter, _Iter, _Alloc) -> set<_Iter_value_t<_Iter>, less<_Iter_value_t<_Iter>>, _Alloc>;
 
 template <class _Kty, class _Alloc, enable_if_t<_Is_allocator<_Alloc>::value, int> = 0>
-set(initializer_list<_Kty>, _Alloc)->set<_Kty, less<_Kty>, _Alloc>;
+set(initializer_list<_Kty>, _Alloc) -> set<_Kty, less<_Kty>, _Alloc>;
 #endif // _HAS_CXX17
 
 template <class _Kty, class _Pr, class _Alloc>
-void swap(set<_Kty, _Pr, _Alloc>& _Left, set<_Kty, _Pr, _Alloc>& _Right) _NOEXCEPT_COND(noexcept(_Left.swap(_Right))) {
+void swap(set<_Kty, _Pr, _Alloc>& _Left, set<_Kty, _Pr, _Alloc>& _Right) noexcept(noexcept(_Left.swap(_Right))) {
     _Left.swap(_Right);
 }
+
+#if _HAS_CXX20
+template <class _Kty, class _Keylt, class _Alloc, class _Pr>
+typename set<_Kty, _Keylt, _Alloc>::size_type erase_if(set<_Kty, _Keylt, _Alloc>& _Cont, _Pr _Pred) {
+    return _Erase_nodes_if(_Cont, _Pass_fn(_Pred));
+}
+#endif // _HAS_CXX20
 
 // CLASS TEMPLATE multiset
 template <class _Kty, class _Pr = less<_Kty>, class _Alloc = allocator<_Kty>>
@@ -246,8 +256,8 @@ public:
 
     multiset(multiset&& _Right, const allocator_type& _Al) : _Mybase(_STD move(_Right), _Al) {}
 
-    multiset& operator=(multiset&& _Right)
-        _NOEXCEPT_COND(_Alnode_traits::is_always_equal::value&& is_nothrow_move_assignable_v<_Pr>) {
+    multiset& operator=(multiset&& _Right) noexcept(
+        _Alnode_traits::is_always_equal::value&& is_nothrow_move_assignable_v<_Pr>) {
         _Mybase::operator=(_STD move(_Right));
         return *this;
     }
@@ -257,7 +267,7 @@ public:
         return _Mybase::emplace(_STD forward<_Valty>(_Val)...).first;
     }
 
-    void swap(multiset& _Right) _NOEXCEPT_COND(noexcept(_Mybase::swap(_Right))) { // strengthened
+    void swap(multiset& _Right) noexcept(noexcept(_Mybase::swap(_Right))) {
         _Mybase::swap(_Right);
     }
 
@@ -291,24 +301,31 @@ public:
 #if _HAS_CXX17
 template <class _Iter, class _Pr = less<_Iter_value_t<_Iter>>, class _Alloc = allocator<_Iter_value_t<_Iter>>,
     enable_if_t<conjunction_v<_Is_iterator<_Iter>, negation<_Is_allocator<_Pr>>, _Is_allocator<_Alloc>>, int> = 0>
-multiset(_Iter, _Iter, _Pr = _Pr(), _Alloc = _Alloc())->multiset<_Iter_value_t<_Iter>, _Pr, _Alloc>;
+multiset(_Iter, _Iter, _Pr = _Pr(), _Alloc = _Alloc()) -> multiset<_Iter_value_t<_Iter>, _Pr, _Alloc>;
 
 template <class _Kty, class _Pr = less<_Kty>, class _Alloc = allocator<_Kty>,
     enable_if_t<conjunction_v<negation<_Is_allocator<_Pr>>, _Is_allocator<_Alloc>>, int> = 0>
-multiset(initializer_list<_Kty>, _Pr = _Pr(), _Alloc = _Alloc())->multiset<_Kty, _Pr, _Alloc>;
+multiset(initializer_list<_Kty>, _Pr = _Pr(), _Alloc = _Alloc()) -> multiset<_Kty, _Pr, _Alloc>;
 
 template <class _Iter, class _Alloc, enable_if_t<conjunction_v<_Is_iterator<_Iter>, _Is_allocator<_Alloc>>, int> = 0>
-multiset(_Iter, _Iter, _Alloc)->multiset<_Iter_value_t<_Iter>, less<_Iter_value_t<_Iter>>, _Alloc>;
+multiset(_Iter, _Iter, _Alloc) -> multiset<_Iter_value_t<_Iter>, less<_Iter_value_t<_Iter>>, _Alloc>;
 
 template <class _Kty, class _Alloc, enable_if_t<_Is_allocator<_Alloc>::value, int> = 0>
-multiset(initializer_list<_Kty>, _Alloc)->multiset<_Kty, less<_Kty>, _Alloc>;
+multiset(initializer_list<_Kty>, _Alloc) -> multiset<_Kty, less<_Kty>, _Alloc>;
 #endif // _HAS_CXX17
 
 template <class _Kty, class _Pr, class _Alloc>
-void swap(multiset<_Kty, _Pr, _Alloc>& _Left, multiset<_Kty, _Pr, _Alloc>& _Right)
-    _NOEXCEPT_COND(noexcept(_Left.swap(_Right))) {
+void swap(multiset<_Kty, _Pr, _Alloc>& _Left, multiset<_Kty, _Pr, _Alloc>& _Right) noexcept(
+    noexcept(_Left.swap(_Right))) {
     _Left.swap(_Right);
 }
+
+#if _HAS_CXX20
+template <class _Kty, class _Keylt, class _Alloc, class _Pr>
+typename multiset<_Kty, _Keylt, _Alloc>::size_type erase_if(multiset<_Kty, _Keylt, _Alloc>& _Cont, _Pr _Pred) {
+    return _Erase_nodes_if(_Cont, _Pass_fn(_Pred));
+}
+#endif // _HAS_CXX20
 
 #if _HAS_CXX17
 namespace pmr {
@@ -326,8 +343,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _SET_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

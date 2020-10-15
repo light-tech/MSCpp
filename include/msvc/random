@@ -1,4 +1,8 @@
 // random standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _RANDOM_
 #define _RANDOM_
@@ -58,18 +62,11 @@ struct _Require_constant; // not defined; _Require_constant<E> is a valid type i
 // clang-format off
 template <class _Ty>
 concept uniform_random_bit_generator = invocable<_Ty&> && unsigned_integral<invoke_result_t<_Ty&>> && requires {
-#if _HAS_EXACT_COMPOUND_REQUIREMENT
     { (_Ty::min)() } -> same_as<invoke_result_t<_Ty&>>;
     { (_Ty::max)() } -> same_as<invoke_result_t<_Ty&>>;
-#else // ^^^ _HAS_EXACT_COMPOUND_REQUIREMENT / !_HAS_EXACT_COMPOUND_REQUIREMENT vvv
-    (_Ty::min)(); requires same_as<decltype((_Ty::min)()), invoke_result_t<_Ty&>>;
-    (_Ty::max)(); requires same_as<decltype((_Ty::max)()), invoke_result_t<_Ty&>>;
-#endif // _HAS_EXACT_COMPOUND_REQUIREMENT
-#if 1 // Implement the PR for LWG 3150
     typename _Require_constant<(_Ty::min)()>;
     typename _Require_constant<(_Ty::max)()>;
     requires (_Ty::min)() < (_Ty::max)();
-#endif // LWG 3150
 };
 // clang-format on
 #endif // __cpp_lib_concepts
@@ -154,8 +151,7 @@ basic_ostream<_Elem, _Traits>& _Out(basic_ostream<_Elem, _Traits>& _Os, _Ty _Dx)
 template <class _Elem, class _Traits, class _Ty>
 class _Wrap_istream { // wrap input stream as function object
 public:
-    _Wrap_istream(basic_istream<_Elem, _Traits>& _Is) : _Str(_Is) { // construct
-    }
+    _Wrap_istream(basic_istream<_Elem, _Traits>& _Is) : _Str(_Is) {}
 
     _Ty operator()() { // read next value
         _Ty _Data;
@@ -315,36 +311,24 @@ _NODISCARD _Uint _Next_linear_congruential_value(_Uint _Prev) noexcept {
     // Divide by _Ax:
     //   _Cx <= numeric_limits<T>::max()
     //   && (_Mx - 1) <= (numeric_limits<T>::max() - _Cx) / _Ax
-    if
-        _CONSTEXPR_IF(_Ax == 0) { // degenerate case; avoid divide by 0
-            (void) _Prev;
-            return static_cast<_Uint>(_Cx); // relies on _Mx == 0 || _Cx <= _Mx, N4741 [rand.eng.lcong]/3
-        }
-    else if
-        _CONSTEXPR_IF(
-            _Mx == 0) { // N4762 [rand.eng.lcong]/2: "If the template parameter m is 0, the modulus m used throughout
-                        // this subclause [rand.eng.lcong] is numeric_limits<result_type>::max() plus 1."
-                        // That is: Just do the multiply and let normal unsigned modulo take care of it
-            return static_cast<_Uint>(static_cast<_Uint>(_Ax * _Prev) + _Cx);
-        }
-    else if
-        _CONSTEXPR_IF(
-            _Cx <= UINT_MAX
-            && static_cast<_Uint>(_Mx - 1)
-                   <= (UINT_MAX - _Cx) / _Ax) { // unsigned int is sufficient to store intermediate calculation
-            const auto _Mul =
-                static_cast<unsigned int>(_Prev) * static_cast<unsigned int>(_Ax) + static_cast<unsigned int>(_Cx);
-            return static_cast<_Uint>(_Mul % _Mx);
-        }
-    else if
-        _CONSTEXPR_IF(
-            _Cx <= ULLONG_MAX
-            && static_cast<_Uint>(_Mx - 1)
-                   <= (ULLONG_MAX - _Cx) / _Ax) { // unsigned long long is sufficient to store intermediate calculation
-            const auto _Mul = static_cast<unsigned long long>(_Prev) * _Ax + _Cx;
-            return static_cast<_Uint>(_Mul % _Mx);
-        }
-    else { // no intermediate integral type fits; fall back to multiprecision
+    if _CONSTEXPR_IF (_Ax == 0) { // degenerate case; avoid divide by 0
+        return static_cast<_Uint>(_Cx); // relies on _Mx == 0 || _Cx <= _Mx, N4741 [rand.eng.lcong]/3
+    } else if _CONSTEXPR_IF (_Mx == 0) {
+        // N4762 [rand.eng.lcong]/2: "If the template parameter m is 0, the modulus m
+        // used throughout this subclause [rand.eng.lcong] is
+        // numeric_limits<result_type>::max() plus 1." That is: Just do the multiply
+        // and let normal unsigned modulo take care of it
+        return static_cast<_Uint>(static_cast<_Uint>(_Ax * _Prev) + _Cx);
+    } else if _CONSTEXPR_IF (_Cx <= UINT_MAX && static_cast<_Uint>(_Mx - 1) <= (UINT_MAX - _Cx) / _Ax) {
+        // unsigned int is sufficient to store intermediate calculation
+        const auto _Mul =
+            static_cast<unsigned int>(_Prev) * static_cast<unsigned int>(_Ax) + static_cast<unsigned int>(_Cx);
+        return static_cast<_Uint>(_Mul % _Mx);
+    } else if _CONSTEXPR_IF (_Cx <= ULLONG_MAX && static_cast<_Uint>(_Mx - 1) <= (ULLONG_MAX - _Cx) / _Ax) {
+        // unsigned long long is sufficient to store intermediate calculation
+        const auto _Mul = static_cast<unsigned long long>(_Prev) * _Ax + _Cx;
+        return static_cast<_Uint>(_Mul % _Mx);
+    } else { // no intermediate integral type fits; fall back to multiprecision
         _MP_arr _Wx;
         _MP_Mul(_Wx, _Prev, _Ax);
         _MP_Add(_Wx, _Cx);
@@ -381,17 +365,15 @@ _NODISCARD constexpr unsigned long long _Seed_seq_to_ull(_Seed_seq& _Seq) {
 
 template <class _Uint, _Uint _Cx, _Uint _Mx>
 _NODISCARD constexpr _Uint _Get_linear_congruential_seed(_Uint _Sx) noexcept { // N4741 [rand.eng.lcong]/5
-    if
-        _CONSTEXPR_IF(_Mx != 0) {
-            _Sx %= _Mx;
-        }
+    if _CONSTEXPR_IF (_Mx != 0) {
+        _Sx %= _Mx;
+    }
 
-    if
-        _CONSTEXPR_IF(_Cx == 0) {
-            if (_Sx == 0) {
-                _Sx = _Uint{1};
-            }
+    if _CONSTEXPR_IF (_Cx == 0) {
+        if (_Sx == 0) {
+            _Sx = _Uint{1};
         }
+    }
 
     return _Sx;
 }
@@ -399,21 +381,15 @@ _NODISCARD constexpr _Uint _Get_linear_congruential_seed(_Uint _Sx) noexcept { /
 template <class _Uint, _Uint _Cx, _Uint _Mx, class _Seed_seq>
 _NODISCARD _Uint _Get_linear_congruential_seed_from_seq(_Seed_seq& _Seq) { // N4741 [rand.eng.lcong]/6
     _Uint _Sx;
-    if
-        _CONSTEXPR_IF(_Mx == 0) {
-            if
-                _CONSTEXPR_IF(sizeof(_Uint) <= sizeof(unsigned int)) {
-                    _Sx = static_cast<_Uint>(_Seed_seq_to_uint(_Seq));
-                }
-            else {
-                _Sx = static_cast<_Uint>(_Seed_seq_to_ull(_Seq));
-            }
+    if _CONSTEXPR_IF (_Mx == 0) {
+        if _CONSTEXPR_IF (sizeof(_Uint) <= sizeof(unsigned int)) {
+            _Sx = static_cast<_Uint>(_Seed_seq_to_uint(_Seq));
+        } else {
+            _Sx = static_cast<_Uint>(_Seed_seq_to_ull(_Seq));
         }
-    else if
-        _CONSTEXPR_IF(_Mx <= UINT_MAX) {
-            _Sx = static_cast<_Uint>(_Seed_seq_to_uint(_Seq) % _Mx);
-        }
-    else {
+    } else if _CONSTEXPR_IF (_Mx <= UINT_MAX) {
+        _Sx = static_cast<_Uint>(_Seed_seq_to_uint(_Seq) % _Mx);
+    } else {
         _Sx = static_cast<_Uint>(_Seed_seq_to_ull(_Seq) % _Mx);
     }
 
@@ -436,14 +412,14 @@ public:
     static constexpr result_type increment  = _Cx;
     static constexpr result_type modulus    = _Mx;
 
-    _NODISCARD static constexpr result_type(min)() noexcept { // strengthened
+    _NODISCARD static constexpr result_type(min)() noexcept /* strengthened */ {
         // return minimum possible generated value
         return _Cx == 0;
     }
 
 #pragma warning(push)
 #pragma warning(disable : 4309) // truncation of constant value
-    _NODISCARD static constexpr result_type(max)() noexcept { // strengthened
+    _NODISCARD static constexpr result_type(max)() noexcept /* strengthened */ {
         // return maximum possible generated value
         return static_cast<result_type>(_Mx - 1u); // note 0 wraps around to max
     }
@@ -451,16 +427,17 @@ public:
 
     static constexpr result_type default_seed = 1u;
 
-    explicit linear_congruential_engine(result_type _Sx = default_seed) noexcept // strengthened
-        : _Prev(_Get_linear_congruential_seed<result_type, _Cx, _Mx>(_Sx)) { // construct from initial value
-    }
+    linear_congruential_engine() noexcept // strengthened
+        : _Prev(_Get_linear_congruential_seed<result_type, _Cx, _Mx>(default_seed)) {}
+
+    explicit linear_congruential_engine(result_type _Sx) noexcept // strengthened
+        : _Prev(_Get_linear_congruential_seed<result_type, _Cx, _Mx>(_Sx)) {}
 
     template <class _Seed_seq, _Enable_if_seed_seq_t<_Seed_seq, linear_congruential_engine> = 0>
     explicit linear_congruential_engine(_Seed_seq& _Seq)
-        : _Prev(_Get_linear_congruential_seed_from_seq<result_type, _Cx, _Mx>(_Seq)) { // construct from seed sequence
-    }
+        : _Prev(_Get_linear_congruential_seed_from_seq<result_type, _Cx, _Mx>(_Seq)) {}
 
-    void seed(result_type _Sx = default_seed) noexcept { // strengthened
+    void seed(result_type _Sx = default_seed) noexcept /* strengthened */ {
         // reset sequence from numeric value
         _Prev = _Get_linear_congruential_seed<result_type, _Cx, _Mx>(_Sx);
     }
@@ -470,12 +447,12 @@ public:
         _Prev = _Get_linear_congruential_seed_from_seq<result_type, _Cx, _Mx>(_Seq);
     }
 
-    _NODISCARD _Uint operator()() noexcept { // return next value
+    _NODISCARD _Uint operator()() noexcept {
         _Prev = _Next_linear_congruential_value<result_type, _Ax, _Cx, _Mx>(_Prev);
         return _Prev;
     }
 
-    void discard(unsigned long long _Nskip) noexcept { // strengthened
+    void discard(unsigned long long _Nskip) noexcept /* strengthened */ {
         // discard _Nskip elements
         auto _Temp = _Prev;
         for (; 0 < _Nskip; --_Nskip) {
@@ -485,19 +462,19 @@ public:
         _Prev = _Temp;
     }
 
-#ifndef __EDG__ // TRANSITION, VSO#568006
+#ifndef __CUDACC__ // TRANSITION, VSO-568006
     _NODISCARD
-#endif // __EDG__
-    friend bool operator==(
-        const linear_congruential_engine& _Lhs, const linear_congruential_engine& _Rhs) noexcept { // strengthened
+#endif // TRANSITION, VSO-568006
+    friend bool operator==(const linear_congruential_engine& _Lhs, const linear_congruential_engine& _Rhs) noexcept
+    /* strengthened */ {
         return _Lhs._Prev == _Rhs._Prev;
     }
 
-#ifndef __EDG__ // TRANSITION, VSO#568006
+#ifndef __CUDACC__ // TRANSITION, VSO-568006
     _NODISCARD
-#endif // __EDG__
-    friend bool operator!=(
-        const linear_congruential_engine& _Lhs, const linear_congruential_engine& _Rhs) noexcept { // strengthened
+#endif // TRANSITION, VSO-568006
+    friend bool operator!=(const linear_congruential_engine& _Lhs, const linear_congruential_engine& _Rhs) noexcept
+    /* strengthened */ {
         return _Lhs._Prev != _Rhs._Prev;
     }
 
@@ -531,16 +508,16 @@ public:
     static constexpr _Uint increment  = _Cx;
     static constexpr _Uint modulus    = _Mx;
 
-    explicit linear_congruential(_Uint _X0 = 1u) noexcept // strengthened
-        : _Prev(_Get_linear_congruential_seed<_Uint, _Cx, _Mx>(_X0)) { // construct from initial value
-    }
+    linear_congruential() noexcept // strengthened
+        : _Prev(_Get_linear_congruential_seed<_Uint, _Cx, _Mx>(1u)) {}
+
+    explicit linear_congruential(_Uint _X0) noexcept // strengthened
+        : _Prev(_Get_linear_congruential_seed<_Uint, _Cx, _Mx>(_X0)) {}
 
     template <class _Gen, _Enable_if_seed_seq_t<_Gen, linear_congruential> = 0>
-    linear_congruential(_Gen& _Seq)
-        : _Prev(_Get_linear_congruential_seed<_Uint, _Cx, _Mx>(_Seq())) { // construct from seed sequence
-    }
+    linear_congruential(_Gen& _Seq) : _Prev(_Get_linear_congruential_seed<_Uint, _Cx, _Mx>(_Seq())) {}
 
-    void seed(_Uint _X0 = 1u) noexcept { // strengthened
+    void seed(_Uint _X0 = 1u) noexcept /* strengthened */ {
         // reset sequence from numeric value
         _Prev = _Get_linear_congruential_seed<_Uint, _Cx, _Mx>(_X0);
     }
@@ -550,26 +527,26 @@ public:
         _Prev = _Get_linear_congruential_seed<_Uint, _Cx, _Mx>(_Seq());
     }
 
-    _NODISCARD _Uint(min)() const noexcept { // strengthened
+    _NODISCARD _Uint(min)() const noexcept /* strengthened */ {
         // return minimum possible generated value
         return _Cx == 0;
     }
 
 #pragma warning(push)
 #pragma warning(disable : 4309) // truncation of constant value
-    _NODISCARD _Uint(max)() const noexcept { // strengthened
+    _NODISCARD _Uint(max)() const noexcept /* strengthened */ {
         // return maximum possible generated value
         return static_cast<_Uint>(_Mx - 1u); // note 0 wraps around to max
     }
 #pragma warning(pop)
 
-    _NODISCARD _Uint operator()() noexcept { // strengthened
+    _NODISCARD _Uint operator()() noexcept /* strengthened */ {
         // return next value
         _Prev = _Next_linear_congruential_value<_Uint, _Ax, _Cx, _Mx>(_Prev);
         return _Prev;
     }
 
-    void discard(unsigned long long _Nskip) noexcept { // strengthened
+    void discard(unsigned long long _Nskip) noexcept /* strengthened */ {
         // discard _Nskip elements
         auto _Temp = _Prev;
         for (; 0 < _Nskip; --_Nskip) {
@@ -579,17 +556,19 @@ public:
         _Prev = _Temp;
     }
 
-#ifndef __EDG__ // TRANSITION, VSO#568006
+#ifndef __CUDACC__ // TRANSITION, VSO-568006
     _NODISCARD
-#endif // __EDG__
-    friend bool operator==(const linear_congruential& _Lhs, const linear_congruential& _Rhs) noexcept { // strengthened
+#endif // TRANSITION, VSO-568006
+    friend bool operator==(const linear_congruential& _Lhs, const linear_congruential& _Rhs) noexcept
+    /* strengthened */ {
         return _Lhs._Prev == _Rhs._Prev;
     }
 
-#ifndef __EDG__ // TRANSITION, VSO#568006
+#ifndef __CUDACC__ // TRANSITION, VSO-568006
     _NODISCARD
-#endif // __EDG__
-    friend bool operator!=(const linear_congruential& _Lhs, const linear_congruential& _Rhs) noexcept { // strengthened
+#endif // TRANSITION, VSO-568006
+    friend bool operator!=(const linear_congruential& _Lhs, const linear_congruential& _Rhs) noexcept
+    /* strengthened */ {
         return _Lhs._Prev != _Rhs._Prev;
     }
 
@@ -611,14 +590,16 @@ private:
 // CLASS TEMPLATE _Circ_buf FOR subtract_with_carry, subtract_with_carry_01, AND mersenne_twister
 template <class _Ty, size_t _Nw>
 struct _Circ_buf { // holds historical values for generators
-    _Ty _At(int _Ix) const { // return value at current position plus _Ix
+    _Ty _At(size_t _Ix) const {
         return _Ax[_Base(_Ix)];
     }
 
-    bool _Equals(const _Circ_buf& _Right) const { // return true if *this holds same values as _Right
+    bool _Equals(const _Circ_buf& _Right) const {
         const _Ty* _Last1 = _Ax + _Idx;
         const _Ty* _Last2 = _Right._Ax + _Right._Idx;
-        const _Ty *_First, *_Last, *_Other;
+        const _Ty* _First;
+        const _Ty* _Last;
+        const _Ty* _Other;
         bool _Use2 = _Base() < _Right._Base();
 
         if (_Use2) { // _Right's range is higher up in the array
@@ -655,7 +636,7 @@ struct _Circ_buf { // holds historical values for generators
         return true;
     }
 
-    unsigned int _Base(int _Ix = 0) const { // return _Ix'th historical element (loosely, (_Idx - _Nw) + _Ix)
+    size_t _Base(size_t _Ix = 0) const {
         return (_Ix += _Idx) < _Nw ? (_Ix + _Nw) : (_Ix - _Nw);
     }
 
@@ -676,37 +657,37 @@ public:
     static constexpr size_t long_lag      = _Rx;
     static constexpr _Seed_t default_seed = static_cast<_Seed_t>(19780503U);
 
-    _Swc_base() { // construct with default seed
+    _Swc_base() {
         seed();
     }
 
-    _Swc_base(_Seed_t _X0) { // construct with specified seed
+    _Swc_base(_Seed_t _X0) {
         seed(_X0);
     }
 
     template <class _Gen, _Enable_if_seed_seq_t<_Gen, _Swc_base> = 0>
-    _Swc_base(_Gen& _Gx) { // construct with seed values from generator
+    _Swc_base(_Gen& _Gx) {
         seed(_Gx);
     }
 
     void seed(_Seed_t _Value = default_seed) { // set initial values from specified seed value
-        _Seed(_Value, false, true_type());
+        _Seed(_Value, false, true_type{});
     }
 
     template <class _Gen>
     void seed(_Gen& _Gx, bool _Readcy = false) { // set initial values from range
-        _Seed(_Gx, _Readcy, is_arithmetic<_Gen>());
+        _Seed(_Gx, _Readcy, is_arithmetic<_Gen>{});
     }
 
-    _NODISCARD result_type(min)() const { // return minimum possible generated value
+    _NODISCARD result_type(min)() const {
         return 0;
     }
 
-    _NODISCARD result_type(max)() const { // return maximum possible generated value
+    _NODISCARD result_type(max)() const {
         return _Swc_Traits::_Max;
     }
 
-    _NODISCARD result_type operator()() { // return next value
+    _NODISCARD result_type operator()() {
         const auto _Ix = 2 * _Rx <= this->_Idx ? 0 : this->_Idx;
         if (_Ix < _Sx) {
             _Setx(_Ix, this->_Ax[_Ix + 2 * _Rx - _Sx], this->_Ax[_Ix + _Rx]);
@@ -726,7 +707,7 @@ public:
         }
     }
 
-    bool _Equals(const _Swc_base& _Right) const { // return true if *this will generate same sequence as _Right
+    bool _Equals(const _Swc_base& _Right) const {
         return _Mybase::_Equals(_Right) && _Carry == _Right._Carry;
     }
 
@@ -754,7 +735,7 @@ protected:
         this->_Idx = _Rx;
     }
 
-    void _Setx(unsigned int _Ix, _Ty _Xis, _Ty _Xir) { // update _Ax[_Ix] and _Carry
+    void _Setx(size_t _Ix, _Ty _Xis, _Ty _Xir) { // update _Ax[_Ix] and _Carry
         bool _Underflowed = false;
         _Ty _Newx         = _Xis;
         if (_Newx < _Xir) {
@@ -781,15 +762,14 @@ protected:
 };
 
 template <class _Ty, size_t _Sx, size_t _Rx, class _Swc_Traits>
-_NODISCARD bool operator==(const _Swc_base<_Ty, _Sx, _Rx, _Swc_Traits>& _Left,
-    const _Swc_base<_Ty, _Sx, _Rx, _Swc_Traits>& _Right) { // return true if _Left will generate same sequence as _Right
+_NODISCARD bool operator==(
+    const _Swc_base<_Ty, _Sx, _Rx, _Swc_Traits>& _Left, const _Swc_base<_Ty, _Sx, _Rx, _Swc_Traits>& _Right) {
     return _Left._Equals(_Right);
 }
 
 template <class _Ty, size_t _Sx, size_t _Rx, class _Swc_Traits>
-_NODISCARD bool operator!=(const _Swc_base<_Ty, _Sx, _Rx, _Swc_Traits>& _Left,
-    const _Swc_base<_Ty, _Sx, _Rx, _Swc_Traits>&
-        _Right) { // return true if _Left will not generate same sequence as _Right
+_NODISCARD bool operator!=(
+    const _Swc_base<_Ty, _Sx, _Rx, _Swc_Traits>& _Left, const _Swc_base<_Ty, _Sx, _Rx, _Swc_Traits>& _Right) {
     return !_Left._Equals(_Right);
 }
 
@@ -828,11 +808,9 @@ struct _Swc_traits { // traits for subtract_with_carry generator
     static int _Get_wc() { // compute number of 32-bit words per element
         int _Kx;
 
-        if
-            _CONSTEXPR_IF(_Mx == 0) {
-                _Kx = (8 * sizeof(_Ty) + 31) / 32;
-            }
-        else { // compute number of 32-bit words required
+        if _CONSTEXPR_IF (_Mx == 0) {
+            _Kx = (8 * sizeof(_Ty) + 31) / 32;
+        } else { // compute number of 32-bit words required
             unsigned long long _Val = 1ULL << 32;
             for (_Kx = 1; 0 < _Val && _Val < _Mx; ++_Kx) {
                 _Val = _Val << 32;
@@ -848,9 +826,9 @@ struct _Swc_traits { // traits for subtract_with_carry generator
                                                              // otherwise compute from last value
         int _Kx = _Get_wc();
 
-        for (int _Ix = 0; _Ix < _Nw; ++_Ix) { // pack _Kx words
+        for (size_t _Ix = 0; _Ix < _Nw; ++_Ix) { // pack _Kx words
             _Ax[_Ix] = _Gx();
-            for (int _Jx = 0; ++_Jx < _Kx;) {
+            for (int _Jx = 1; _Jx < _Kx; ++_Jx) {
                 _Ax[_Ix] |= static_cast<_Ty>(_Gx()) << (32 * _Jx);
             }
         }
@@ -866,12 +844,11 @@ struct _Swc_traits { // traits for subtract_with_carry generator
 #pragma warning(push)
 #pragma warning(disable : 4724) // potential mod by 0
     static _Cy_t _Reduce(_Ty* _Ax) { // reduce values to allowed range
-        if
-            _CONSTEXPR_IF(_Mx != 0) {
-                for (int _Ix = 0; _Ix < _Nw; ++_Ix) {
-                    _Ax[_Ix] = _Ax[_Ix] % _Mx;
-                }
+        if _CONSTEXPR_IF (_Mx != 0) {
+            for (size_t _Ix = 0; _Ix < _Nw; ++_Ix) {
+                _Ax[_Ix] = _Ax[_Ix] % _Mx;
             }
+        }
 
         return _Ax[_Nw - 1] == 0;
     }
@@ -882,7 +859,7 @@ struct _Swc_traits { // traits for subtract_with_carry generator
         basic_ostream<_Elem, _Traits>& _Ostr, const _Circ_buf<_Ty, _Nw>& _Buf, _Cy_t _Cy) { // write state to _Ostr
         int _Kx = _Get_wc();
 
-        for (int _Ix = 0; _Ix < _Nw; ++_Ix) {
+        for (size_t _Ix = 0; _Ix < _Nw; ++_Ix) {
             for (int _Jx = 1; _Jx <= _Kx; ++_Jx) { // unpack into _Kx words
                 unsigned int _Word = static_cast<unsigned int>(_Buf._At(_Ix) >> ((_Kx - _Jx) * 32));
                 _Ostr << _Word << ' ';
@@ -904,12 +881,12 @@ public:
 
     using _Mybase::default_seed;
 
-    explicit subtract_with_carry(_Ty _X0 = default_seed) : _Mybase(_X0) { // construct with default seed
-    }
+    subtract_with_carry() : _Mybase(default_seed) {}
+
+    explicit subtract_with_carry(_Ty _X0) : _Mybase(_X0) {}
 
     template <class _Gen, _Enable_if_seed_seq_t<_Gen, subtract_with_carry> = 0>
-    subtract_with_carry(_Gen& _Gx) : _Mybase(_Gx) { // construct with seed values from generator
-    }
+    subtract_with_carry(_Gen& _Gx) : _Mybase(_Gx) {}
 };
 
 // CLASS TEMPLATE subtract_with_carry_engine
@@ -933,16 +910,17 @@ public:
 
     using _Mybase::default_seed;
 
-    explicit subtract_with_carry_engine(_Ty _X0 = default_seed) : _Mybase(_X0) { // construct with default seed
-    }
+    subtract_with_carry_engine() : _Mybase(default_seed) {}
+
+    explicit subtract_with_carry_engine(_Ty _X0) : _Mybase(_X0) {}
 
     template <class _Seed_seq, _Enable_if_seed_seq_t<_Seed_seq, subtract_with_carry_engine> = 0>
-    explicit subtract_with_carry_engine(_Seed_seq& _Seq) : _Mybase() { // construct from seed sequence
+    explicit subtract_with_carry_engine(_Seed_seq& _Seq) : _Mybase() {
         seed(_Seq);
     }
 
     void seed(_Ty _Value = default_seed) { // set initial values from specified seed value
-        this->_Seed(_Value, false, true_type());
+        this->_Seed(_Value, false, true_type{});
     }
 
     static constexpr int _Kx = (8 * sizeof(_Ty) + 31) / 32;
@@ -952,29 +930,28 @@ public:
         unsigned long _Arr[_Kx * _Rx];
         _Seq.generate(&_Arr[0], &_Arr[_Kx * _Rx]);
 
-        int _Idx0 = 0;
-        for (int _Ix = 0; _Ix < _Rx; ++_Ix, _Idx0 += _Kx) { // pack _Kx words
+        size_t _Idx0 = 0;
+        for (size_t _Ix = 0; _Ix < _Rx; ++_Ix, _Idx0 += _Kx) { // pack _Kx words
             this->_Ax[_Ix] = _Arr[_Idx0];
-            for (int _Jx = 0; ++_Jx < _Kx;) {
+            for (int _Jx = 1; _Jx < _Kx; ++_Jx) {
                 this->_Ax[_Ix] |= static_cast<_Ty>(_Arr[_Idx0 + _Jx]) << (32 * _Jx);
             }
 
             constexpr bool _Mod_non_zero = _Traits::_Mod != 0;
-            if
-                _CONSTEXPR_IF(_Mod_non_zero) {
-                    this->_Ax[_Ix] %= _Traits::_Mod;
-                }
+            if _CONSTEXPR_IF (_Mod_non_zero) {
+                this->_Ax[_Ix] %= _Traits::_Mod;
+            }
         }
 
         this->_Carry = _Traits::_Reduce(this->_Ax);
         this->_Idx   = _Rx;
     }
 
-    _NODISCARD static constexpr _Ty(min)() { // return minimum possible generated value
+    _NODISCARD static constexpr _Ty(min)() {
         return 0;
     }
 
-    _NODISCARD static constexpr _Ty(max)() { // return maximum possible generated value
+    _NODISCARD static constexpr _Ty(max)() {
         return _Mx - 1;
     }
 };
@@ -997,7 +974,7 @@ struct _Swc_01_traits { // traits for subtract_with_carry_01 generator
     static _Cy_t _Reset(_Gen& _Gx, _Ty* _Ax, bool _Readcy) { // set initial values of _Ax from generator _Gx
                                                              // return value of _Cy from range if _Readcy is true,
                                                              // otherwise from last value
-        for (int _Ix = 0; _Ix < _Rx; ++_Ix) { // read values
+        for (size_t _Ix = 0; _Ix < _Rx; ++_Ix) { // read values
             _Ty _Factor = 1;
             _Ty _Val    = 0;
             for (int _Jx = 0; _Jx < _Nwords - 1; ++_Jx) { // read components of value
@@ -1018,7 +995,7 @@ struct _Swc_01_traits { // traits for subtract_with_carry_01 generator
     template <class _Elem, class _Traits>
     static void _Write(
         basic_ostream<_Elem, _Traits>& _Ostr, const _Circ_buf<_Ty, _Rx>& _Buf, _Cy_t _Cy) { // write state to _Ostr
-        for (int _Ix = 0; _Ix < _Rx; ++_Ix) { // write values
+        for (size_t _Ix = 0; _Ix < _Rx; ++_Ix) { // write values
             _Ty _Val = _Buf._At(_Ix);
             unsigned long _Temp;
             for (int _Jx = 0; _Jx < _Nwords - 1; ++_Jx) { // write components of value
@@ -1061,23 +1038,18 @@ public:
 
     using _Mybase = _Swc_base<_Ty, _Sx, _Rx, _Swc_01_traits<_Ty, _Wx, _Rx>>;
 
-    subtract_with_carry_01() : _Mybase() { // construct with default seed
-    }
+    subtract_with_carry_01() : _Mybase() {}
 
-    explicit subtract_with_carry_01(typename _Mybase::_Seed_t _Value)
-        : _Mybase(_Value) { // construct with specified seed
-    }
+    explicit subtract_with_carry_01(typename _Mybase::_Seed_t _Value) : _Mybase(_Value) {}
 
     template <class _Gen, _Enable_if_seed_seq_t<_Gen, subtract_with_carry_01> = 0>
-    subtract_with_carry_01(_Gen& _Gx) : _Mybase(_Gx) { // construct with seed values from generator
-    }
+    subtract_with_carry_01(_Gen& _Gx) : _Mybase(_Gx) {}
 };
 
-#pragma warning(push)
-#pragma warning(disable : 4996) // was declared deprecated
+_STL_DISABLE_DEPRECATED_WARNING
 template <class _Ty, size_t _Wx, size_t _Sx, size_t _Rx>
 const size_t subtract_with_carry_01<_Ty, _Wx, _Sx, _Rx>::word_size;
-#pragma warning(pop)
+_STL_RESTORE_DEPRECATED_WARNING
 
 #endif // _HAS_TR1_NAMESPACE
 
@@ -1101,20 +1073,23 @@ public:
 
     static constexpr _Ty default_seed = 5489U;
 
-    explicit mersenne_twister(_Ty _X0 = default_seed, _Ty _Dxarg = _WMSK, _Ty _Fxarg = static_cast<_Ty>(1812433253))
-        : _Dxval(_Dxarg) { // construct with specified seed
+    mersenne_twister() : _Dxval(_WMSK) {
+        seed(default_seed, static_cast<_Ty>(1812433253));
+    }
+
+    explicit mersenne_twister(_Ty _X0, _Ty _Dxarg = _WMSK, _Ty _Fxarg = static_cast<_Ty>(1812433253)) : _Dxval(_Dxarg) {
         seed(_X0, _Fxarg);
     }
 
     template <class _Gen, _Enable_if_seed_seq_t<_Gen, mersenne_twister> = 0>
-    explicit mersenne_twister(_Gen& _Gx) : _Dxval(_WMSK) { // construct with seed values from generator
+    explicit mersenne_twister(_Gen& _Gx) : _Dxval(_WMSK) {
         seed(_Gx);
     }
 
     void seed(_Ty _X0 = default_seed, _Ty _Fx = static_cast<_Ty>(1812433253)) {
         // set initial values from specified value
         _Ty _Prev = this->_Ax[0] = _X0 & _WMSK;
-        for (int _Ix = 1; _Ix < _Nx; ++_Ix) {
+        for (size_t _Ix = 1; _Ix < _Nx; ++_Ix) {
             _Prev = this->_Ax[_Ix] = (_Ix + _Fx * (_Prev ^ (_Prev >> (_Wx - 2)))) & _WMSK;
         }
 
@@ -1123,7 +1098,7 @@ public:
 
     template <class _Gen, _Enable_if_seed_seq_t<_Gen, mersenne_twister> = 0>
     void seed(_Gen& _Gx, bool = false) { // set initial values from range
-        for (int _Ix = 0; _Ix < _Nx; ++_Ix) {
+        for (size_t _Ix = 0; _Ix < _Nx; ++_Ix) {
             this->_Ax[_Ix] = _Gx() & _WMSK;
         }
 
@@ -1132,22 +1107,22 @@ public:
 
     template <class _Elem, class _S_Traits>
     basic_ostream<_Elem, _S_Traits>& _Write(basic_ostream<_Elem, _S_Traits>& _Ostr) const { // write state to _Ostr
-        for (int _Ix = 0; _Ix < _Nx; ++_Ix) {
+        for (size_t _Ix = 0; _Ix < _Nx; ++_Ix) {
             _Ostr << this->_At(_Ix) << ' ';
         }
 
         return _Ostr;
     }
 
-    _NODISCARD result_type(min)() const { // return minimum possible generated value
+    _NODISCARD result_type(min)() const {
         return 0;
     }
 
-    _NODISCARD result_type(max)() const { // return maximum possible generated value
+    _NODISCARD result_type(max)() const {
         return _WMSK;
     }
 
-    _NODISCARD result_type operator()() { // return next value
+    _NODISCARD result_type operator()() {
         if (this->_Idx == _Nx) {
             _Refill_upper();
         } else if (2 * _Nx <= this->_Idx) {
@@ -1172,7 +1147,7 @@ protected:
     _Post_satisfies_(this->_Idx == 0)
 
         void _Refill_lower() { // compute values for the lower half of the history array
-        int _Ix;
+        size_t _Ix;
         for (_Ix = 0; _Ix < _Nx - _Mx; ++_Ix) { // fill in lower region
             _Ty _Tmp       = (this->_Ax[_Ix + _Nx] & _HMSK) | (this->_Ax[_Ix + _Nx + 1] & _LMSK);
             this->_Ax[_Ix] = (_Tmp >> 1) ^ (_Tmp & 1 ? _Px : 0) ^ this->_Ax[_Ix + _Nx + _Mx];
@@ -1189,7 +1164,7 @@ protected:
     }
 
     void _Refill_upper() { // compute values for the upper half of the history array
-        int _Ix;
+        size_t _Ix;
         for (_Ix = _Nx; _Ix < 2 * _Nx; ++_Ix) { // fill in values
             _Ty _Tmp       = (this->_Ax[_Ix - _Nx] & _HMSK) | (this->_Ax[_Ix - _Nx + 1] & _LMSK);
             this->_Ax[_Ix] = (_Tmp >> 1) ^ (_Tmp & 1 ? _Px : 0) ^ this->_Ax[_Ix - _Nx + _Mx];
@@ -1205,15 +1180,13 @@ protected:
 
 template <class _Ty, int _Wx, int _Nx, int _Mx, int _Rx, _Ty _Px, int _Ux, int _Sx, _Ty _Bx, int _Tx, _Ty _Cx, int _Lx>
 _NODISCARD bool operator==(const mersenne_twister<_Ty, _Wx, _Nx, _Mx, _Rx, _Px, _Ux, _Sx, _Bx, _Tx, _Cx, _Lx>& _Left,
-    const mersenne_twister<_Ty, _Wx, _Nx, _Mx, _Rx, _Px, _Ux, _Sx, _Bx, _Tx, _Cx, _Lx>&
-        _Right) { // return true if _Left will generate same sequence as _Right
+    const mersenne_twister<_Ty, _Wx, _Nx, _Mx, _Rx, _Px, _Ux, _Sx, _Bx, _Tx, _Cx, _Lx>& _Right) {
     return _Left._Equals(_Right);
 }
 
 template <class _Ty, int _Wx, int _Nx, int _Mx, int _Rx, _Ty _Px, int _Ux, int _Sx, _Ty _Bx, int _Tx, _Ty _Cx, int _Lx>
 _NODISCARD bool operator!=(const mersenne_twister<_Ty, _Wx, _Nx, _Mx, _Rx, _Px, _Ux, _Sx, _Bx, _Tx, _Cx, _Lx>& _Left,
-    const mersenne_twister<_Ty, _Wx, _Nx, _Mx, _Rx, _Px, _Ux, _Sx, _Bx, _Tx, _Cx, _Lx>&
-        _Right) { // return true if _Left will not generate same sequence as _Right
+    const mersenne_twister<_Ty, _Wx, _Nx, _Mx, _Rx, _Px, _Ux, _Sx, _Bx, _Tx, _Cx, _Lx>& _Right) {
     return !_Left._Equals(_Right);
 }
 
@@ -1266,13 +1239,12 @@ public:
 
     static constexpr result_type default_seed = 5489U;
 
-    explicit mersenne_twister_engine(result_type _X0 = default_seed)
-        : _Mybase(_X0, _Dx, _Fx) { // construct with default seed
-    }
+    mersenne_twister_engine() : _Mybase(default_seed, _Dx, _Fx) {}
+
+    explicit mersenne_twister_engine(result_type _X0) : _Mybase(_X0, _Dx, _Fx) {}
 
     template <class _Seed_seq, _Enable_if_seed_seq_t<_Seed_seq, mersenne_twister_engine> = 0>
-    explicit mersenne_twister_engine(_Seed_seq& _Seq)
-        : _Mybase(default_seed, _Dx, _Fx) { // construct from seed sequence
+    explicit mersenne_twister_engine(_Seed_seq& _Seq) : _Mybase(default_seed, _Dx, _Fx) {
         seed(_Seq);
     }
 
@@ -1288,9 +1260,9 @@ public:
 
         int _Idx0 = 0;
         _Ty _Sum  = 0;
-        for (int _Ix = 0; _Ix < _Nx; ++_Ix, _Idx0 += _Kx) { // pack _Kx words
+        for (size_t _Ix = 0; _Ix < _Nx; ++_Ix, _Idx0 += _Kx) { // pack _Kx words
             this->_Ax[_Ix] = _Arr[_Idx0];
-            for (int _Jx = 0; ++_Jx < _Kx;) {
+            for (int _Jx = 1; _Jx < _Kx; ++_Jx) {
                 this->_Ax[_Ix] |= static_cast<_Ty>(_Arr[_Idx0 + _Jx]) << (32 * _Jx);
             }
 
@@ -1310,11 +1282,11 @@ public:
         this->_Idx = _Nx;
     }
 
-    _NODISCARD static constexpr result_type(min)() { // return minimum possible generated value
+    _NODISCARD static constexpr result_type(min)() {
         return 0;
     }
 
-    _NODISCARD static constexpr result_type(max)() { // return maximum possible generated value
+    _NODISCARD static constexpr result_type(max)() {
         return _Mybase::_WMSK;
     }
 };
@@ -1329,18 +1301,14 @@ public:
     static constexpr int block_size = _Px;
     static constexpr int used_block = _Rx;
 
-    discard_block() : _Eng(), _Nx(0) { // construct
-    }
+    discard_block() : _Eng(), _Nx(0) {}
 
-    explicit discard_block(const _Engine& _Ex) : _Eng(_Ex), _Nx(0) { // construct with engine initializer _Ex
-    }
+    explicit discard_block(const _Engine& _Ex) : _Eng(_Ex), _Nx(0) {}
 
-    explicit discard_block(result_type _Seed) : _Eng(_Seed), _Nx(0) { // construct from specified seed value
-    }
+    explicit discard_block(result_type _Seed) : _Eng(_Seed), _Nx(0) {}
 
     template <class _Seed_seq, _Enable_if_seed_seq_t<_Seed_seq, discard_block, _Engine> = 0>
-    explicit discard_block(_Seed_seq& _Seq) : _Eng(_Seq), _Nx(0) { // construct from seed sequence
-    }
+    explicit discard_block(_Seed_seq& _Seq) : _Eng(_Seq), _Nx(0) {}
 
     void seed() { // seed engine from default value
         _Eng.seed();
@@ -1358,19 +1326,19 @@ public:
         _Nx = 0;
     }
 
-    _NODISCARD const base_type& base() const noexcept { // return const reference to engine
+    _NODISCARD const base_type& base() const noexcept {
         return _Eng;
     }
 
-    _NODISCARD result_type(min)() const { // return minimum possible generated value
+    _NODISCARD result_type(min)() const {
         return (_Eng.min)();
     }
 
-    _NODISCARD result_type(max)() const { // return maximum possible generated value
+    _NODISCARD result_type(max)() const {
         return (_Eng.max)();
     }
 
-    _NODISCARD result_type operator()() { // return next value
+    _NODISCARD result_type operator()() {
         if (_Rx <= _Nx) { // discard values
             while (_Nx++ < _Px) {
                 (void) _Eng();
@@ -1388,7 +1356,7 @@ public:
         }
     }
 
-    bool _Equals(const discard_block& _Right) const { // return true if *this will generate same sequence as _Right
+    bool _Equals(const discard_block& _Right) const {
         return _Eng == _Right._Eng && _Nx == _Right._Nx;
     }
 
@@ -1414,14 +1382,14 @@ template <class _Engine, int _Px, int _Rx>
 const int discard_block<_Engine, _Px, _Rx>::used_block;
 
 template <class _Engine, int _Px, int _Rx>
-_NODISCARD bool operator==(const discard_block<_Engine, _Px, _Rx>& _Left,
-    const discard_block<_Engine, _Px, _Rx>& _Right) { // return true if _Left will generate same sequence as _Right
+_NODISCARD bool operator==(
+    const discard_block<_Engine, _Px, _Rx>& _Left, const discard_block<_Engine, _Px, _Rx>& _Right) {
     return _Left._Equals(_Right);
 }
 
 template <class _Engine, int _Px, int _Rx>
-_NODISCARD bool operator!=(const discard_block<_Engine, _Px, _Rx>& _Left,
-    const discard_block<_Engine, _Px, _Rx>& _Right) { // return true if _Left will not generate same sequence as _Right
+_NODISCARD bool operator!=(
+    const discard_block<_Engine, _Px, _Rx>& _Left, const discard_block<_Engine, _Px, _Rx>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -1448,24 +1416,20 @@ public:
 
     discard_block_engine() : _Mybase() {}
 
-    explicit discard_block_engine(const _Engine& _Ex) : _Mybase(_Ex) { // construct with engine initializer _Ex
-    }
+    explicit discard_block_engine(const _Engine& _Ex) : _Mybase(_Ex) {}
 
-    explicit discard_block_engine(_Engine&& _Ex) : _Mybase(_STD move(_Ex)) { // construct with engine initializer _Ex
-    }
+    explicit discard_block_engine(_Engine&& _Ex) : _Mybase(_STD move(_Ex)) {}
 
-    explicit discard_block_engine(result_type _X0) : _Mybase(_X0) { // construct from specified seed value
-    }
+    explicit discard_block_engine(result_type _X0) : _Mybase(_X0) {}
 
     template <class _Seed_seq, _Enable_if_seed_seq_t<_Seed_seq, discard_block_engine, _Engine> = 0>
-    explicit discard_block_engine(_Seed_seq& _Seq) : _Mybase(_Seq) { // construct from seed sequence
-    }
+    explicit discard_block_engine(_Seed_seq& _Seq) : _Mybase(_Seq) {}
 
-    _NODISCARD static constexpr typename _Engine::result_type(min)() { // return minimum possible generated value
+    _NODISCARD static constexpr typename _Engine::result_type(min)() {
         return (_Engine::min)();
     }
 
-    _NODISCARD static constexpr typename _Engine::result_type(max)() { // return maximum possible generated value
+    _NODISCARD static constexpr typename _Engine::result_type(max)() {
         return (_Engine::max)();
     }
 };
@@ -1483,25 +1447,24 @@ public:
     using result_type = _UIntType;
     using _Eres       = typename _Engine::result_type;
 
-    independent_bits_engine() { // construct
+    independent_bits_engine() {
         _Init();
     }
 
-    explicit independent_bits_engine(const _Engine& _Ex) : _Eng(_Ex) { // construct with engine initializer _Ex
+    explicit independent_bits_engine(const _Engine& _Ex) : _Eng(_Ex) {
         _Init();
     }
 
-    explicit independent_bits_engine(_Engine&& _Ex) : _Eng(_STD move(_Ex)) { // construct with engine initializer _Ex
+    explicit independent_bits_engine(_Engine&& _Ex) : _Eng(_STD move(_Ex)) {
         _Init();
     }
 
-    explicit independent_bits_engine(result_type _X0)
-        : _Eng(static_cast<_Eres>(_X0)) { // construct from specified seed value
+    explicit independent_bits_engine(result_type _X0) : _Eng(static_cast<_Eres>(_X0)) {
         _Init();
     }
 
     template <class _Seed_seq, _Enable_if_seed_seq_t<_Seed_seq, independent_bits_engine, _Engine> = 0>
-    explicit independent_bits_engine(_Seed_seq& _Seq) : _Eng(_Seq) { // construct from seed sequence
+    explicit independent_bits_engine(_Seed_seq& _Seq) : _Eng(_Seq) {
         _Init();
     }
 
@@ -1518,19 +1481,19 @@ public:
         _Eng.seed(_Seq);
     }
 
-    _NODISCARD const _Engine& base() const noexcept { // return const reference to engine
+    _NODISCARD const _Engine& base() const noexcept {
         return _Eng;
     }
 
-    _NODISCARD static constexpr result_type(min)() { // return minimum possible generated value
+    _NODISCARD static constexpr result_type(min)() {
         return 0;
     }
 
-    _NODISCARD static constexpr result_type(max)() { // return maximum possible generated value
+    _NODISCARD static constexpr result_type(max)() {
         return ((result_type{1} << (_Wx - 1)) << 1) - 1;
     }
 
-    _NODISCARD result_type operator()() { // return next value
+    _NODISCARD result_type operator()() {
         size_t _Idx       = 0;
         result_type _Res  = 0;
         result_type _Mask = ((result_type{1} << (_W0 - 1)) << 1) - 1;
@@ -1613,15 +1576,13 @@ private:
 
 template <class _Engine, size_t _Wx, class _UIntType>
 _NODISCARD bool operator==(const independent_bits_engine<_Engine, _Wx, _UIntType>& _Left,
-    const independent_bits_engine<_Engine, _Wx, _UIntType>&
-        _Right) { // return true if _Left will generate same sequence as _Right
+    const independent_bits_engine<_Engine, _Wx, _UIntType>& _Right) {
     return _Left.base() == _Right.base();
 }
 
 template <class _Engine, size_t _Wx, class _UIntType>
 _NODISCARD bool operator!=(const independent_bits_engine<_Engine, _Wx, _UIntType>& _Left,
-    const independent_bits_engine<_Engine, _Wx, _UIntType>&
-        _Right) { // return true if _Left will not generate same sequence as _Right
+    const independent_bits_engine<_Engine, _Wx, _UIntType>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -1648,24 +1609,24 @@ public:
 
     static constexpr size_t table_size = _Kx;
 
-    shuffle_order_engine() { // construct
+    shuffle_order_engine() {
         _Init();
     }
 
-    explicit shuffle_order_engine(const _Engine& _Ex) : _Eng(_Ex) { // construct with engine initializer _Ex
+    explicit shuffle_order_engine(const _Engine& _Ex) : _Eng(_Ex) {
         _Init();
     }
 
-    explicit shuffle_order_engine(_Engine&& _Ex) : _Eng(_STD move(_Ex)) { // construct with engine initializer _Ex
+    explicit shuffle_order_engine(_Engine&& _Ex) : _Eng(_STD move(_Ex)) {
         _Init();
     }
 
-    explicit shuffle_order_engine(result_type _X0) : _Eng(_X0) { // construct from specified seed value
+    explicit shuffle_order_engine(result_type _X0) : _Eng(_X0) {
         _Init();
     }
 
     template <class _Seed_seq, _Enable_if_seed_seq_t<_Seed_seq, shuffle_order_engine, _Engine> = 0>
-    explicit shuffle_order_engine(_Seed_seq& _Seq) : _Eng(_Seq) { // construct from seed sequence
+    explicit shuffle_order_engine(_Seed_seq& _Seq) : _Eng(_Seq) {
         _Init();
     }
 
@@ -1685,19 +1646,19 @@ public:
         _Init();
     }
 
-    _NODISCARD const _Engine& base() const noexcept { // return const reference to engine
+    _NODISCARD const _Engine& base() const noexcept {
         return _Eng;
     }
 
-    _NODISCARD static constexpr result_type(min)() { // return minimum possible generated value
+    _NODISCARD static constexpr result_type(min)() {
         return (_Engine::min)();
     }
 
-    _NODISCARD static constexpr result_type(max)() { // return maximum possible generated value
+    _NODISCARD static constexpr result_type(max)() {
         return (_Engine::max)();
     }
 
-    _NODISCARD result_type operator()() { // return next value
+    _NODISCARD result_type operator()() {
         size_t _Idx = static_cast<size_t>(static_cast<double>(_Yx - (_Eng.min)()) * _Scale);
 
         _Yx        = _Arr[_Idx];
@@ -1749,15 +1710,14 @@ private:
 };
 
 template <class _Engine, size_t _Kx>
-_NODISCARD bool operator==(const shuffle_order_engine<_Engine, _Kx>& _Left,
-    const shuffle_order_engine<_Engine, _Kx>& _Right) { // return true if _Left will generate same sequence as _Right
+_NODISCARD bool operator==(
+    const shuffle_order_engine<_Engine, _Kx>& _Left, const shuffle_order_engine<_Engine, _Kx>& _Right) {
     return _Left.base() == _Right.base();
 }
 
 template <class _Engine, size_t _Kx>
-_NODISCARD bool operator!=(const shuffle_order_engine<_Engine, _Kx>& _Left,
-    const shuffle_order_engine<_Engine, _Kx>&
-        _Right) { // return true if _Left will not generate same sequence as _Right
+_NODISCARD bool operator!=(
+    const shuffle_order_engine<_Engine, _Kx>& _Left, const shuffle_order_engine<_Engine, _Kx>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -1782,23 +1742,27 @@ public:
     struct param_type { // parameter package
         using distribution_type = uniform_int;
 
-        explicit param_type(result_type _Min0 = 0, result_type _Max0 = 9) { // construct from parameters
+        param_type() {
+            _Init(0, 9);
+        }
+
+        explicit param_type(result_type _Min0, result_type _Max0 = 9) {
             _Init(_Min0, _Max0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Min == _Right._Min && _Max == _Right._Max;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD result_type a() const { // return a value
+        _NODISCARD result_type a() const {
             return _Min;
         }
 
-        _NODISCARD result_type b() const { // return b value
+        _NODISCARD result_type b() const {
             return _Max;
         }
 
@@ -1812,21 +1776,21 @@ public:
         result_type _Max;
     };
 
-    explicit uniform_int(_Ty _Min0 = 0, _Ty _Max0 = 9) : _Par(_Min0, _Max0) { // construct from parameters
-    }
+    uniform_int() : _Par(0, 9) {}
 
-    explicit uniform_int(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit uniform_int(_Ty _Min0, _Ty _Max0 = 9) : _Par(_Min0, _Max0) {}
 
-    _NODISCARD result_type a() const { // return a value
+    explicit uniform_int(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD result_type a() const {
         return _Par.a();
     }
 
-    _NODISCARD result_type b() const { // return b value
+    _NODISCARD result_type b() const {
         return _Par.b();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -1834,30 +1798,28 @@ public:
         _Par = _Par0;
     }
 
-    _NODISCARD result_type(min)() const { // return minimum possible generated value
+    _NODISCARD result_type(min)() const {
         return _Par._Min;
     }
 
-    _NODISCARD result_type(max)() const { // return maximum possible generated value
+    _NODISCARD result_type(max)() const {
         return _Par._Max;
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par._Min, _Par._Max);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0._Min, _Par0._Max);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng, result_type _Nx) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng, result_type _Nx) const {
         return _Eval(_Eng, 0, _Nx - 1);
     }
 
@@ -1880,7 +1842,7 @@ private:
 
     template <class _Engine>
     result_type _Eval(_Engine& _Eng, _Ty _Min, _Ty _Max) const { // compute next value in range [_Min, _Max]
-        _Rng_from_urng<_Uty, _Engine> _Rng(_Eng);
+        _Rng_from_urng<_Uty, _Engine> _Generator(_Eng);
 
         const _Uty _Umin = _Adjust(_Uty(_Min));
         const _Uty _Umax = _Adjust(_Uty(_Max));
@@ -1888,16 +1850,16 @@ private:
         _Uty _Uret;
 
         if (_Umax - _Umin == _Uty(-1)) {
-            _Uret = static_cast<_Uty>(_Rng._Get_all_bits());
+            _Uret = static_cast<_Uty>(_Generator._Get_all_bits());
         } else {
-            _Uret = static_cast<_Uty>(_Rng(static_cast<_Uty>(_Umax - _Umin + 1)));
+            _Uret = static_cast<_Uty>(_Generator(static_cast<_Uty>(_Umax - _Umin + 1)));
         }
 
         return static_cast<_Ty>(_Adjust(static_cast<_Uty>(_Uret + _Umin)));
     }
 
     static _Uty _Adjust(_Uty _Uval) { // convert signed ranges to unsigned ranges and vice versa
-        return _Adjust(_Uval, is_signed<_Ty>());
+        return _Adjust(_Uval, is_signed<_Ty>{});
     }
 
     static _Uty _Adjust(_Uty _Uval, true_type) { // convert signed ranges to unsigned ranges and vice versa
@@ -1939,34 +1901,31 @@ public:
     using _Mypbase    = typename _Mybase::param_type;
     using result_type = typename _Mybase::result_type;
 
-    struct param_type : public _Mypbase { // parameter package
+    struct param_type : _Mypbase { // parameter package
         using distribution_type = uniform_int_distribution;
 
-        explicit param_type(result_type _Min0 = 0, result_type _Max0 = (numeric_limits<_Ty>::max)())
-            : _Mypbase(_Min0, _Max0) { // construct from parameters
-        }
+        param_type() : _Mypbase(0, (numeric_limits<_Ty>::max)()) {}
 
-        param_type(const _Mypbase& _Right) : _Mypbase(_Right) { // construct from base
-        }
+        explicit param_type(result_type _Min0, result_type _Max0 = (numeric_limits<_Ty>::max)())
+            : _Mypbase(_Min0, _Max0) {}
+
+        param_type(const _Mypbase& _Right) : _Mypbase(_Right) {}
     };
 
-    explicit uniform_int_distribution(_Ty _Min0 = 0, _Ty _Max0 = (numeric_limits<_Ty>::max)())
-        : _Mybase(_Min0, _Max0) { // construct from parameters
-    }
+    uniform_int_distribution() : _Mybase(0, (numeric_limits<_Ty>::max)()) {}
 
-    explicit uniform_int_distribution(const param_type& _Par0) : _Mybase(_Par0) { // construct from parameter package
-    }
+    explicit uniform_int_distribution(_Ty _Min0, _Ty _Max0 = (numeric_limits<_Ty>::max)()) : _Mybase(_Min0, _Max0) {}
+
+    explicit uniform_int_distribution(const param_type& _Par0) : _Mybase(_Par0) {}
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const uniform_int_distribution<_Ty>& _Left,
-    const uniform_int_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const uniform_int_distribution<_Ty>& _Left, const uniform_int_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const uniform_int_distribution<_Ty>& _Left,
-    const uniform_int_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const uniform_int_distribution<_Ty>& _Left, const uniform_int_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -1978,19 +1937,23 @@ public:
     struct param_type { // parameter package
         using distribution_type = bernoulli_distribution;
 
-        explicit param_type(double _P0 = 0.5) { // construct from parameters
+        param_type() {
+            _Init(0.5);
+        }
+
+        explicit param_type(double _P0) {
             _Init(_P0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Px == _Right._Px;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD double p() const { // return probability
+        _NODISCARD double p() const {
             return _Px;
         }
 
@@ -2003,17 +1966,17 @@ public:
         double _Px;
     };
 
-    explicit bernoulli_distribution(double _P0 = 0.5) : _Par(_P0) { // construct
-    }
+    bernoulli_distribution() : _Par(0.5) {}
 
-    explicit bernoulli_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit bernoulli_distribution(double _P0) : _Par(_P0) {}
 
-    _NODISCARD double p() const { // return probability
+    explicit bernoulli_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD double p() const {
         return _Par.p();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -2029,17 +1992,15 @@ public:
         return true;
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -2059,20 +2020,18 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         return _NRAND(_Eng, double) < _Par0._Px;
     }
 
     param_type _Par;
 };
 
-_NODISCARD inline bool operator==(const bernoulli_distribution& _Left,
-    const bernoulli_distribution& _Right) { // test for equality
+_NODISCARD inline bool operator==(const bernoulli_distribution& _Left, const bernoulli_distribution& _Right) {
     return _Left.param() == _Right.param();
 }
 
-_NODISCARD inline bool operator!=(const bernoulli_distribution& _Left,
-    const bernoulli_distribution& _Right) { // test for inequality
+_NODISCARD inline bool operator!=(const bernoulli_distribution& _Left, const bernoulli_distribution& _Right) {
     return !(_Left == _Right);
 }
 
@@ -2101,19 +2060,23 @@ public:
     struct param_type { // parameter package
         using distribution_type = geometric_distribution;
 
-        explicit param_type(_Ty1 _P0 = _Ty1(0.5)) { // construct from parameters
+        param_type() {
+            _Init(_Ty1(0.5));
+        }
+
+        explicit param_type(_Ty1 _P0) {
             _Init(_P0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Px == _Right._Px;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty1 p() const { // return probability
+        _NODISCARD _Ty1 p() const {
             return _Px;
         }
 
@@ -2127,17 +2090,17 @@ public:
         _Ty1 _Log_1_p;
     };
 
-    explicit geometric_distribution(_Ty1 _P0 = _Ty1(0.5)) : _Par(_P0) { // construct
-    }
+    geometric_distribution() : _Par(_Ty1(0.5)) {}
 
-    explicit geometric_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit geometric_distribution(_Ty1 _P0) : _Par(_P0) {}
 
-    _NODISCARD _Ty1 p() const { // return probability
+    explicit geometric_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty1 p() const {
         return _Par.p();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -2153,17 +2116,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -2183,7 +2144,7 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         return static_cast<_Ty>(_CSTD log(_NRAND(_Eng, _Ty1)) / _Par0._Log_1_p);
     }
 
@@ -2191,14 +2152,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const geometric_distribution<_Ty>& _Left,
-    const geometric_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const geometric_distribution<_Ty>& _Left, const geometric_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const geometric_distribution<_Ty>& _Left,
-    const geometric_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const geometric_distribution<_Ty>& _Left, const geometric_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -2222,7 +2181,7 @@ public:
     using _Ty1 = double;
 
     template <class _Engine>
-    _NODISCARD _Ty operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD _Ty operator()(_Engine& _Eng) const {
         _Ty _Res;
         _Ty1 _Val;
         for (_Res = 0, _Val = 1.0;; ++_Res) { // count repetitions
@@ -2254,19 +2213,23 @@ public:
     struct param_type { // parameter package
         using distribution_type = poisson_distribution;
 
-        explicit param_type(_Ty1 _Mean0 = _Ty1(1)) { // construct from parameters
+        param_type() {
+            _Init(_Ty1(1));
+        }
+
+        explicit param_type(_Ty1 _Mean0) {
             _Init(_Mean0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Mean == _Right._Mean;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty1 mean() const { // return mean value
+        _NODISCARD _Ty1 mean() const {
             return _Mean;
         }
 
@@ -2287,17 +2250,17 @@ public:
         _Small_poisson_distribution<_Ty> _Small;
     };
 
-    explicit poisson_distribution(_Ty1 _Mean0 = _Ty1(1)) : _Par(_Mean0) { // construct
-    }
+    poisson_distribution() : _Par(_Ty1(1)) {}
 
-    explicit poisson_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit poisson_distribution(_Ty1 _Mean0) : _Par(_Mean0) {}
 
-    _NODISCARD _Ty1 mean() const { // return mean value
+    explicit poisson_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty1 mean() const {
         return _Par.mean();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -2313,17 +2276,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -2343,7 +2304,7 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         if (_Par0._Mean < 12.0) {
             return _Par0._Small(_Eng);
         }
@@ -2370,14 +2331,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const poisson_distribution<_Ty>& _Left,
-    const poisson_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const poisson_distribution<_Ty>& _Left, const poisson_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const poisson_distribution<_Ty>& _Left,
-    const poisson_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const poisson_distribution<_Ty>& _Left, const poisson_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -2407,23 +2366,27 @@ public:
     struct param_type { // parameter package
         using distribution_type = binomial_distribution;
 
-        explicit param_type(_Ty _T0 = 1, _Ty1 _P0 = _Ty1(0.5)) { // construct from parameters
+        param_type() {
+            _Init(1, _Ty1(0.5));
+        }
+
+        explicit param_type(_Ty _T0, _Ty1 _P0 = _Ty1(0.5)) {
             _Init(_T0, _P0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Tx == _Right._Tx && _Px == _Right._Px;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty t() const { // return max value
+        _NODISCARD _Ty t() const {
             return _Tx;
         }
 
-        _NODISCARD _Ty1 p() const { // return probability
+        _NODISCARD _Ty1 p() const {
             return _Px;
         }
 
@@ -2453,21 +2416,21 @@ public:
         _Small_poisson_distribution<_Ty> _Small;
     };
 
-    explicit binomial_distribution(_Ty _T0 = 1, _Ty1 _P0 = _Ty1(0.5)) : _Par(_T0, _P0) { // construct
-    }
+    binomial_distribution() : _Par(1, _Ty1(0.5)) {}
 
-    explicit binomial_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit binomial_distribution(_Ty _T0, _Ty1 _P0 = _Ty1(0.5)) : _Par(_T0, _P0) {}
 
-    _NODISCARD _Ty t() const { // return max value
+    explicit binomial_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty t() const {
         return _Par.t();
     }
 
-    _NODISCARD _Ty1 p() const { // return probability
+    _NODISCARD _Ty1 p() const {
         return _Par.p();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -2483,17 +2446,15 @@ public:
         return _Par.t();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -2556,14 +2517,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const binomial_distribution<_Ty>& _Left,
-    const binomial_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const binomial_distribution<_Ty>& _Left, const binomial_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const binomial_distribution<_Ty>& _Left,
-    const binomial_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const binomial_distribution<_Ty>& _Left, const binomial_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -2588,23 +2547,27 @@ public:
     struct param_type { // parameter package
         using distribution_type = uniform_real;
 
-        explicit param_type(_Ty _Min0 = _Ty{0}, _Ty _Max0 = _Ty{1}) { // construct from parameters
+        param_type() {
+            _Init(_Ty{0}, _Ty{1});
+        }
+
+        explicit param_type(_Ty _Min0, _Ty _Max0 = _Ty{1}) {
             _Init(_Min0, _Max0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Min == _Right._Min && _Max == _Right._Max;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD result_type a() const { // return a value
+        _NODISCARD result_type a() const {
             return _Min;
         }
 
-        _NODISCARD result_type b() const { // return b value
+        _NODISCARD result_type b() const {
             return _Max;
         }
 
@@ -2619,21 +2582,21 @@ public:
         result_type _Max;
     };
 
-    explicit uniform_real(_Ty _Min0 = _Ty{0}, _Ty _Max0 = _Ty{1}) : _Par(_Min0, _Max0) { // construct
-    }
+    uniform_real() : _Par(_Ty{0}, _Ty{1}) {}
 
-    explicit uniform_real(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit uniform_real(_Ty _Min0, _Ty _Max0 = _Ty{1}) : _Par(_Min0, _Max0) {}
 
-    _NODISCARD result_type a() const { // return a value
+    explicit uniform_real(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD result_type a() const {
         return _Par.a();
     }
 
-    _NODISCARD result_type b() const { // return b value
+    _NODISCARD result_type b() const {
         return _Par.b();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -2641,25 +2604,23 @@ public:
         _Par = _Par0;
     }
 
-    _NODISCARD result_type(min)() const { // return minimum possible generated value
+    _NODISCARD result_type(min)() const {
         return _Par._Min;
     }
 
-    _NODISCARD result_type(max)() const { // return maximum possible generated value
+    _NODISCARD result_type(max)() const {
         return _Par._Max;
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -2682,7 +2643,7 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         return _NRAND(_Eng, _Ty) * (_Par0._Max - _Par0._Min) + _Par0._Min;
     }
 
@@ -2711,34 +2672,30 @@ public:
     using _Mypbase    = typename _Mybase::param_type;
     using result_type = typename _Mybase::result_type;
 
-    struct param_type : public _Mypbase { // parameter package
+    struct param_type : _Mypbase { // parameter package
         using distribution_type = uniform_real_distribution;
 
-        explicit param_type(_Ty _Min0 = _Ty{0}, _Ty _Max0 = _Ty{1})
-            : _Mypbase(_Min0, _Max0) { // construct from parameters
-        }
+        param_type() : _Mypbase(_Ty{0}, _Ty{1}) {}
 
-        param_type(const _Mypbase& _Right) : _Mypbase(_Right) { // construct from base
-        }
+        explicit param_type(_Ty _Min0, _Ty _Max0 = _Ty{1}) : _Mypbase(_Min0, _Max0) {}
+
+        param_type(const _Mypbase& _Right) : _Mypbase(_Right) {}
     };
 
-    explicit uniform_real_distribution(_Ty _Min0 = _Ty{0}, _Ty _Max0 = _Ty{1})
-        : _Mybase(_Min0, _Max0) { // construct from parameters
-    }
+    uniform_real_distribution() : _Mybase(_Ty{0}, _Ty{1}) {}
 
-    explicit uniform_real_distribution(const param_type& _Par0) : _Mybase(_Par0) { // construct from parameter package
-    }
+    explicit uniform_real_distribution(_Ty _Min0, _Ty _Max0 = _Ty{1}) : _Mybase(_Min0, _Max0) {}
+
+    explicit uniform_real_distribution(const param_type& _Par0) : _Mybase(_Par0) {}
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const uniform_real_distribution<_Ty>& _Left,
-    const uniform_real_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const uniform_real_distribution<_Ty>& _Left, const uniform_real_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const uniform_real_distribution<_Ty>& _Left,
-    const uniform_real_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const uniform_real_distribution<_Ty>& _Left, const uniform_real_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -2753,19 +2710,23 @@ public:
     struct param_type { // parameter package
         using distribution_type = exponential_distribution;
 
-        explicit param_type(_Ty _Lambda0 = _Ty{1}) { // construct from parameters
+        param_type() {
+            _Init(_Ty{1});
+        }
+
+        explicit param_type(_Ty _Lambda0) {
             _Init(_Lambda0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Lambda == _Right._Lambda;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty lambda() const { // return lambda value
+        _NODISCARD _Ty lambda() const {
             return _Lambda;
         }
 
@@ -2777,17 +2738,17 @@ public:
         _Ty _Lambda;
     };
 
-    explicit exponential_distribution(_Ty _Lambda0 = _Ty{1}) : _Par(_Lambda0) { // construct
-    }
+    exponential_distribution() : _Par(_Ty{1}) {}
 
-    explicit exponential_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit exponential_distribution(_Ty _Lambda0) : _Par(_Lambda0) {}
 
-    _NODISCARD _Ty lambda() const { // return lambda value
+    explicit exponential_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty lambda() const {
         return _Par.lambda();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -2803,17 +2764,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -2833,7 +2792,7 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         return -_CSTD log(_Ty{1} - _NRAND(_Eng, _Ty)) / _Par0._Lambda;
     }
 
@@ -2841,14 +2800,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const exponential_distribution<_Ty>& _Left,
-    const exponential_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const exponential_distribution<_Ty>& _Left, const exponential_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const exponential_distribution<_Ty>& _Left,
-    const exponential_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const exponential_distribution<_Ty>& _Left, const exponential_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -2875,27 +2832,31 @@ public:
     struct param_type { // parameter package
         using distribution_type = normal_distribution;
 
-        explicit param_type(_Ty _Mean0 = 0.0, _Ty _Sigma0 = 1.0) { // construct from parameters
+        param_type() {
+            _Init(0.0, 1.0);
+        }
+
+        explicit param_type(_Ty _Mean0, _Ty _Sigma0 = 1.0) {
             _Init(_Mean0, _Sigma0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Mean == _Right._Mean && _Sigma == _Right._Sigma;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty mean() const { // return mean value
+        _NODISCARD _Ty mean() const {
             return _Mean;
         }
 
-        _NODISCARD _Ty sigma() const { // return sigma value
+        _NODISCARD _Ty sigma() const {
             return _Sigma;
         }
 
-        _NODISCARD _Ty stddev() const { // return sigma value
+        _NODISCARD _Ty stddev() const {
             return _Sigma;
         }
 
@@ -2909,27 +2870,25 @@ public:
         _Ty _Sigma;
     };
 
-    explicit normal_distribution(_Ty _Mean0 = 0.0, _Ty _Sigma0 = 1.0)
-        : _Par(_Mean0, _Sigma0), _Valid(false), _X2(0) { // construct
-    }
+    normal_distribution() : _Par(0.0, 1.0), _Valid(false), _X2(0) {}
 
-    explicit normal_distribution(const param_type& _Par0)
-        : _Par(_Par0), _Valid(false), _X2(0) { // construct from parameter package
-    }
+    explicit normal_distribution(_Ty _Mean0, _Ty _Sigma0 = 1.0) : _Par(_Mean0, _Sigma0), _Valid(false), _X2(0) {}
 
-    _NODISCARD _Ty mean() const { // return mean value
+    explicit normal_distribution(const param_type& _Par0) : _Par(_Par0), _Valid(false), _X2(0) {}
+
+    _NODISCARD _Ty mean() const {
         return _Par.mean();
     }
 
-    _NODISCARD _Ty sigma() const { // return sigma value
+    _NODISCARD _Ty sigma() const {
         return _Par.sigma();
     }
 
-    _NODISCARD _Ty stddev() const { // return sigma value
+    _NODISCARD _Ty stddev() const {
         return _Par.sigma();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -2951,13 +2910,12 @@ public:
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) {
         reset();
         return _Eval(_Eng, _Par0, false);
     }
@@ -2991,7 +2949,7 @@ private:
         bool _Keep = true) { // compute next value
                              // Knuth, vol. 2, p. 122, alg. P
         _Ty _Res;
-        if (_Keep && _Valid) { // return stored value
+        if (_Keep && _Valid) {
             _Res   = _X2;
             _Valid = false;
         } else { // generate two values, store one, return one
@@ -3022,14 +2980,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const normal_distribution<_Ty>& _Left,
-    const normal_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const normal_distribution<_Ty>& _Left, const normal_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const normal_distribution<_Ty>& _Left,
-    const normal_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const normal_distribution<_Ty>& _Left, const normal_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -3056,23 +3012,27 @@ public:
     struct param_type { // parameter package
         using distribution_type = gamma_distribution;
 
-        explicit param_type(_Ty _Alpha0 = _Ty{1}, _Ty _Beta0 = _Ty{1}) { // construct from parameters
+        param_type() {
+            _Init(_Ty{1}, _Ty{1});
+        }
+
+        explicit param_type(_Ty _Alpha0, _Ty _Beta0 = _Ty{1}) {
             _Init(_Alpha0, _Beta0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Px == _Right._Px;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty alpha() const { // return alpha value
+        _NODISCARD _Ty alpha() const {
             return _Alpha;
         }
 
-        _NODISCARD _Ty beta() const { // return beta value
+        _NODISCARD _Ty beta() const {
             return _Beta;
         }
 
@@ -3092,21 +3052,21 @@ public:
         exponential_distribution<_Ty> _Exp;
     };
 
-    explicit gamma_distribution(_Ty _Alpha0 = _Ty{1}, _Ty _Beta0 = _Ty{1}) : _Par(_Alpha0, _Beta0) { // construct
-    }
+    gamma_distribution() : _Par(_Ty{1}, _Ty{1}) {}
 
-    explicit gamma_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit gamma_distribution(_Ty _Alpha0, _Ty _Beta0 = _Ty{1}) : _Par(_Alpha0, _Beta0) {}
 
-    _NODISCARD _Ty alpha() const { // return alpha value
+    explicit gamma_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty alpha() const {
         return _Par.alpha();
     }
 
-    _NODISCARD _Ty beta() const { // return beta value
+    _NODISCARD _Ty beta() const {
         return _Par.beta();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -3122,17 +3082,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -3155,7 +3113,7 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, param_type _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, param_type _Par0) const {
         _Ty _Ux;
         _Ty _Vx;
         _Ty _Xx;
@@ -3218,14 +3176,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const gamma_distribution<_Ty>& _Left,
-    const gamma_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const gamma_distribution<_Ty>& _Left, const gamma_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const gamma_distribution<_Ty>& _Left,
-    const gamma_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const gamma_distribution<_Ty>& _Left, const gamma_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -3252,23 +3208,27 @@ public:
     struct param_type { // parameter package
         using distribution_type = weibull_distribution;
 
-        explicit param_type(_Ty _A0 = _Ty{1}, _Ty _B0 = _Ty{1}) { // construct from parameters
+        param_type() {
+            _Init(_Ty{1}, _Ty{1});
+        }
+
+        explicit param_type(_Ty _A0, _Ty _B0 = _Ty{1}) {
             _Init(_A0, _B0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Ax == _Right._Ax && _Bx == _Right._Bx;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty a() const { // return a value
+        _NODISCARD _Ty a() const {
             return _Ax;
         }
 
-        _NODISCARD _Ty b() const { // return b value
+        _NODISCARD _Ty b() const {
             return _Bx;
         }
 
@@ -3283,21 +3243,21 @@ public:
         _Ty _Bx;
     };
 
-    explicit weibull_distribution(_Ty _A0 = _Ty{1}, _Ty _B0 = _Ty{1}) : _Par(_A0, _B0) { // construct
-    }
+    weibull_distribution() : _Par(_Ty{1}, _Ty{1}) {}
 
-    explicit weibull_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit weibull_distribution(_Ty _A0, _Ty _B0 = _Ty{1}) : _Par(_A0, _B0) {}
 
-    _NODISCARD _Ty a() const { // return a value
+    explicit weibull_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty a() const {
         return _Par.a();
     }
 
-    _NODISCARD _Ty b() const { // return b value
+    _NODISCARD _Ty b() const {
         return _Par.b();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -3313,17 +3273,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -3355,14 +3313,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const weibull_distribution<_Ty>& _Left,
-    const weibull_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const weibull_distribution<_Ty>& _Left, const weibull_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const weibull_distribution<_Ty>& _Left,
-    const weibull_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const weibull_distribution<_Ty>& _Left, const weibull_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -3389,23 +3345,27 @@ public:
     struct param_type { // parameter package
         using distribution_type = extreme_value_distribution;
 
-        explicit param_type(_Ty _A0 = _Ty{0}, _Ty _B0 = _Ty{1}) { // construct from parameters
+        param_type() {
+            _Init(_Ty{0}, _Ty{1});
+        }
+
+        explicit param_type(_Ty _A0, _Ty _B0 = _Ty{1}) {
             _Init(_A0, _B0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Ax == _Right._Ax && _Bx == _Right._Bx;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty a() const { // return a value
+        _NODISCARD _Ty a() const {
             return _Ax;
         }
 
-        _NODISCARD _Ty b() const { // return b value
+        _NODISCARD _Ty b() const {
             return _Bx;
         }
 
@@ -3419,21 +3379,21 @@ public:
         _Ty _Bx;
     };
 
-    explicit extreme_value_distribution(_Ty _A0 = _Ty{0}, _Ty _B0 = _Ty{1}) : _Par(_A0, _B0) { // construct
-    }
+    extreme_value_distribution() : _Par(_Ty{0}, _Ty{1}) {}
 
-    explicit extreme_value_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit extreme_value_distribution(_Ty _A0, _Ty _B0 = _Ty{1}) : _Par(_A0, _B0) {}
 
-    _NODISCARD _Ty a() const { // return a value
+    explicit extreme_value_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty a() const {
         return _Par.a();
     }
 
-    _NODISCARD _Ty b() const { // return b value
+    _NODISCARD _Ty b() const {
         return _Par.b();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -3449,17 +3409,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -3491,14 +3449,14 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const extreme_value_distribution<_Ty>& _Left,
-    const extreme_value_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(
+    const extreme_value_distribution<_Ty>& _Left, const extreme_value_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const extreme_value_distribution<_Ty>& _Left,
-    const extreme_value_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(
+    const extreme_value_distribution<_Ty>& _Left, const extreme_value_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -3525,23 +3483,27 @@ public:
     struct param_type { // parameter package
         using distribution_type = lognormal_distribution;
 
-        explicit param_type(_Ty _M0 = _Ty{0}, _Ty _S0 = _Ty{1}) { // construct from parameters
+        param_type() {
+            _Init(_Ty{0}, _Ty{1});
+        }
+
+        explicit param_type(_Ty _M0, _Ty _S0 = _Ty{1}) {
             _Init(_M0, _S0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Mx == _Right._Mx && _Sx == _Right._Sx;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty m() const { // return m value
+        _NODISCARD _Ty m() const {
             return _Mx;
         }
 
-        _NODISCARD _Ty s() const { // return s value
+        _NODISCARD _Ty s() const {
             return _Sx;
         }
 
@@ -3555,21 +3517,21 @@ public:
         _Ty _Sx;
     };
 
-    explicit lognormal_distribution(_Ty _M0 = _Ty{0}, _Ty _S0 = _Ty{1}) : _Par(_M0, _S0) { // construct
-    }
+    lognormal_distribution() : _Par(_Ty{0}, _Ty{1}) {}
 
-    explicit lognormal_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit lognormal_distribution(_Ty _M0, _Ty _S0 = _Ty{1}) : _Par(_M0, _S0) {}
 
-    _NODISCARD _Ty m() const { // return m value
+    explicit lognormal_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty m() const {
         return _Par.m();
     }
 
-    _NODISCARD _Ty s() const { // return s value
+    _NODISCARD _Ty s() const {
         return _Par.s();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -3585,17 +3547,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -3627,14 +3587,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const lognormal_distribution<_Ty>& _Left,
-    const lognormal_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const lognormal_distribution<_Ty>& _Left, const lognormal_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const lognormal_distribution<_Ty>& _Left,
-    const lognormal_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const lognormal_distribution<_Ty>& _Left, const lognormal_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -3661,19 +3619,23 @@ public:
     struct param_type { // parameter package
         using distribution_type = chi_squared_distribution;
 
-        explicit param_type(_Ty _N0 = _Ty{1}) { // construct from parameters
+        param_type() {
+            _Init(_Ty{1});
+        }
+
+        explicit param_type(_Ty _N0) {
             _Init(_N0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Nx == _Right._Nx;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty n() const { // return n value
+        _NODISCARD _Ty n() const {
             return _Nx;
         }
 
@@ -3685,17 +3647,17 @@ public:
         _Ty _Nx;
     };
 
-    explicit chi_squared_distribution(_Ty _N0 = _Ty{1}) : _Par(_N0) { // construct
-    }
+    chi_squared_distribution() : _Par(_Ty{1}) {}
 
-    explicit chi_squared_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit chi_squared_distribution(_Ty _N0) : _Par(_N0) {}
 
-    _NODISCARD _Ty n() const { // return n value
+    explicit chi_squared_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty n() const {
         return _Par.n();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -3711,17 +3673,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -3740,7 +3700,7 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return pseudo-random value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         gamma_distribution<_Ty> _Dist(static_cast<_Ty>(_Par0._Nx) * static_cast<_Ty>(0.5), _Ty{2});
         return _Dist(_Eng);
     }
@@ -3749,14 +3709,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const chi_squared_distribution<_Ty>& _Left,
-    const chi_squared_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const chi_squared_distribution<_Ty>& _Left, const chi_squared_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const chi_squared_distribution<_Ty>& _Left,
-    const chi_squared_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const chi_squared_distribution<_Ty>& _Left, const chi_squared_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -3783,23 +3741,27 @@ public:
     struct param_type { // parameter package
         using distribution_type = cauchy_distribution;
 
-        explicit param_type(_Ty _A0 = _Ty{0}, _Ty _B0 = _Ty{1}) { // construct from parameters
+        param_type() {
+            _Init(_Ty{0}, _Ty{1});
+        }
+
+        explicit param_type(_Ty _A0, _Ty _B0 = _Ty{1}) {
             _Init(_A0, _B0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Ax == _Right._Ax && _Bx == _Right._Bx;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty a() const { // return a value
+        _NODISCARD _Ty a() const {
             return _Ax;
         }
 
-        _NODISCARD _Ty b() const { // return b value
+        _NODISCARD _Ty b() const {
             return _Bx;
         }
 
@@ -3813,21 +3775,21 @@ public:
         _Ty _Bx;
     };
 
-    explicit cauchy_distribution(_Ty _A0 = _Ty{0}, _Ty _B0 = _Ty{1}) : _Par(_A0, _B0) { // construct
-    }
+    cauchy_distribution() : _Par(_Ty{0}, _Ty{1}) {}
 
-    explicit cauchy_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit cauchy_distribution(_Ty _A0, _Ty _B0 = _Ty{1}) : _Par(_A0, _B0) {}
 
-    _NODISCARD _Ty a() const { // return a value
+    explicit cauchy_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty a() const {
         return _Par.a();
     }
 
-    _NODISCARD _Ty b() const { // return b value
+    _NODISCARD _Ty b() const {
         return _Par.b();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -3843,17 +3805,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -3885,14 +3845,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const cauchy_distribution<_Ty>& _Left,
-    const cauchy_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const cauchy_distribution<_Ty>& _Left, const cauchy_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const cauchy_distribution<_Ty>& _Left,
-    const cauchy_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const cauchy_distribution<_Ty>& _Left, const cauchy_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -3914,12 +3872,12 @@ class _Beta_distribution { // beta distribution
 public:
     using result_type = _Ty;
 
-    explicit _Beta_distribution(const _Ty& _A0 = _Ty{1}, const _Ty& _B0 = _Ty{1}) { // construct
+    explicit _Beta_distribution(const _Ty& _A0 = _Ty{1}, const _Ty& _B0 = _Ty{1}) {
         _Init(_A0, _B0);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         if (_Ax < _Ty{1} && _Bx < _Ty{1}) { // look for a good value
             _Ty _Wx;
             _Ty _P1;
@@ -3969,23 +3927,27 @@ public:
     struct param_type { // parameter package
         using distribution_type = fisher_f_distribution;
 
-        explicit param_type(_Ty _M0 = _Ty{1}, _Ty _N0 = _Ty{1}) { // construct from parameters
+        param_type() {
+            _Init(_Ty{1}, _Ty{1});
+        }
+
+        explicit param_type(_Ty _M0, _Ty _N0 = _Ty{1}) {
             _Init(_M0, _N0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Mx == _Right._Mx && _Nx == _Right._Nx;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty m() const { // return m value
+        _NODISCARD _Ty m() const {
             return _Mx;
         }
 
-        _NODISCARD _Ty n() const { // return n value
+        _NODISCARD _Ty n() const {
             return _Nx;
         }
 
@@ -4000,21 +3962,21 @@ public:
         _Ty _Nx;
     };
 
-    explicit fisher_f_distribution(_Ty _M0 = _Ty{1}, _Ty _N0 = _Ty{1}) : _Par(_M0, _N0) { // construct
-    }
+    fisher_f_distribution() : _Par(_Ty{1}, _Ty{1}) {}
 
-    explicit fisher_f_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit fisher_f_distribution(_Ty _M0, _Ty _N0 = _Ty{1}) : _Par(_M0, _N0) {}
 
-    _NODISCARD _Ty m() const { // return m value
+    explicit fisher_f_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty m() const {
         return _Par.m();
     }
 
-    _NODISCARD _Ty n() const { // return n value
+    _NODISCARD _Ty n() const {
         return _Par.n();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -4030,17 +3992,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -4061,7 +4021,7 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         _Ty _Px;
         _Ty _V1;
         _Ty _V2;
@@ -4077,14 +4037,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const fisher_f_distribution<_Ty>& _Left,
-    const fisher_f_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const fisher_f_distribution<_Ty>& _Left, const fisher_f_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const fisher_f_distribution<_Ty>& _Left,
-    const fisher_f_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const fisher_f_distribution<_Ty>& _Left, const fisher_f_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -4111,19 +4069,23 @@ public:
     struct param_type { // parameter package
         using distribution_type = student_t_distribution;
 
-        explicit param_type(_Ty _N0 = _Ty{1}) { // construct from parameters
+        param_type() {
+            _Init(_Ty{1});
+        }
+
+        explicit param_type(_Ty _N0) {
             _Init(_N0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Nx == _Right._Nx;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty n() const { // return n value
+        _NODISCARD _Ty n() const {
             return _Nx;
         }
 
@@ -4135,17 +4097,17 @@ public:
         _Ty _Nx;
     };
 
-    explicit student_t_distribution(_Ty _N0 = _Ty{1}) : _Par(_N0) { // construct
-    }
+    student_t_distribution() : _Par(_Ty{1}) {}
 
-    explicit student_t_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit student_t_distribution(_Ty _N0) : _Par(_N0) {}
 
-    _NODISCARD _Ty n() const { // return n value
+    explicit student_t_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty n() const {
         return _Par.n();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -4161,17 +4123,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -4190,7 +4150,7 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         _Ty _V1;
         _Ty _V2;
         _Ty _R0;
@@ -4214,14 +4174,12 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const student_t_distribution<_Ty>& _Left,
-    const student_t_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const student_t_distribution<_Ty>& _Left, const student_t_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const student_t_distribution<_Ty>& _Left,
-    const student_t_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const student_t_distribution<_Ty>& _Left, const student_t_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -4248,24 +4206,27 @@ public:
     struct param_type { // parameter package
         using distribution_type = negative_binomial_distribution;
 
-        explicit param_type(_Ty _K0 = 1,
-            double _P0              = 0.5) { // construct from parameters
+        param_type() {
+            _Init(1, 0.5);
+        }
+
+        explicit param_type(_Ty _K0, double _P0 = 0.5) {
             _Init(_K0, _P0);
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Kx == _Right._Kx && _Px == _Right._Px;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Ty k() const { // return k value
+        _NODISCARD _Ty k() const {
             return _Kx;
         }
 
-        _NODISCARD double p() const { // return probability
+        _NODISCARD double p() const {
             return _Px;
         }
 
@@ -4282,21 +4243,21 @@ public:
         double _Px;
     };
 
-    explicit negative_binomial_distribution(_Ty _K0 = 1, double _P0 = 0.5) : _Par(_K0, _P0) { // construct
-    }
+    negative_binomial_distribution() : _Par(1, 0.5) {}
 
-    explicit negative_binomial_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit negative_binomial_distribution(_Ty _K0, double _P0 = 0.5) : _Par(_K0, _P0) {}
 
-    _NODISCARD _Ty k() const { // return k value
+    explicit negative_binomial_distribution(const param_type& _Par0) : _Par(_Par0) {}
+
+    _NODISCARD _Ty k() const {
         return _Par.k();
     }
 
-    _NODISCARD double p() const { // return probability
+    _NODISCARD double p() const {
         return _Par.p();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -4312,17 +4273,15 @@ public:
         return (numeric_limits<result_type>::max)();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -4345,7 +4304,7 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return pseudo-random value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         double _V1;
         gamma_distribution<double> dist1(
             static_cast<double>(_Par0._Kx), static_cast<double>((_Ty{1} - _Par0._Px) / _Par0._Px));
@@ -4359,14 +4318,14 @@ private:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const negative_binomial_distribution<_Ty>& _Left,
-    const negative_binomial_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(
+    const negative_binomial_distribution<_Ty>& _Left, const negative_binomial_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const negative_binomial_distribution<_Ty>& _Left,
-    const negative_binomial_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(
+    const negative_binomial_distribution<_Ty>& _Left, const negative_binomial_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -4393,28 +4352,24 @@ public:
 
     struct param_type { // parameter package
         using distribution_type = discrete_distribution;
-        struct _Noinit { // placeholder to suppress initialization
-        };
 
-        param_type(_Noinit) { // do-nothing constructor for derived classes
-        }
+        param_type(_Uninitialized) {} // do-nothing constructor for derived classes
 
         param_type() {
             _Init();
         }
 
         template <class _InIt>
-        param_type(_InIt _First, _InIt _Last) : _Pvec(_First, _Last) { // construct from [_First, _Last)
+        param_type(_InIt _First, _InIt _Last) : _Pvec(_First, _Last) {
             _Init();
         }
 
-        param_type(initializer_list<double> _Ilist) : _Pvec(_Ilist) { // construct from initializer list
+        param_type(initializer_list<double> _Ilist) : _Pvec(_Ilist) {
             _Init();
         }
 
         template <class _Fn>
-        param_type(size_t _Count, double _Low, double _High,
-            _Fn _Func) { // construct from function
+        param_type(size_t _Count, double _Low, double _High, _Fn _Func) {
             double _Range = _High - _Low;
             _STL_ASSERT(0.0 < _Range, "invalid range for discrete_distribution");
             if (_Count <= 0) {
@@ -4430,15 +4385,15 @@ public:
             _Init();
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return _Pvec == _Right._Pvec;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD _Myvec probabilities() const { // return probabilities
+        _NODISCARD _Myvec probabilities() const {
             return _Pvec;
         }
 
@@ -4479,25 +4434,20 @@ public:
     discrete_distribution() {}
 
     template <class _InIt>
-    discrete_distribution(_InIt _First, _InIt _Last) : _Par(_First, _Last) { // construct from [_First, _Last)
-    }
+    discrete_distribution(_InIt _First, _InIt _Last) : _Par(_First, _Last) {}
 
-    discrete_distribution(initializer_list<double> _Ilist) : _Par(_Ilist) { // construct from initializer list
-    }
+    discrete_distribution(initializer_list<double> _Ilist) : _Par(_Ilist) {}
 
     template <class _Fn>
-    discrete_distribution(size_t _Count, double _Low, double _High, _Fn _Func)
-        : _Par(_Count, _Low, _High, _Func) { // construct from function
-    }
+    discrete_distribution(size_t _Count, double _Low, double _High, _Fn _Func) : _Par(_Count, _Low, _High, _Func) {}
 
-    explicit discrete_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit discrete_distribution(const param_type& _Par0) : _Par(_Par0) {}
 
-    _NODISCARD _Myvec probabilities() const { // return scaled probabilities vector
+    _NODISCARD _Myvec probabilities() const {
         return _Par.probabilities();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -4505,25 +4455,23 @@ public:
         _Par = _Par0;
     }
 
-    _NODISCARD result_type(min)() const { // return minimum possible generated value
+    _NODISCARD result_type(min)() const {
         return 0;
     }
 
-    _NODISCARD result_type(max)() const { // return maximum possible generated value
+    _NODISCARD result_type(max)() const {
         return static_cast<result_type>(_Par._Pvec.size() - 1);
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -4557,7 +4505,7 @@ public:
 
 private:
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         double _Px           = _NRAND(_Eng, double);
         const auto _First    = _Par0._Pcdf.begin();
         const auto _Position = _STD lower_bound(_First, _Par0._Pcdf.end(), _Px);
@@ -4569,14 +4517,12 @@ public:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const discrete_distribution<_Ty>& _Left,
-    const discrete_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(const discrete_distribution<_Ty>& _Left, const discrete_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const discrete_distribution<_Ty>& _Left,
-    const discrete_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(const discrete_distribution<_Ty>& _Left, const discrete_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -4601,10 +4547,9 @@ public:
 
     using _Mybase     = discrete_distribution<size_t>;
     using _Mypbase    = typename _Mybase::param_type;
-    using _Noinit     = typename _Mypbase::_Noinit;
     using result_type = _Ty;
 
-    struct param_type : public _Mypbase { // parameter package
+    struct param_type : _Mypbase { // parameter package
         using distribution_type = piecewise_constant_distribution;
 
         param_type() {
@@ -4613,8 +4558,7 @@ public:
         }
 
         template <class _InIt1, class _InIt2>
-        param_type(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2)
-            : _Mypbase(_Noinit()), _Bvec(_First1, _Last1) { // construct from [_First1, _Last1) and [_First2, ...)
+        param_type(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2) : _Mypbase(_Noinit), _Bvec(_First1, _Last1) {
             if (2 <= _Bvec.size()) {
                 for (size_t _Idx = 0; _Idx < _Bvec.size() - 1; ++_Idx) {
                     this->_Pvec.push_back(static_cast<double>(*_First2++));
@@ -4625,9 +4569,7 @@ public:
         }
 
         template <class _Fn>
-        param_type(initializer_list<_Ty> _Ilist,
-            _Fn _Func)
-            : _Mypbase(_Noinit()) { // construct from _Ilist and function
+        param_type(initializer_list<_Ty> _Ilist, _Fn _Func) : _Mypbase(_Noinit) {
             if (2 <= _Ilist.size()) {
                 _Bvec.assign(_Ilist);
             } else { // default construct
@@ -4648,8 +4590,7 @@ public:
         }
 
         template <class _Fn>
-        param_type(size_t _Count, _Ty _Low, _Ty _High, _Fn _Func)
-            : _Mypbase(_Count, _Low, _High, _Func) { // construct from value range and function
+        param_type(size_t _Count, _Ty _Low, _Ty _High, _Fn _Func) : _Mypbase(_Count, _Low, _High, _Func) {
             _Ty _Range = _High - _Low;
             if (_Count <= 0) {
                 _Count = 1;
@@ -4661,19 +4602,19 @@ public:
             }
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return static_cast<const _Mypbase&>(*this) == static_cast<const _Mypbase&>(_Right) && _Bvec == _Right._Bvec;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD vector<_Ty> intervals() const { // return intervals vector
+        _NODISCARD vector<_Ty> intervals() const {
             return _Bvec;
         }
 
-        _NODISCARD vector<_Ty> densities() const { // return densities vector
+        _NODISCARD vector<_Ty> densities() const {
             vector<_Ty> _Ans(this->_Pvec.begin(), this->_Pvec.end());
 
             for (size_t _Idx = 0; _Idx < _Ans.size(); ++_Idx) {
@@ -4693,33 +4634,25 @@ public:
     piecewise_constant_distribution() {}
 
     template <class _InIt1, class _InIt2>
-    piecewise_constant_distribution(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2)
-        : _Par(_First1, _Last1, _First2) { // construct from [_First1, _Last1) and [_First2, ...)
-    }
+    piecewise_constant_distribution(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2) : _Par(_First1, _Last1, _First2) {}
 
     template <class _Fn>
-    piecewise_constant_distribution(initializer_list<_Ty> _Ilist, _Fn _Func)
-        : _Par(_Ilist, _Func) { // construct from _Ilist and function
-    }
+    piecewise_constant_distribution(initializer_list<_Ty> _Ilist, _Fn _Func) : _Par(_Ilist, _Func) {}
 
     template <class _Fn>
-    piecewise_constant_distribution(size_t _Count, _Ty _Low, _Ty _High, _Fn _Func)
-        : _Par(_Count, _Low, _High, _Func) { // construct from value range and function
-    }
+    piecewise_constant_distribution(size_t _Count, _Ty _Low, _Ty _High, _Fn _Func) : _Par(_Count, _Low, _High, _Func) {}
 
-    explicit piecewise_constant_distribution(const param_type& _Par0)
-        : _Par(_Par0) { // construct from parameter package
-    }
+    explicit piecewise_constant_distribution(const param_type& _Par0) : _Par(_Par0) {}
 
-    _NODISCARD vector<_Ty> intervals() const { // return intervals vector
+    _NODISCARD vector<_Ty> intervals() const {
         return _Par.intervals();
     }
 
-    _NODISCARD vector<_Ty> densities() const { // return densities vector
+    _NODISCARD vector<_Ty> densities() const {
         return _Par.densities();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -4727,25 +4660,23 @@ public:
         _Par = _Par0;
     }
 
-    _NODISCARD result_type(min)() const { // return minimum possible generated value
+    _NODISCARD result_type(min)() const {
         return _Par._Bvec.front();
     }
 
-    _NODISCARD result_type(max)() const { // return maximum possible generated value
+    _NODISCARD result_type(max)() const {
         return _Par._Bvec.back();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -4774,7 +4705,7 @@ public:
     }
 
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         size_t _Px = _Mybase::operator()(_Eng, _Par0);
         uniform_real<_Ty> _Dist(_Par0._Bvec[_Px], _Par0._Bvec[_Px + 1]);
         return _Dist(_Eng);
@@ -4784,14 +4715,14 @@ public:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const piecewise_constant_distribution<_Ty>& _Left,
-    const piecewise_constant_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(
+    const piecewise_constant_distribution<_Ty>& _Left, const piecewise_constant_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const piecewise_constant_distribution<_Ty>& _Left,
-    const piecewise_constant_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(
+    const piecewise_constant_distribution<_Ty>& _Left, const piecewise_constant_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -4816,10 +4747,9 @@ public:
 
     using _Mybase     = discrete_distribution<size_t>;
     using _Mypbase    = typename _Mybase::param_type;
-    using _Noinit     = typename _Mypbase::_Noinit;
     using result_type = _Ty;
 
-    struct param_type : public _Mypbase { // parameter package
+    struct param_type : _Mypbase { // parameter package
         using distribution_type = piecewise_linear_distribution;
 
         param_type() {
@@ -4828,8 +4758,7 @@ public:
         }
 
         template <class _InIt1, class _InIt2>
-        param_type(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2)
-            : _Mypbase(_Noinit()), _Bvec(_First1, _Last1) { // construct from [_First1, _Last1) and [_First2, ...)
+        param_type(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2) : _Mypbase(_Noinit), _Bvec(_First1, _Last1) {
             if (2 <= _Bvec.size()) {
                 for (size_t _Idx = 0; _Idx < _Bvec.size(); ++_Idx) {
                     this->_Pvec.push_back(static_cast<double>(*_First2++));
@@ -4840,9 +4769,7 @@ public:
         }
 
         template <class _Fn>
-        param_type(initializer_list<_Ty> _Ilist,
-            _Fn _Func)
-            : _Mypbase(_Noinit()) { // construct from _Ilist and function
+        param_type(initializer_list<_Ty> _Ilist, _Fn _Func) : _Mypbase(_Noinit) {
             if (2 <= _Ilist.size()) {
                 _Bvec.assign(_Ilist);
             } else { // default construct
@@ -4863,8 +4790,7 @@ public:
         }
 
         template <class _Fn>
-        param_type(size_t _Count, _Ty _Low, _Ty _High, _Fn _Func)
-            : _Mypbase(_Noinit()) { // construct from value range and function
+        param_type(size_t _Count, _Ty _Low, _Ty _High, _Fn _Func) : _Mypbase(_Noinit) {
             _Ty _Range = _High - _Low;
             _STL_ASSERT(_Ty{0} < _Range, "invalid range for piecewise_linear_distribution");
             if (_Count < 2) {
@@ -4880,19 +4806,19 @@ public:
             _Init();
         }
 
-        _NODISCARD bool operator==(const param_type& _Right) const { // test for equality
+        _NODISCARD bool operator==(const param_type& _Right) const {
             return static_cast<const _Mypbase&>(*this) == static_cast<const _Mypbase&>(_Right) && _Bvec == _Right._Bvec;
         }
 
-        _NODISCARD bool operator!=(const param_type& _Right) const { // test for inequality
+        _NODISCARD bool operator!=(const param_type& _Right) const {
             return !(*this == _Right);
         }
 
-        _NODISCARD vector<_Ty> intervals() const { // return intervals vector
+        _NODISCARD vector<_Ty> intervals() const {
             return _Bvec;
         }
 
-        _NODISCARD vector<_Ty> densities() const { // return densities vector
+        _NODISCARD vector<_Ty> densities() const {
             vector<_Ty> _Ans(this->_Pvec.begin(), this->_Pvec.end());
             return _Ans;
         }
@@ -4935,32 +4861,25 @@ public:
     piecewise_linear_distribution() {}
 
     template <class _InIt1, class _InIt2>
-    piecewise_linear_distribution(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2)
-        : _Par(_First1, _Last1, _First2) { // construct from [_First1, _Last1) and [_First2, ...)
-    }
+    piecewise_linear_distribution(_InIt1 _First1, _InIt1 _Last1, _InIt2 _First2) : _Par(_First1, _Last1, _First2) {}
 
     template <class _Fn>
-    piecewise_linear_distribution(initializer_list<_Ty> _Ilist, _Fn _Func)
-        : _Par(_Ilist, _Func) { // construct from _Ilist and function
-    }
+    piecewise_linear_distribution(initializer_list<_Ty> _Ilist, _Fn _Func) : _Par(_Ilist, _Func) {}
 
     template <class _Fn>
-    piecewise_linear_distribution(size_t _Count, _Ty _Low, _Ty _High, _Fn _Func)
-        : _Par(_Count, _Low, _High, _Func) { // construct from value range and function
-    }
+    piecewise_linear_distribution(size_t _Count, _Ty _Low, _Ty _High, _Fn _Func) : _Par(_Count, _Low, _High, _Func) {}
 
-    explicit piecewise_linear_distribution(const param_type& _Par0) : _Par(_Par0) { // construct from parameter package
-    }
+    explicit piecewise_linear_distribution(const param_type& _Par0) : _Par(_Par0) {}
 
-    _NODISCARD vector<_Ty> intervals() const { // return intervals vector
+    _NODISCARD vector<_Ty> intervals() const {
         return _Par.intervals();
     }
 
-    _NODISCARD vector<_Ty> densities() const { // return densities vector
+    _NODISCARD vector<_Ty> densities() const {
         return _Par.densities();
     }
 
-    _NODISCARD param_type param() const { // return parameter package
+    _NODISCARD param_type param() const {
         return _Par;
     }
 
@@ -4968,25 +4887,23 @@ public:
         _Par = _Par0;
     }
 
-    _NODISCARD result_type(min)() const { // return minimum possible generated value
+    _NODISCARD result_type(min)() const {
         return _Par._Bvec.front();
     }
 
-    _NODISCARD result_type(max)() const { // return maximum possible generated value
+    _NODISCARD result_type(max)() const {
         return _Par._Bvec.back();
     }
 
-    void reset() { // clear internal state
-    }
+    void reset() {} // clear internal state
 
     template <class _Engine>
-    _NODISCARD result_type operator()(_Engine& _Eng) const { // return next value
+    _NODISCARD result_type operator()(_Engine& _Eng) const {
         return _Eval(_Eng, _Par);
     }
 
     template <class _Engine>
-    _NODISCARD result_type operator()(
-        _Engine& _Eng, const param_type& _Par0) const { // return next value, given parameter package
+    _NODISCARD result_type operator()(_Engine& _Eng, const param_type& _Par0) const {
         return _Eval(_Eng, _Par0);
     }
 
@@ -5024,7 +4941,7 @@ public:
     }
 
     template <class _Engine>
-    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const { // return next value
+    result_type _Eval(_Engine& _Eng, const param_type& _Par0) const {
         size_t _Px = _Mybase::operator()(_Eng, _Par0);
         double _P0 = _Par0._Pvec[_Px];
         double _P1 = _Par0._Pvec[_Px + 1];
@@ -5042,14 +4959,14 @@ public:
 };
 
 template <class _Ty>
-_NODISCARD bool operator==(const piecewise_linear_distribution<_Ty>& _Left,
-    const piecewise_linear_distribution<_Ty>& _Right) { // test for equality
+_NODISCARD bool operator==(
+    const piecewise_linear_distribution<_Ty>& _Left, const piecewise_linear_distribution<_Ty>& _Right) {
     return _Left.param() == _Right.param();
 }
 
 template <class _Ty>
-_NODISCARD bool operator!=(const piecewise_linear_distribution<_Ty>& _Left,
-    const piecewise_linear_distribution<_Ty>& _Right) { // test for inequality
+_NODISCARD bool operator!=(
+    const piecewise_linear_distribution<_Ty>& _Left, const piecewise_linear_distribution<_Ty>& _Right) {
     return !(_Left == _Right);
 }
 
@@ -5073,8 +4990,7 @@ using mt19937 = mersenne_twister_engine<unsigned int, 32, 624, 397, 31, 0x9908b0
     0xefc60000, 18, 1812433253>;
 
 #if _HAS_TR1_NAMESPACE
-#pragma warning(push)
-#pragma warning(disable : 4996) // was declared deprecated
+_STL_DISABLE_DEPRECATED_WARNING
 using _Ranbase = subtract_with_carry<unsigned int, 1 << 24, 10, 24>;
 _DEPRECATE_TR1_NAMESPACE typedef discard_block<_Ranbase, 223, 24> ranlux3;
 _DEPRECATE_TR1_NAMESPACE typedef discard_block<_Ranbase, 389, 24> ranlux4;
@@ -5083,7 +4999,7 @@ _DEPRECATE_TR1_NAMESPACE typedef subtract_with_carry_01<float, 24, 10, 24> ranlu
 _DEPRECATE_TR1_NAMESPACE typedef subtract_with_carry_01<double, 48, 5, 12> ranlux64_base_01;
 _DEPRECATE_TR1_NAMESPACE typedef discard_block<ranlux_base_01, 223, 24> ranlux3_01;
 _DEPRECATE_TR1_NAMESPACE typedef discard_block<ranlux_base_01, 389, 24> ranlux4_01;
-#pragma warning(pop)
+_STL_RESTORE_DEPRECATED_WARNING
 #endif // _HAS_TR1_NAMESPACE
 
 using mt19937_64 = mersenne_twister_engine<unsigned long long, 64, 312, 156, 31, 0xb5026f5aa96619e9ULL, 29,
@@ -5105,25 +5021,23 @@ class random_device { // class to generate random numbers (from hardware where a
 public:
     using result_type = unsigned int;
 
-    explicit random_device() { // construct
-    }
+    random_device() {}
 
-    explicit random_device(const string&) { // construct
-    }
+    explicit random_device(const string&) {}
 
-    _NODISCARD static constexpr result_type(min)() { // return minimum possible generated value
+    _NODISCARD static constexpr result_type(min)() {
         return 0;
     }
 
-    _NODISCARD static constexpr result_type(max)() { // return maximum possible generated value
+    _NODISCARD static constexpr result_type(max)() {
         return static_cast<result_type>(-1);
     }
 
-    _NODISCARD double entropy() const noexcept { // return entropy of random number source
+    _NODISCARD double entropy() const noexcept {
         return 32.0;
     }
 
-    _NODISCARD result_type operator()() { // return next value
+    _NODISCARD result_type operator()() {
         return _Random_device();
     }
 
@@ -5132,8 +5046,7 @@ public:
 };
 
 #if _HAS_TR1_NAMESPACE
-#pragma warning(push)
-#pragma warning(disable : 4996) // was declared deprecated
+_STL_DISABLE_DEPRECATED_WARNING
 namespace _DEPRECATE_TR1_NAMESPACE tr1 {
     using _STD bernoulli_distribution;
     using _STD binomial_distribution;
@@ -5188,7 +5101,7 @@ namespace _DEPRECATE_TR1_NAMESPACE tr1 {
     using _STD uniform_real_distribution;
     using _STD weibull_distribution;
 } // namespace tr1
-#pragma warning(pop)
+_STL_RESTORE_DEPRECATED_WARNING
 #endif // _HAS_TR1_NAMESPACE
 _STD_END
 
@@ -5200,8 +5113,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _RANDOM_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

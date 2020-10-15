@@ -1,4 +1,8 @@
 // iomanip standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _IOMANIP_
 #define _IOMANIP_
@@ -20,15 +24,14 @@ _STD_BEGIN
 // STRUCT TEMPLATE _Fillobj
 template <class _Elem>
 struct _Fillobj { // store fill character
-    _Fillobj(_Elem _Ch) : _Fill(_Ch) { // construct from fill character
-    }
+    _Fillobj(_Elem _Ch) : _Fill(_Ch) {}
 
     _Elem _Fill; // the fill character
 };
 
 // FUNCTION TEMPLATE setfill
 template <class _Elem>
-_NODISCARD _Fillobj<_Elem> setfill(_Elem _Ch) { // return a _Fillobj manipulator
+_NODISCARD _Fillobj<_Elem> setfill(_Elem _Ch) {
     return _Fillobj<_Elem>(_Ch);
 }
 
@@ -53,9 +56,7 @@ basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
 // STRUCT TEMPLATE _Monobj
 template <class _Money>
 struct _Monobj { // store reference to monetary amount
-    _Monobj(_Money& _Val_arg, bool _Intl_arg)
-        : _Val(_Val_arg), _Intl(_Intl_arg) { // construct from monetary amount reference and int'l flag
-    }
+    _Monobj(_Money& _Val_arg, bool _Intl_arg) : _Val(_Val_arg), _Intl(_Intl_arg) {}
 
     _Money& _Val; // the monetary amount reference
     bool _Intl; // international flag
@@ -65,7 +66,7 @@ struct _Monobj { // store reference to monetary amount
 
 // FUNCTION TEMPLATE get_money
 template <class _Money>
-_NODISCARD _Monobj<_Money> get_money(_Money& _Val_arg, bool _Intl_arg = false) { // return a _Monobj manipulator
+_NODISCARD _Monobj<_Money> get_money(_Money& _Val_arg, bool _Intl_arg = false) {
     return _Monobj<_Money>(_Val_arg, _Intl_arg);
 }
 
@@ -92,8 +93,7 @@ basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
 
 // FUNCTION TEMPLATE put_money
 template <class _Money>
-_NODISCARD _Monobj<const _Money> put_money(
-    const _Money& _Val_arg, bool _Intl_arg = false) { // return a _Monobj manipulator
+_NODISCARD _Monobj<const _Money> put_money(const _Money& _Val_arg, bool _Intl_arg = false) {
     return _Monobj<const _Money>(_Val_arg, _Intl_arg);
 }
 
@@ -123,8 +123,7 @@ basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
 // STRUCT TEMPLATE _Timeobj
 template <class _Elem, class _Ptr>
 struct _Timeobj { // store reference to tm object and format
-    _Timeobj(_Ptr _Tptr_arg, const _Elem* _Fmt_arg)
-        : _Tptr(_Tptr_arg), _Fmtfirst(_Fmt_arg) { // construct from tm pointer and format pointer
+    _Timeobj(_Ptr _Tptr_arg, const _Elem* _Fmt_arg) : _Tptr(_Tptr_arg), _Fmtfirst(_Fmt_arg) {
         for (_Fmtlast = _Fmtfirst; *_Fmtlast != 0; ++_Fmtlast) { // find end of format string
         }
     }
@@ -136,14 +135,13 @@ struct _Timeobj { // store reference to tm object and format
 
 // FUNCTION TEMPLATE get_time
 template <class _Elem>
-_NODISCARD _Timeobj<_Elem, struct tm*> get_time(
-    struct tm* _Tptr_arg, const _Elem* _Fmt_arg) { // return a _Timeobj manipulator
-    return _Timeobj<_Elem, struct tm*>(_Tptr_arg, _Fmt_arg);
+_NODISCARD _Timeobj<_Elem, tm*> get_time(tm* _Tptr_arg, const _Elem* _Fmt_arg) {
+    return _Timeobj<_Elem, tm*>(_Tptr_arg, _Fmt_arg);
 }
 
 template <class _Elem, class _Traits, class _Elem2>
 basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
-    const _Timeobj<_Elem2, struct tm*>& _Manip) { // get time information from input stream
+    const _Timeobj<_Elem2, tm*>& _Manip) { // get time information from input stream
     using _Myis   = basic_istream<_Elem, _Traits>;
     using _Iter   = istreambuf_iterator<_Elem, _Traits>;
     using _Mytget = time_get<_Elem2, _Iter>;
@@ -167,14 +165,13 @@ basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
 
 // FUNCTION TEMPLATE put_time
 template <class _Elem>
-_NODISCARD _Timeobj<_Elem, const struct tm*> put_time(
-    const struct tm* _Tptr_arg, const _Elem* _Fmt_arg) { // return a _Timeobj manipulator
-    return _Timeobj<_Elem, const struct tm*>(_Tptr_arg, _Fmt_arg);
+_NODISCARD _Timeobj<_Elem, const tm*> put_time(const tm* _Tptr_arg, const _Elem* _Fmt_arg) {
+    return _Timeobj<_Elem, const tm*>(_Tptr_arg, _Fmt_arg);
 }
 
 template <class _Elem, class _Traits, class _Elem2>
 basic_ostream<_Elem, _Traits>& operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
-    const _Timeobj<_Elem2, const struct tm*>& _Manip) { // put time information to output stream
+    const _Timeobj<_Elem2, const tm*>& _Manip) { // put time information to output stream
     using _Myos   = basic_ostream<_Elem, _Traits>;
     using _Iter   = ostreambuf_iterator<_Elem, _Traits>;
     using _Mytput = time_put<_Elem2, _Iter>;
@@ -204,8 +201,7 @@ struct _Quote_in { // store reference to string
     using _Mystr = basic_string<_Elem, _Traits, _Alloc>;
 
     _Quote_in(_Mystr& _Str_obj, _Elem _Delim_obj, _Elem _Escape_obj)
-        : _Str(_Str_obj), _Delim(_Delim_obj), _Escape(_Escape_obj) { // construct from string, delimiter, and escape
-    }
+        : _Str(_Str_obj), _Delim(_Delim_obj), _Escape(_Escape_obj) {}
 
     _Mystr& _Str; // reference to string
     _Elem _Delim; // delimiter element
@@ -218,9 +214,7 @@ struct _Quote_in { // store reference to string
 template <class _Elem, class _Traits, class _Sizet>
 struct _Quote_out { // store pointer/length for string
     _Quote_out(const _Elem* _Ptr_obj, _Sizet _Size_obj, _Elem _Delim_obj, _Elem _Escape_obj)
-        : _Ptr(_Ptr_obj), _Size(_Size_obj), _Delim(_Delim_obj),
-          _Escape(_Escape_obj) { // construct from string, delimiter, and escape
-    }
+        : _Ptr(_Ptr_obj), _Size(_Size_obj), _Delim(_Delim_obj), _Escape(_Escape_obj) {}
 
     const _Elem* _Ptr; // pointer to string
     _Sizet _Size; // length of string
@@ -232,8 +226,8 @@ struct _Quote_out { // store pointer/length for string
 
 // FUNCTION TEMPLATE quoted
 template <class _Elem>
-_NODISCARD _Quote_out<_Elem, void, size_t> quoted(const _Elem* _Ptr, _Elem _Delim = _Elem('"'),
-    _Elem _Escape = _Elem('\\')) { // return a _Quote_out manipulator for pointer/length
+_NODISCARD _Quote_out<_Elem, void, size_t> quoted(
+    const _Elem* _Ptr, _Elem _Delim = _Elem('"'), _Elem _Escape = _Elem('\\')) {
     size_t _Size = 0;
     while (_Ptr[_Size] != _Elem(0)) {
         ++_Size;
@@ -244,26 +238,23 @@ _NODISCARD _Quote_out<_Elem, void, size_t> quoted(const _Elem* _Ptr, _Elem _Deli
 
 template <class _Elem, class _Traits, class _Alloc>
 _NODISCARD _Quote_out<_Elem, _Traits, typename basic_string<_Elem, _Traits, _Alloc>::size_type> quoted(
-    const basic_string<_Elem, _Traits, _Alloc>& _Str, _Elem _Delim = _Elem('"'),
-    _Elem _Escape = _Elem('\\')) { // return a _Quote_out manipulator for string
+    const basic_string<_Elem, _Traits, _Alloc>& _Str, _Elem _Delim = _Elem('"'), _Elem _Escape = _Elem('\\')) {
     using _Qobj = _Quote_out<_Elem, _Traits, typename basic_string<_Elem, _Traits, _Alloc>::size_type>;
     return _Qobj(_Str.c_str(), _Str.size(), _Delim, _Escape);
 }
 
 #if _HAS_CXX17
 template <class _Elem, class _Traits>
-_NODISCARD _Quote_out<_Elem, _Traits, size_t> quoted(const basic_string_view<_Elem, _Traits> _Str,
-    _Elem _Delim  = _Elem('"'),
-    _Elem _Escape = _Elem('\\')) { // return a _Quote_out manipulator for string_view
+_NODISCARD _Quote_out<_Elem, _Traits, size_t> quoted(
+    const basic_string_view<_Elem, _Traits> _Str, _Elem _Delim = _Elem('"'), _Elem _Escape = _Elem('\\')) {
     using _Qobj = _Quote_out<_Elem, _Traits, size_t>;
     return _Qobj(_Str.data(), _Str.size(), _Delim, _Escape);
 }
 #endif // _HAS_CXX17
 
 template <class _Elem, class _Traits, class _Alloc>
-_NODISCARD _Quote_in<_Elem, _Traits, _Alloc> quoted(basic_string<_Elem, _Traits, _Alloc>& _Str,
-    _Elem _Delim  = _Elem('"'),
-    _Elem _Escape = _Elem('\\')) { // return a _Quote_in manipulator
+_NODISCARD _Quote_in<_Elem, _Traits, _Alloc> quoted(
+    basic_string<_Elem, _Traits, _Alloc>& _Str, _Elem _Delim = _Elem('"'), _Elem _Escape = _Elem('\\')) {
     return _Quote_in<_Elem, _Traits, _Alloc>(_Str, _Delim, _Escape);
 }
 
@@ -414,9 +405,7 @@ basic_istream<_Elem, _Traits>& operator>>(basic_istream<_Elem, _Traits>& _Istr,
 // STRUCT TEMPLATE _Smanip
 template <class _Arg>
 struct _Smanip { // store function pointer and argument value
-    _Smanip(void(__cdecl* _Left)(ios_base&, _Arg), _Arg _Val)
-        : _Pfun(_Left), _Manarg(_Val) { // construct from function pointer and argument value
-    }
+    _Smanip(void(__cdecl* _Left)(ios_base&, _Arg), _Arg _Val) : _Pfun(_Left), _Manarg(_Val) {}
 
     void(__cdecl* _Pfun)(ios_base&, _Arg); // the function pointer
     _Arg _Manarg; // the argument value
@@ -449,8 +438,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _IOMANIP_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

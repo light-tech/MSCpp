@@ -1,16 +1,10 @@
 // coroutine experimental header
 
-/***
- *coroutine
- *
- *       Copyright (c) Microsoft Corporation. All rights reserved.
- *
- *       Purpose: Library support of coroutines
- *       https://wg21.link/p0057
- *
- *       [Public]
- *
- ****/
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+// Library support of coroutines TS, https://wg21.link/p0057
+
 #pragma once
 #ifndef _EXPERIMENTAL_COROUTINE_
 #define _EXPERIMENTAL_COROUTINE_

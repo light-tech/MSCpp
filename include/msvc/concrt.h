@@ -77,7 +77,7 @@ typedef void * HANDLE;
 #pragma push_macro("_YieldProcessor")
 #undef _YieldProcessor
 
-#if (defined (_M_IX86) || defined (_M_X64)) && !defined(_M_HYBRID)
+#if (defined (_M_IX86) || defined (_M_X64)) && !defined(_M_HYBRID) && !defined(_M_ARM64EC)
 #define _YieldProcessor _mm_pause
 #else
 inline void _YieldProcessor() {}

@@ -1,4 +1,8 @@
 // xtr1common internal header (core)
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XTR1COMMON_
 #define _XTR1COMMON_
@@ -175,9 +179,9 @@ _INLINE_VAR constexpr bool _Is_any_of_v = // true if and only if _Ty is in _Type
 template <class _Ty>
 _INLINE_VAR constexpr bool is_integral_v = _Is_any_of_v<remove_cv_t<_Ty>, bool, char, signed char, unsigned char,
     wchar_t,
-#if _HAS_CHAR8_T
+#ifdef __cpp_char8_t
     char8_t,
-#endif // _HAS_CHAR8_T
+#endif // __cpp_char8_t
     char16_t, char32_t, short, unsigned short, int, unsigned int, long, unsigned long, long long, unsigned long long>;
 
 template <class _Ty>
@@ -201,21 +205,28 @@ struct is_arithmetic : bool_constant<is_arithmetic_v<_Ty>> {};
 // STRUCT TEMPLATE remove_reference
 template <class _Ty>
 struct remove_reference {
-    using type = _Ty;
+    using type                 = _Ty;
+    using _Const_thru_ref_type = const _Ty;
 };
 
 template <class _Ty>
 struct remove_reference<_Ty&> {
-    using type = _Ty;
+    using type                 = _Ty;
+    using _Const_thru_ref_type = const _Ty&;
 };
 
 template <class _Ty>
 struct remove_reference<_Ty&&> {
-    using type = _Ty;
+    using type                 = _Ty;
+    using _Const_thru_ref_type = const _Ty&&;
 };
 
 template <class _Ty>
 using remove_reference_t = typename remove_reference<_Ty>::type;
+
+// ALIAS TEMPLATE _Const_thru_ref
+template <class _Ty>
+using _Const_thru_ref = typename remove_reference<_Ty>::_Const_thru_ref_type;
 
 template <class _Ty>
 using _Remove_cvref_t = remove_cv_t<remove_reference_t<_Ty>>;
@@ -237,8 +248,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XTR1COMMON_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

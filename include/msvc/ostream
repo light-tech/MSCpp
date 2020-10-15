@@ -1,4 +1,8 @@
 // ostream standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _OSTREAM_
 #define _OSTREAM_
@@ -25,30 +29,28 @@ public:
     using _Iter  = ostreambuf_iterator<_Elem, _Traits>;
     using _Nput  = num_put<_Elem, _Iter>;
 
-    explicit __CLR_OR_THIS_CALL basic_ostream(basic_streambuf<_Elem, _Traits>* _Strbuf,
-
-        bool _Isstd = false) { // construct from a stream buffer pointer
+    explicit __CLR_OR_THIS_CALL basic_ostream(basic_streambuf<_Elem, _Traits>* _Strbuf, bool _Isstd = false) {
         _Myios::init(_Strbuf, _Isstd);
     }
 
-    __CLR_OR_THIS_CALL basic_ostream(_Uninitialized, bool _Addit = true) { // construct uninitialized
+    __CLR_OR_THIS_CALL basic_ostream(_Uninitialized, bool _Addit = true) {
         if (_Addit) {
             this->_Addstd(this); // suppress for basic_iostream
         }
     }
 
 protected:
-    __CLR_OR_THIS_CALL basic_ostream(basic_ostream&& _Right) { // construct by moving _Right
+    __CLR_OR_THIS_CALL basic_ostream(basic_ostream&& _Right) {
         _Myios::init();
         _Myios::move(_STD move(_Right));
     }
 
-    basic_ostream& __CLR_OR_THIS_CALL operator=(basic_ostream&& _Right) { // move from _Right
+    basic_ostream& __CLR_OR_THIS_CALL operator=(basic_ostream&& _Right) {
         this->swap(_Right);
         return *this;
     }
 
-    void __CLR_OR_THIS_CALL swap(basic_ostream& _Right) { // swap with _Right
+    void __CLR_OR_THIS_CALL swap(basic_ostream& _Right) {
         if (this != _STD addressof(_Right)) {
             _Myios::swap(_Right);
         }
@@ -85,10 +87,9 @@ public:
         _Sentry_base& operator=(const _Sentry_base&) = delete;
     };
 
-    class sentry : public _Sentry_base { // stores thread lock and state of stream
+    class sentry : public _Sentry_base {
     public:
-        explicit __CLR_OR_THIS_CALL sentry(basic_ostream& _Ostr)
-            : _Sentry_base(_Ostr) { // construct locking and testing stream
+        explicit __CLR_OR_THIS_CALL sentry(basic_ostream& _Ostr) : _Sentry_base(_Ostr) {
             if (!_Ostr.good()) {
                 _Ok = false;
                 return;
@@ -105,29 +106,23 @@ public:
             _Ok = _Ostr.good(); // store test only after flushing tie
         }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#else // ^^^ clang ^^^ / vvv not clang vvv
-#pragma warning(push)
-#pragma warning(disable : 4996) // was declared deprecated
-#endif // __clang__
+        _STL_DISABLE_DEPRECATED_WARNING
         __CLR_OR_THIS_CALL ~sentry() noexcept {
-#if _HAS_EXCEPTIONS
-            if (!_STD uncaught_exception()) { // TRANSITION, OS#15518458
+#if !_HAS_EXCEPTIONS
+            const bool _Zero_uncaught_exceptions = true;
+#elif _HAS_DEPRECATED_UNCAUGHT_EXCEPTION
+            const bool _Zero_uncaught_exceptions = !_STD uncaught_exception(); // TRANSITION, ArchivedOS-12000909
+#else // ^^^ _HAS_DEPRECATED_UNCAUGHT_EXCEPTION / !_HAS_DEPRECATED_UNCAUGHT_EXCEPTION vvv
+            const bool _Zero_uncaught_exceptions = _STD uncaught_exceptions() == 0;
+#endif // !_HAS_DEPRECATED_UNCAUGHT_EXCEPTION
+
+            if (_Zero_uncaught_exceptions) {
                 this->_Myostr._Osfx();
             }
-#else // _HAS_EXCEPTIONS
-            this->_Myostr._Osfx();
-#endif // _HAS_EXCEPTIONS
         }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#else // ^^^ clang ^^^ / vvv not clang vvv
-#pragma warning(pop)
-#endif // __clang__
+        _STL_RESTORE_DEPRECATED_WARNING
 
-        explicit __CLR_OR_THIS_CALL operator bool() const { // test if stream state okay
+        explicit __CLR_OR_THIS_CALL operator bool() const {
             return _Ok;
         }
 
@@ -138,7 +133,8 @@ public:
         bool _Ok; // true if stream state okay at construction
     };
 
-    bool __CLR_OR_THIS_CALL opfx() { // test stream state and flush tie stream as needed (retained)
+    // TRANSITION, ABI: non-Standard opfx() is preserved for binary compatibility
+    bool __CLR_OR_THIS_CALL opfx() { // test stream state and flush tie stream as needed
         if (!this->good()) {
             return false;
         }
@@ -152,7 +148,8 @@ public:
         return this->good();
     }
 
-    void __CLR_OR_THIS_CALL osfx() { // perform any wrapup (retained)
+    // TRANSITION, ABI: non-Standard osfx() is preserved for binary compatibility
+    void __CLR_OR_THIS_CALL osfx() { // perform any wrapup
         _Osfx();
     }
 
@@ -459,7 +456,7 @@ public:
         return *this;
     }
 
-#if _HAS_CXX17 // LWG 2221 "No formatted output operator for nullptr"
+#if _HAS_CXX17 // LWG-2221 "No formatted output operator for nullptr"
     template <class = void> // TRANSITION, ABI
     basic_ostream& operator<<(nullptr_t) { // insert a null pointer
         return *this << "nullptr";
@@ -579,7 +576,7 @@ public:
         return *this;
     }
 
-    pos_type __CLR_OR_THIS_CALL tellp() { // return output stream position
+    pos_type __CLR_OR_THIS_CALL tellp() {
         const sentry _Ok(*this);
 
         if (!this->fail()) {
@@ -918,15 +915,49 @@ basic_ostream<char, _Traits>& operator<<(
     return _Ostr << static_cast<char>(_Ch);
 }
 
-#if _HAS_CHAR8_T // These deleted overloads are specified in P1423.
+#ifdef __cpp_char8_t // These deleted overloads are specified in P1423.
+// don't insert a UTF-8 NTBS
 template <class _Traits>
-basic_ostream<char, _Traits>& operator<<(
-    basic_ostream<char, _Traits>&, const char8_t*) = delete; // don't insert a UTF-8 NTBS
+basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const char8_t*) = delete;
+template <class _Traits>
+basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, const char8_t*) = delete;
+
+// don't insert a UTF-8 code unit
+template <class _Traits>
+basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, char8_t) = delete;
+template <class _Traits>
+basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, char8_t) = delete;
+#endif // __cpp_char8_t
+
+#if !_HAS_STREAM_INSERTION_OPERATORS_DELETED_IN_CXX20
+#ifdef _NATIVE_WCHAR_T_DEFINED
+template <class _Traits>
+basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, wchar_t) = delete;
 
 template <class _Traits>
-basic_ostream<char, _Traits>& operator<<(
-    basic_ostream<char, _Traits>&, char8_t) = delete; // don't insert a UTF-8 code unit
-#endif // _HAS_CHAR8_T
+basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const wchar_t*) = delete;
+#endif // _NATIVE_WCHAR_T_DEFINED
+
+template <class _Traits>
+basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, char16_t) = delete;
+template <class _Traits>
+basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, char32_t) = delete;
+
+template <class _Traits>
+basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, char16_t) = delete;
+template <class _Traits>
+basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, char32_t) = delete;
+
+template <class _Traits>
+basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const char16_t*) = delete;
+template <class _Traits>
+basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const char32_t*) = delete;
+
+template <class _Traits>
+basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, const char16_t*) = delete;
+template <class _Traits>
+basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, const char32_t*) = delete;
+#endif // !_HAS_STREAM_INSERTION_OPERATORS_DELETED_IN_CXX20
 
 template <class _Ostr, class _Ty, class = void>
 struct _Can_stream_out : false_type {};
@@ -979,8 +1010,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _OSTREAM_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

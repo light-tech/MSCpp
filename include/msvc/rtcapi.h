@@ -16,6 +16,9 @@
 
 #include <vcruntime.h>
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 #pragma pack(push,_CRT_PACKING)
 
 /*
@@ -129,7 +132,7 @@ typedef enum _RTC_ErrorNumber {
 
     /* Stack Checking Calls */
 #if defined (_M_IX86)
-    void   __cdecl     _RTC_CheckEsp();
+    void   __cdecl     _RTC_CheckEsp(void);
 #endif  /* defined (_M_IX86) */
 
 #if !defined (_M_CEE) && !defined (_M_CEE_PURE)
@@ -156,6 +159,8 @@ typedef enum _RTC_ErrorNumber {
 #endif  /* __cplusplus */
 
 #pragma pack(pop)
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 
 #endif  /* defined(_RTC) || !defined(_CRTBLD) */
 

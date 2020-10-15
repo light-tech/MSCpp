@@ -1,4 +1,8 @@
-// xlocale internal header (from <locale>)
+// xlocale internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XLOCALE_
 #define _XLOCALE_
@@ -81,8 +85,7 @@ struct _CRTIMP2_PURE_IMPORT _Crt_new_delete { // base class for marking allocati
         return _Ptr;
     }
 
-    void __CLRCALL_OR_CDECL operator delete(void*, void*) noexcept { // imitate True Placement Delete
-    }
+    void __CLRCALL_OR_CDECL operator delete(void*, void*) noexcept {} // imitate True Placement Delete
 #endif // _DEBUG
 };
 
@@ -93,8 +96,7 @@ public:
     // CLASS id
     class _CRTIMP2_PURE_IMPORT id { // identifier stamp, unique for each distinct kind of facet
     public:
-        __CLR_OR_THIS_CALL id(size_t _Val = 0) : _Id(_Val) { // construct with specified stamp value
-        }
+        __CLR_OR_THIS_CALL id(size_t _Val = 0) : _Id(_Val) {}
 
         id(const id&) = delete;
         id& operator=(const id&) = delete;
@@ -148,10 +150,9 @@ public:
     protected:
         explicit __CLR_OR_THIS_CALL facet(size_t _Initrefs = 0)
             : _Myrefs(static_cast<_Atomic_counter_t>(_Initrefs)) // non-atomic initialization
-        {} // construct with initial reference count
+        {}
 
-        virtual __CLR_OR_THIS_CALL ~facet() noexcept override { // ensure that derived classes can be destroyed properly
-        }
+        virtual __CLR_OR_THIS_CALL ~facet() noexcept override {}
 
     public:
         __CLR_OR_THIS_CALL facet(const facet&) = delete;
@@ -175,23 +176,22 @@ public:
         }
 
     private:
-        static _MRTIMP2_PURE_NPURE _Locimp* __CLRCALL_PURE_OR_CDECL _New_Locimp(bool _Transparent = false);
-        static _MRTIMP2_PURE_NPURE _Locimp* __CLRCALL_PURE_OR_CDECL _New_Locimp(const _Locimp& _Right);
+        static _Locimp* __CLRCALL_PURE_OR_CDECL _New_Locimp(bool _Transparent = false);
+        static _Locimp* __CLRCALL_PURE_OR_CDECL _New_Locimp(const _Locimp& _Right);
 
-        static _MRTIMP2_PURE_NPURE void __CLRCALL_PURE_OR_CDECL _Locimp_dtor(_Locimp*);
-        static _MRTIMP2_PURE_NPURE void __CLRCALL_PURE_OR_CDECL _Locimp_Addfac(_Locimp*, facet*, size_t); // add a facet
+        static void __CLRCALL_PURE_OR_CDECL _Locimp_dtor(_Locimp*);
+        static void __CLRCALL_PURE_OR_CDECL _Locimp_Addfac(_Locimp*, facet*, size_t); // add a facet
         static void __CLRCALL_PURE_OR_CDECL _Locimp_ctor(_Locimp*, const _Locimp&);
 
         friend locale;
 
         __CLR_OR_THIS_CALL _Locimp(bool _Transparent)
-            : locale::facet(1), _Facetvec(nullptr), _Facetcount(0), _Catmask(none), _Xparent(_Transparent),
-              _Name("*") { // construct an empty _Locimp
+            : locale::facet(1), _Facetvec(nullptr), _Facetcount(0), _Catmask(none), _Xparent(_Transparent), _Name("*") {
         }
 
         __CLR_OR_THIS_CALL _Locimp(const _Locimp& _Right)
             : locale::facet(1), _Facetvec(nullptr), _Facetcount(_Right._Facetcount), _Catmask(_Right._Catmask),
-              _Xparent(_Right._Xparent), _Name(_Right._Name.c_str()) { // construct by copying
+              _Xparent(_Right._Xparent), _Name(_Right._Name.c_str()) {
             _Locimp_ctor(this, _Right);
         }
 
@@ -255,7 +255,6 @@ public:
 
     template <class _Facet>
     locale(const locale& _Loc, const _Facet* _Facptr) : _Ptr(_Locimp::_New_Locimp(*_Loc._Ptr)) {
-        // construct from _Loc, replacing facet with *_Facptr
         if (_Facptr) { // replace facet
             _Ptr->_Addfac(const_cast<_Facet*>(_Facptr), _Facet::id);
             _Ptr->_Catmask = none;
@@ -265,11 +264,11 @@ public:
 
     locale(_Uninitialized) {} // defer construction
 
-    locale(const locale& _Right) noexcept : _Ptr(_Right._Ptr) { // construct by copying
+    locale(const locale& _Right) noexcept : _Ptr(_Right._Ptr) {
         _Ptr->_Incref();
     }
 
-    locale() noexcept : _Ptr(_Init(true)) {} // construct from current locale
+    locale() noexcept : _Ptr(_Init(true)) {}
 
 #if !defined(MRTDLL) || !defined(_CRTBLD)
     locale(const locale& _Loc, const locale& _Other, category _Cat) : _Ptr(_Locimp::_New_Locimp(*_Loc._Ptr)) {
@@ -354,7 +353,7 @@ public:
         }
     }
 
-    locale& operator=(const locale& _Right) noexcept { // assign a locale
+    const locale& operator=(const locale& _Right) noexcept {
         if (_Ptr != _Right._Ptr) { // different implementation, point at new one
             delete _Ptr->_Decref();
             _Ptr = _Right._Ptr;
@@ -363,11 +362,11 @@ public:
         return *this;
     }
 
-    string name() const { // return locale name
+    string name() const {
         return _Ptr ? _Ptr->_Name.c_str() : string();
     }
 
-    _Ret_z_ const char* c_str() const { // return locale name as NTBS
+    _Ret_z_ const char* c_str() const {
         return _Ptr ? _Ptr->_Name.c_str() : "";
     }
 
@@ -390,7 +389,7 @@ public:
         return _Ptr == _Loc._Ptr || (name().compare("*") != 0 && name().compare(_Loc.name()) == 0);
     }
 
-    _NODISCARD bool operator!=(const locale& _Right) const { // test for locale inequality
+    _NODISCARD bool operator!=(const locale& _Right) const {
         return !(*this == _Right);
     }
 
@@ -401,7 +400,7 @@ public:
     static _MRTIMP2_PURE locale __CLRCALL_PURE_OR_CDECL empty(); // empty (transparent) locale
 
 private:
-    locale(_Locimp* _Ptrimp) : _Ptr(_Ptrimp) {} // construct from _Locimp pointer
+    locale(_Locimp* _Ptrimp) : _Ptr(_Ptrimp) {}
 
     static _MRTIMP2_PURE _Locimp* __CLRCALL_PURE_OR_CDECL _Init(bool _Do_incref = false); // initialize locale
     static _MRTIMP2_PURE _Locimp* __CLRCALL_PURE_OR_CDECL _Getgloballocale();
@@ -438,7 +437,7 @@ const _Facet& __CRTDECL use_facet(const locale& _Loc) { // get facet reference f
 #if _HAS_EXCEPTIONS
             _Throw_bad_cast(); // lazy disallowed
 #else // _HAS_EXCEPTIONS
-            abort(); // lazy disallowed
+            _CSTD abort(); // lazy disallowed
 #endif // _HAS_EXCEPTIONS
         } else { // queue up lazy facet for destruction
             auto _Pfmod = const_cast<locale::facet*>(_Psave);
@@ -681,7 +680,7 @@ public:
         return do_max_length();
     }
 
-    int __CLR_OR_THIS_CALL encoding() const noexcept { // return length of code sequence (from codecvt)
+    int __CLR_OR_THIS_CALL encoding() const noexcept {
         return do_encoding();
     }
 
@@ -698,7 +697,7 @@ protected:
         return 1;
     }
 
-    virtual int __CLR_OR_THIS_CALL do_encoding() const noexcept { // return length of code sequence (from codecvt)
+    virtual int __CLR_OR_THIS_CALL do_encoding() const noexcept {
         return 1; // -1 ==> state dependent, 0 ==> varying length
     }
 };
@@ -745,12 +744,11 @@ public:
 
     __PURE_APPDOMAIN_GLOBAL static locale::id id; // unique facet id
 
-    explicit __CLR_OR_THIS_CALL codecvt(size_t _Refs = 0) : codecvt_base(_Refs) { // construct from current locale
+    explicit __CLR_OR_THIS_CALL codecvt(size_t _Refs = 0) : codecvt_base(_Refs) {
         _Init(_Locinfo());
     }
 
     explicit __CLR_OR_THIS_CALL codecvt(const _Locinfo& _Lobj, size_t _Refs = 0) : codecvt_base(_Refs) {
-        // construct from specified locale
         _Init(_Lobj);
     }
 
@@ -777,13 +775,9 @@ protected:
         _Elem* _First2, _Elem* _Last2, _Elem*& _Mid2) const { // convert bytes [_First1, _Last1) to [_First2, _Last2)
         _Mid1 = _First1;
         _Mid2 = _First2;
-        if
-            _CONSTEXPR_IF(is_same_v<_Byte, _Elem>) {
-                (void) _Last1;
-                (void) _Last2;
-                return noconv; // convert nothing
-            }
-        else {
+        if _CONSTEXPR_IF (is_same_v<_Byte, _Elem>) {
+            return noconv; // convert nothing
+        } else {
             // types differ, copy one for one
             for (; _Mid1 != _Last1; ++_Mid1, ++_Mid2) {
                 if (_Mid2 == _Last2) {
@@ -800,13 +794,9 @@ protected:
         _Byte* _First2, _Byte* _Last2, _Byte*& _Mid2) const { // convert [_First1, _Last1) to bytes [_First2, _Last2)
         _Mid1 = _First1;
         _Mid2 = _First2;
-        if
-            _CONSTEXPR_IF(is_same_v<_Byte, _Elem>) {
-                (void) _Last1;
-                (void) _Last2;
-                return noconv; // convert nothing
-            }
-        else {
+        if _CONSTEXPR_IF (is_same_v<_Byte, _Elem>) {
+            return noconv; // convert nothing
+        } else {
             // types differ, copy one for one
             for (; _Mid1 != _Last1; ++_Mid1, ++_Mid2) {
                 if (_Mid2 == _Last2) {
@@ -830,8 +820,8 @@ protected:
         // return p - _First1, for the largest value p in [_First1, _Last1] such that [_First1, p) successfully
         // converts to at most _Count _Elems
         // assumes 1:1 conversion
-        const auto _Dist = static_cast<size_t>(_Min_value(_Last1 - _First1, ptrdiff_t{INT_MAX}));
-        return static_cast<int>(_Min_value(_Count, _Dist));
+        const auto _Dist = static_cast<size_t>((_STD min)(_Last1 - _First1, ptrdiff_t{INT_MAX}));
+        return static_cast<int>((_STD min)(_Count, _Dist));
     }
 };
 
@@ -855,8 +845,9 @@ _NODISCARD int _Codecvt_do_length(
     // return p - _First1, for the largest value p in [_First1, _Last1] such that _Cvt will successfully convert
     // [_First1, p) to at most _Count wide characters
 
-#pragma warning(suppress : 4996) // don't warn about deprecated codecvt facets
+    _STL_DISABLE_DEPRECATED_WARNING
     using _Elem = typename _CvtTy::intern_type;
+    _STL_RESTORE_DEPRECATED_WARNING
 
     _Adl_verify_range(_First1, _Last1);
     const auto _Old_first1 = _First1;
@@ -868,11 +859,13 @@ _NODISCARD int _Codecvt_do_length(
 
         // test result of single wide-char conversion
 
-#pragma warning(suppress : 4996) // don't warn about deprecated codecvt facets
+        _STL_DISABLE_DEPRECATED_WARNING
         const auto _Result = _Cvt._CvtTy::do_in(_State, _First1, _Last1, _Mid1, &_Ch, &_Ch + 1, _Mid2);
+        _STL_RESTORE_DEPRECATED_WARNING
+
         if (_Result != codecvt_base::ok) {
             if (_Result == codecvt_base::noconv) {
-                _First1 += _Min_value(static_cast<size_t>(_Last1 - _First1), _Count);
+                _First1 += (_STD min)(static_cast<size_t>(_Last1 - _First1), _Count);
             }
 
             break; // error, noconv, or partial
@@ -885,7 +878,7 @@ _NODISCARD int _Codecvt_do_length(
         _First1 = _Mid1;
     }
 
-    return static_cast<int>(_Min_value(_First1 - _Old_first1, ptrdiff_t{INT_MAX}));
+    return static_cast<int>((_STD min)(_First1 - _Old_first1, ptrdiff_t{INT_MAX}));
 }
 
 // ENUM _Codecvt_mode
@@ -927,29 +920,29 @@ public:
     _CRT_SATELLITE_CODECVT_IDS_NOIMPORT static locale::id id;
 
     explicit __CLR_OR_THIS_CALL codecvt(size_t _Refs = 0)
-        : codecvt_base(_Refs), _Maxcode(0x10ffff), _Mode(_Consume_header) { // construct from current locale
+        : codecvt_base(_Refs), _Maxcode(0x10ffff), _Mode(_Consume_header) {
         _BEGIN_LOCINFO(_Lobj)
         _Init(_Lobj);
         _END_LOCINFO()
     }
 
     explicit __CLR_OR_THIS_CALL codecvt(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : codecvt_base(_Refs), _Maxcode(0x10ffff), _Mode(_Consume_header) { // construct from specified locale
+        : codecvt_base(_Refs), _Maxcode(0x10ffff), _Mode(_Consume_header) {
         _Init(_Lobj);
     }
 
     __CLR_OR_THIS_CALL codecvt(
         const _Locinfo& _Lobj, unsigned long _Maxcode_arg, _Codecvt_mode _Mode_arg, size_t _Refs = 0)
         : codecvt_base(_Refs), _Maxcode(_Maxcode_arg), _Mode(_Mode_arg) {
-        // construct from specified locale and parameters
         _Init(_Lobj);
     }
 
     static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
         // return locale category mask and construct standard facet
         if (_Ppf && !*_Ppf) {
-#pragma warning(suppress : 4996) // don't warn that this specialization is deprecated
+            _STL_DISABLE_DEPRECATED_WARNING
             *_Ppf = new codecvt(_Locinfo(_Ploc->c_str()));
+            _STL_RESTORE_DEPRECATED_WARNING
         }
 
         return _X_CTYPE;
@@ -1181,7 +1174,7 @@ protected:
         return 6; // 6-byte max input sequence, no 3-byte header
     }
 
-    virtual int do_encoding() const noexcept override { // return length of code sequence (from codecvt)
+    virtual int do_encoding() const noexcept override {
         return 0; // 0 => varying length
     }
 
@@ -1226,29 +1219,29 @@ public:
     _CRT_SATELLITE_CODECVT_IDS_NOIMPORT static locale::id id;
 
     explicit __CLR_OR_THIS_CALL codecvt(size_t _Refs = 0)
-        : codecvt_base(_Refs), _Maxcode(0xffffffff), _Mode(_Consume_header) { // construct from current locale
+        : codecvt_base(_Refs), _Maxcode(0xffffffff), _Mode(_Consume_header) {
         _BEGIN_LOCINFO(_Lobj)
         _Init(_Lobj);
         _END_LOCINFO()
     }
 
     explicit __CLR_OR_THIS_CALL codecvt(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : codecvt_base(_Refs), _Maxcode(0xffffffff), _Mode(_Consume_header) { // construct from specified locale
+        : codecvt_base(_Refs), _Maxcode(0xffffffff), _Mode(_Consume_header) {
         _Init(_Lobj);
     }
 
     __CLR_OR_THIS_CALL codecvt(
         const _Locinfo& _Lobj, unsigned long _Maxcode_arg, _Codecvt_mode _Mode_arg, size_t _Refs = 0)
         : codecvt_base(_Refs), _Maxcode(_Maxcode_arg), _Mode(_Mode_arg) {
-        // construct from specified locale and parameters
         _Init(_Lobj);
     }
 
     static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
         // return locale category mask and construct standard facet
         if (_Ppf && !*_Ppf) {
-#pragma warning(suppress : 4996) // don't warn that this specialization is deprecated
+            _STL_DISABLE_DEPRECATED_WARNING
             *_Ppf = new codecvt(_Locinfo(_Ploc->c_str()));
+            _STL_RESTORE_DEPRECATED_WARNING
         }
 
         return _X_CTYPE;
@@ -1425,7 +1418,7 @@ private:
     _Codecvt_mode _Mode; // default: _Consume_header
 };
 
-#if _HAS_CHAR8_T && !defined(_M_CEE_PURE)
+#if defined(__cpp_char8_t) && !defined(_M_CEE_PURE)
 template <class _From, class _To>
 struct _Codecvt_guard {
     const _From* const& _First1;
@@ -1508,28 +1501,28 @@ protected:
             }
 
             char8_t _Lead_byte = *_First1;
-            if (_Lead_byte < 0b1000'0000u) { // single-byte sequence // ' TRANSITION, OS#21524983
+            if (_Lead_byte < 0b1000'0000u) { // single-byte sequence
                 *_First2 = static_cast<char16_t>(_Lead_byte);
                 continue;
             }
 
             int _Trailing_count = 1;
-            if (_Lead_byte < 0b1110'0000u) { // ' TRANSITION, OS#21524983
-                if (_Lead_byte < 0b1100'0000u) { // out-of-sequence trailing byte // ' TRANSITION, OS#21524983
+            if (_Lead_byte < 0b1110'0000u) {
+                if (_Lead_byte < 0b1100'0000u) { // out-of-sequence trailing byte
                     return error;
                 }
 
                 // lead byte of 2-byte sequence
-                _Lead_byte &= 0b0001'1111u; // ' TRANSITION, OS#21524983
-            } else if (_Lead_byte < 0b1111'0000u) { // lead byte of 3-byte sequence // ' TRANSITION, OS#21524983
-                _Lead_byte &= 0b0000'1111u; // ' TRANSITION, OS#21524983
+                _Lead_byte &= 0b0001'1111u;
+            } else if (_Lead_byte < 0b1111'0000u) { // lead byte of 3-byte sequence
+                _Lead_byte &= 0b0000'1111u;
                 _Trailing_count = 2;
-            } else if (_Lead_byte < 0b1111'1000u) { // lead byte of 4-byte sequence // ' TRANSITION, OS#21524983
+            } else if (_Lead_byte < 0b1111'1000u) { // lead byte of 4-byte sequence
                 if (_Last2 - _First2 < 2) { // not enough output for a surrogate pair
                     return partial;
                 }
 
-                _Lead_byte &= 0b0000'0111u; // ' TRANSITION, OS#21524983
+                _Lead_byte &= 0b0000'0111u;
                 _Trailing_count = 3;
             } else { // Invalid UTF-8 code unit
                 return error;
@@ -1543,11 +1536,11 @@ protected:
             char32_t _Code_point = _Lead_byte;
             do {
                 const char8_t _By = *++_Peek;
-                if ((_By & 0b1100'0000u) != 0b1000'0000u) { // out-of-sequence lead byte // ' TRANSITION, OS#21524983
+                if ((_By & 0b1100'0000u) != 0b1000'0000u) { // out-of-sequence lead byte
                     return error;
                 }
 
-                _Code_point = (_Code_point << 6) | (_By & 0b11'1111u); // ' TRANSITION, OS#21524983
+                _Code_point = (_Code_point << 6) | (_By & 0b11'1111u);
             } while (--_Trailing_count != 0);
 
             if (_Code_point < 0x10000u) {
@@ -1564,8 +1557,7 @@ protected:
                 // High surrogate: 0xd800 | <upper ten bits>
                 *_First2 = static_cast<char16_t>(0xd800u | (_Code_point >> 10));
                 // Low surrogate: 0xdc00 | <lower ten bits>
-                *++_First2 =
-                    static_cast<char16_t>(0xdc00u | (_Code_point & 0b11'1111'1111u)); // ' TRANSITION, OS#21524983
+                *++_First2 = static_cast<char16_t>(0xdc00u | (_Code_point & 0b11'1111'1111u));
             }
 
             _First1 = _Peek;
@@ -1595,9 +1587,9 @@ protected:
 
             int _Trailing_count = 1;
             if (_Code_point < 0x800u) { // encode 2-byte sequence
-                *_First2 = static_cast<char8_t>(0b1100'0000u | (_Code_point >> 6)); // ' TRANSITION, OS#21524983
+                *_First2 = static_cast<char8_t>(0b1100'0000u | (_Code_point >> 6));
             } else if (_Code_point < 0xd800u || _Code_point >= 0xe000u) { // encode 3-byte sequence
-                *_First2        = static_cast<char8_t>(0b1110'0000u | (_Code_point >> 12)); // ' TRANSITION, OS#21524983
+                *_First2        = static_cast<char8_t>(0b1110'0000u | (_Code_point >> 12));
                 _Trailing_count = 2;
             } else if (_Code_point < 0xdc00u) { // high surrogate; parse the low surrogate
                 if (_Last1 - _First1 < 2) { // not enough input
@@ -1609,12 +1601,10 @@ protected:
                     --_First1;
                     return error;
                 }
-                _Code_point = 0x10000u
-                              + (((_Code_point & 0b11'1111'1111u) << 10) // ' TRANSITION, OS#21524983
-                                  | (_Low_surrogate & 0b11'1111'1111u)); // ' TRANSITION, OS#21524983
+                _Code_point = 0x10000u + (((_Code_point & 0b11'1111'1111u) << 10) | (_Low_surrogate & 0b11'1111'1111u));
 
                 // encode 4-byte sequence
-                *_First2        = static_cast<char8_t>(0b1111'0000u | (_Code_point >> 18)); // ' TRANSITION, OS#21524983
+                *_First2        = static_cast<char8_t>(0b1111'0000u | (_Code_point >> 18));
                 _Trailing_count = 3;
             } else { // out-of-sequence low surrogate
                 return error;
@@ -1629,8 +1619,7 @@ protected:
 
             do {
                 --_Trailing_count;
-                *++_First2 = static_cast<char8_t>(
-                    0b1000'0000u | ((_Code_point >> (6 * _Trailing_count)) & 0b11'1111u)); // ' TRANSITION, OS#21524983
+                *++_First2 = static_cast<char8_t>(0b1000'0000u | ((_Code_point >> (6 * _Trailing_count)) & 0b11'1111u));
             } while (_Trailing_count != 0);
         }
 
@@ -1653,27 +1642,27 @@ protected:
 
         for (; _First1 != _Last1 && _Count > 0u; ++_First1, --_Count) {
             char32_t _Code_point = *_First1;
-            if (_Code_point < 0b1000'0000u) { // single-byte sequence // ' TRANSITION, OS#21524983
+            if (_Code_point < 0b1000'0000u) { // single-byte sequence
                 continue;
             }
 
             int _Trailing_count = 1;
-            if (_Code_point < 0b1110'0000u) { // ' TRANSITION, OS#21524983
-                if (_Code_point < 0b1100'0000u) { // out-of-sequence trailing byte // ' TRANSITION, OS#21524983
+            if (_Code_point < 0b1110'0000u) {
+                if (_Code_point < 0b1100'0000u) { // out-of-sequence trailing byte
                     break;
                 }
 
                 // lead byte of 2-byte sequence
-                _Code_point &= 0b0001'1111u; // ' TRANSITION, OS#21524983
-            } else if (_Code_point < 0b1111'0000u) { // lead byte of 3-byte sequence // ' TRANSITION, OS#21524983
-                _Code_point &= 0b0000'1111u; // ' TRANSITION, OS#21524983
+                _Code_point &= 0b0001'1111u;
+            } else if (_Code_point < 0b1111'0000u) { // lead byte of 3-byte sequence
+                _Code_point &= 0b0000'1111u;
                 _Trailing_count = 2;
-            } else if (_Code_point < 0b1111'1000u) { // lead byte of 4-byte sequence // ' TRANSITION, OS#21524983
+            } else if (_Code_point < 0b1111'1000u) { // lead byte of 4-byte sequence
                 if (_Count < 2u) { // not enough output
                     break;
                 }
 
-                _Code_point &= 0b0000'0111u; // ' TRANSITION, OS#21524983
+                _Code_point &= 0b0000'0111u;
                 _Trailing_count = 3;
             } else { // Invalid UTF-8 code unit
                 break;
@@ -1687,12 +1676,12 @@ protected:
             bool _Done           = false;
             do {
                 const char8_t _By = *++_Peek;
-                if ((_By & 0b1100'0000u) != 0b1000'0000u) { // out-of-sequence lead byte // ' TRANSITION, OS#21524983
+                if ((_By & 0b1100'0000u) != 0b1000'0000u) { // out-of-sequence lead byte
                     _Done = true;
                     break;
                 }
 
-                _Code_point = (_Code_point << 6) | (_By & 0b11'1111u); // ' TRANSITION, OS#21524983
+                _Code_point = (_Code_point << 6) | (_By & 0b11'1111u);
             } while (--_Trailing_count != 0);
 
             if (_Done) {
@@ -1712,7 +1701,7 @@ protected:
             _First1 = _Peek;
         }
 
-        return static_cast<int>(_Min_value(_First1 - _Old_first1, ptrdiff_t{INT_MAX}));
+        return static_cast<int>((_STD min)(_First1 - _Old_first1, ptrdiff_t{INT_MAX}));
     }
 
     virtual bool __CLR_OR_THIS_CALL do_always_noconv() const noexcept override {
@@ -1794,24 +1783,24 @@ protected:
             }
 
             char8_t _Lead_byte = *_First1;
-            if (_Lead_byte < 0b1000'0000u) { // single-byte sequence // ' TRANSITION, OS#21524983
+            if (_Lead_byte < 0b1000'0000u) { // single-byte sequence
                 *_First2 = _Lead_byte;
                 continue;
             }
 
             int _Trailing_count = 1;
-            if (_Lead_byte < 0b1110'0000u) { // ' TRANSITION, OS#21524983
-                if (_Lead_byte < 0b1100'0000u) { // out-of-sequence trailing byte // ' TRANSITION, OS#21524983
+            if (_Lead_byte < 0b1110'0000u) {
+                if (_Lead_byte < 0b1100'0000u) { // out-of-sequence trailing byte
                     return partial;
                 }
 
                 // lead byte of 2-byte sequence
-                _Lead_byte &= 0b0001'1111u; // ' TRANSITION, OS#21524983
-            } else if (_Lead_byte < 0b1111'0000u) { // lead byte of 3-byte sequence // ' TRANSITION, OS#21524983
-                _Lead_byte &= 0b0000'1111u; // ' TRANSITION, OS#21524983
+                _Lead_byte &= 0b0001'1111u;
+            } else if (_Lead_byte < 0b1111'0000u) { // lead byte of 3-byte sequence
+                _Lead_byte &= 0b0000'1111u;
                 _Trailing_count = 2;
-            } else if (_Lead_byte < 0b1111'1000u) { // lead byte of 4-byte sequence // ' TRANSITION, OS#21524983
-                _Lead_byte &= 0b0000'0111u; // ' TRANSITION, OS#21524983
+            } else if (_Lead_byte < 0b1111'1000u) { // lead byte of 4-byte sequence
+                _Lead_byte &= 0b0000'0111u;
                 _Trailing_count = 3;
             } else { // invalid UTF-8 code unit
                 return error;
@@ -1825,11 +1814,11 @@ protected:
             char32_t _Code_point = _Lead_byte;
             do {
                 const char8_t _By = *++_Peek;
-                if ((_By & 0b1100'0000u) != 0b1000'0000u) { // out-of-sequence lead byte // ' TRANSITION, OS#21524983
+                if ((_By & 0b1100'0000u) != 0b1000'0000u) { // out-of-sequence lead byte
                     return error;
                 }
 
-                _Code_point = (_Code_point << 6) | (_By & 0b11'1111u); // ' TRANSITION, OS#21524983
+                _Code_point = (_Code_point << 6) | (_By & 0b11'1111u);
             } while (--_Trailing_count != 0);
 
             if (_Code_point >= 0xd800u && (_Code_point < 0xe000u || _Code_point >= 0x110000u)) {
@@ -1865,16 +1854,16 @@ protected:
 
             int _Trailing_count = 1;
             if (_Code_point < 0x800u) { // encode 2-byte sequence
-                *_First2 = static_cast<char8_t>(0b1100'0000u | (_Code_point >> 6)); // ' TRANSITION, OS#21524983
+                *_First2 = static_cast<char8_t>(0b1100'0000u | (_Code_point >> 6));
             } else if (_Code_point < 0x10000u) { // encode 3-byte sequence
                 if (_Code_point >= 0xd800u && _Code_point < 0xe000u) { // invalid code point (surrogate)
                     return error;
                 }
 
-                *_First2        = static_cast<char8_t>(0b1110'0000u | (_Code_point >> 12)); // ' TRANSITION, OS#21524983
+                *_First2        = static_cast<char8_t>(0b1110'0000u | (_Code_point >> 12));
                 _Trailing_count = 2;
             } else if (_Code_point < 0x110000u) { // encode 4-byte sequence
-                *_First2        = static_cast<char8_t>(0b1111'0000u | (_Code_point >> 18)); // ' TRANSITION, OS#21524983
+                *_First2        = static_cast<char8_t>(0b1111'0000u | (_Code_point >> 18));
                 _Trailing_count = 3;
             } else { // Invalid code point (out of range)
                 return error;
@@ -1886,8 +1875,7 @@ protected:
 
             do {
                 --_Trailing_count;
-                *++_First2 = static_cast<char8_t>(
-                    0b1000'0000u | ((_Code_point >> (6 * _Trailing_count)) & 0b11'1111u)); // ' TRANSITION, OS#21524983
+                *++_First2 = static_cast<char8_t>(0b1000'0000u | ((_Code_point >> (6 * _Trailing_count)) & 0b11'1111u));
             } while (_Trailing_count != 0);
         }
 
@@ -1910,23 +1898,23 @@ protected:
 
         for (; _First1 != _Last1 && _Count > 0u; ++_First1, --_Count) {
             char32_t _Code_point = *_First1;
-            if (_Code_point < 0b1000'0000u) { // single-byte sequence // ' TRANSITION, OS#21524983
+            if (_Code_point < 0b1000'0000u) { // single-byte sequence
                 continue;
             }
 
             int _Trailing_count = 1;
-            if (_Code_point < 0b1110'0000u) { // ' TRANSITION, OS#21524983
-                if (_Code_point < 0b1100'0000u) { // out-of-sequence trailing byte // ' TRANSITION, OS#21524983
+            if (_Code_point < 0b1110'0000u) {
+                if (_Code_point < 0b1100'0000u) { // out-of-sequence trailing byte
                     break;
                 }
 
                 // lead byte of 2-byte sequence
-                _Code_point &= 0b0001'1111u; // ' TRANSITION, OS#21524983
-            } else if (_Code_point < 0b1111'0000u) { // lead byte of 3-byte sequence // ' TRANSITION, OS#21524983
-                _Code_point &= 0b0000'1111u; // ' TRANSITION, OS#21524983
+                _Code_point &= 0b0001'1111u;
+            } else if (_Code_point < 0b1111'0000u) { // lead byte of 3-byte sequence
+                _Code_point &= 0b0000'1111u;
                 _Trailing_count = 2;
-            } else if (_Code_point < 0b1111'1000u) { // lead byte of 4-byte sequence // ' TRANSITION, OS#21524983
-                _Code_point &= 0b0000'0111u; // ' TRANSITION, OS#21524983
+            } else if (_Code_point < 0b1111'1000u) { // lead byte of 4-byte sequence
+                _Code_point &= 0b0000'0111u;
                 _Trailing_count = 3;
             } else { // invalid UTF-8 code unit
                 break;
@@ -1940,15 +1928,15 @@ protected:
             bool _Done           = false;
             do {
                 const char8_t _By = *++_Peek;
-                if ((_By & 0b1100'0000u) != 0b1000'0000u) { // out-of-sequence lead byte // ' TRANSITION, OS#21524983
+                if ((_By & 0b1100'0000u) != 0b1000'0000u) { // out-of-sequence lead byte
                     _Done = true;
                     break;
                 }
 
-                _Code_point = (_Code_point << 6) | (_By & 0b11'1111u); // ' TRANSITION, OS#21524983
+                _Code_point = (_Code_point << 6) | (_By & 0b11'1111u);
             } while (--_Trailing_count != 0);
 
-            if (_Done || _Code_point >= 0xd800u && (_Code_point < 0xe000u || _Code_point >= 0x110000u)) {
+            if (_Done || (_Code_point >= 0xd800u && (_Code_point < 0xe000u || _Code_point >= 0x110000u))) {
                 // invalid code point (surrogate or out of range)
                 break;
             }
@@ -1956,7 +1944,7 @@ protected:
             _First1 = _Peek;
         }
 
-        return static_cast<int>(_Min_value(_First1 - _Old_first1, ptrdiff_t{INT_MAX}));
+        return static_cast<int>((_STD min)(_First1 - _Old_first1, ptrdiff_t{INT_MAX}));
     }
 
     virtual bool __CLR_OR_THIS_CALL do_always_noconv() const noexcept override {
@@ -1974,7 +1962,7 @@ protected:
         return 0; // varying length
     }
 };
-#endif // _HAS_CHAR8_T && !defined(_M_CEE_PURE)
+#endif // defined(__cpp_char8_t) && !defined(_M_CEE_PURE)
 
 // CLASS codecvt<wchar_t, char, mbstate_t>
 template <>
@@ -2010,14 +1998,13 @@ public:
 
     __PURE_APPDOMAIN_GLOBAL static locale::id id;
 
-    explicit __CLR_OR_THIS_CALL codecvt(size_t _Refs = 0) : codecvt_base(_Refs) { // construct from current locale
+    explicit __CLR_OR_THIS_CALL codecvt(size_t _Refs = 0) : codecvt_base(_Refs) {
         _BEGIN_LOCINFO(_Lobj)
         _Init(_Lobj);
         _END_LOCINFO()
     }
 
     explicit __CLR_OR_THIS_CALL codecvt(const _Locinfo& _Lobj, size_t _Refs = 0) : codecvt_base(_Refs) {
-        // construct from specified locale
         _Init(_Lobj);
     }
 
@@ -2062,7 +2049,7 @@ protected:
             case -1: // failed conversion
                 return error;
 
-            case 0: // converted NULL character, TRANSITION, VSO#654347
+            case 0: // converted NULL character, TRANSITION, VSO-654347
                 _Bytes = 1;
                 // [[fallthrough]];
 
@@ -2146,7 +2133,7 @@ protected:
                 break;
             }
 
-            if (_Bytes == 0) { // converted NULL character, TRANSITION, VSO#654347
+            if (_Bytes == 0) { // converted NULL character, TRANSITION, VSO-654347
                 _Bytes = 1;
             }
 
@@ -2154,7 +2141,7 @@ protected:
             _First1 += _Bytes;
         }
 
-        return static_cast<int>(_Min_value(_First1 - _Old_first1, ptrdiff_t{INT_MAX}));
+        return static_cast<int>((_STD min)(_First1 - _Old_first1, ptrdiff_t{INT_MAX}));
     }
 
     virtual bool __CLR_OR_THIS_CALL do_always_noconv() const noexcept override {
@@ -2211,14 +2198,13 @@ public:
 
     __PURE_APPDOMAIN_GLOBAL static locale::id id;
 
-    explicit __CLR_OR_THIS_CALL codecvt(size_t _Refs = 0) : codecvt_base(_Refs) { // construct from current locale
+    explicit __CLR_OR_THIS_CALL codecvt(size_t _Refs = 0) : codecvt_base(_Refs) {
         _BEGIN_LOCINFO(_Lobj)
         _Init(_Lobj);
         _END_LOCINFO()
     }
 
     explicit __CLR_OR_THIS_CALL codecvt(const _Locinfo& _Lobj, size_t _Refs = 0) : codecvt_base(_Refs) {
-        // construct from specified locale
         _Init(_Lobj);
     }
 
@@ -2264,7 +2250,7 @@ protected:
             case -1: // failed conversion
                 return error;
 
-            case 0: // converted NULL character, TRANSITION, VSO#654347
+            case 0: // converted NULL character, TRANSITION, VSO-654347
                 _Bytes = 1;
                 // [[fallthrough]];
 
@@ -2349,7 +2335,7 @@ protected:
                 break;
             }
 
-            if (_Bytes == 0) { // converted NULL character, TRANSITION, VSO#654347
+            if (_Bytes == 0) { // converted NULL character, TRANSITION, VSO-654347
                 _Bytes = 1;
             }
 
@@ -2357,7 +2343,7 @@ protected:
             _First1 += _Bytes;
         }
 
-        return static_cast<int>(_Min_value(_First1 - _Old_first1, ptrdiff_t{INT_MAX}));
+        return static_cast<int>((_STD min)(_First1 - _Old_first1, ptrdiff_t{INT_MAX}));
     }
 
     virtual bool __CLR_OR_THIS_CALL do_always_noconv() const noexcept override {
@@ -2386,9 +2372,9 @@ class codecvt_byname : public codecvt<_Elem, _Byte, _Statype> { // codecvt for n
 public:
     static_assert(!_ENFORCE_FACET_SPECIALIZATIONS
                       || _Is_any_of_v<codecvt_byname,
-#if _HAS_CHAR8_T
+#ifdef __cpp_char8_t
                           codecvt_byname<char16_t, char8_t, mbstate_t>, codecvt_byname<char32_t, char8_t, mbstate_t>,
-#endif // _HAS_CHAR8_T
+#endif // __cpp_char8_t
                           codecvt_byname<char, char, mbstate_t>, codecvt_byname<wchar_t, char, mbstate_t>>,
         _FACET_SPECIALIZATION_MESSAGE);
 
@@ -2403,7 +2389,7 @@ protected:
 };
 
 // STRUCT ctype_base
-struct _CRTIMP2_PURE_IMPORT ctype_base : public locale::facet { // base for ctype
+struct _CRTIMP2_PURE_IMPORT ctype_base : locale::facet { // base for ctype
     enum { // constants for character classifications
         alnum  = _DI | _LO | _UP | _XA,
         alpha  = _LO | _UP | _XA,
@@ -2491,19 +2477,17 @@ public:
 
     __PURE_APPDOMAIN_GLOBAL static locale::id id;
 
-    explicit __CLR_OR_THIS_CALL ctype(size_t _Refs = 0) : ctype_base(_Refs) { // construct from current locale
+    explicit __CLR_OR_THIS_CALL ctype(size_t _Refs = 0) : ctype_base(_Refs) {
         _BEGIN_LOCINFO(_Lobj)
         _Init(_Lobj);
         _END_LOCINFO()
     }
 
-    __CLR_OR_THIS_CALL ctype(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : ctype_base(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL ctype(const _Locinfo& _Lobj, size_t _Refs = 0) : ctype_base(_Refs) {
         _Init(_Lobj);
     }
 
-    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
+    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
         if (_Ppf && !*_Ppf) {
             *_Ppf = new ctype<_Elem>(_Locinfo(_Ploc->c_str()));
         }
@@ -2758,13 +2742,11 @@ public:
         }
     }
 
-    __CLR_OR_THIS_CALL ctype(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : ctype_base(_Refs) { // construct from current locale
+    __CLR_OR_THIS_CALL ctype(const _Locinfo& _Lobj, size_t _Refs = 0) : ctype_base(_Refs) {
         _Init(_Lobj);
     }
 
-    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
+    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
         if (_Ppf && !*_Ppf) {
             *_Ppf = new ctype<_Elem>(_Locinfo(_Ploc->c_str()));
         }
@@ -2772,12 +2754,11 @@ public:
         return _X_CTYPE;
     }
 
-    const mask* __CLR_OR_THIS_CALL table() const noexcept { // return address of char to mask table
+    const mask* __CLR_OR_THIS_CALL table() const noexcept {
         return _Ctype._Table;
     }
 
-    static const mask* __CLRCALL_OR_CDECL
-        classic_table() noexcept { // return address of char to mask table for "C" locale
+    static const mask* __CLRCALL_OR_CDECL classic_table() noexcept {
         return _STD use_facet<ctype>(locale::classic()).table();
     }
 
@@ -2921,19 +2902,17 @@ public:
 
     __PURE_APPDOMAIN_GLOBAL static locale::id id;
 
-    explicit __CLR_OR_THIS_CALL ctype(size_t _Refs = 0) : ctype_base(_Refs) { // construct from current locale
+    explicit __CLR_OR_THIS_CALL ctype(size_t _Refs = 0) : ctype_base(_Refs) {
         _BEGIN_LOCINFO(_Lobj)
         _Init(_Lobj);
         _END_LOCINFO()
     }
 
-    __CLR_OR_THIS_CALL ctype(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : ctype_base(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL ctype(const _Locinfo& _Lobj, size_t _Refs = 0) : ctype_base(_Refs) {
         _Init(_Lobj);
     }
 
-    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
+    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
         if (_Ppf && !*_Ppf) {
             *_Ppf = new ctype<_Elem>(_Locinfo(_Ploc->c_str()));
         }
@@ -3125,19 +3104,17 @@ public:
 
     __PURE_APPDOMAIN_GLOBAL static locale::id id;
 
-    explicit __CLR_OR_THIS_CALL ctype(size_t _Refs = 0) : ctype_base(_Refs) { // construct from current locale
+    explicit __CLR_OR_THIS_CALL ctype(size_t _Refs = 0) : ctype_base(_Refs) {
         _BEGIN_LOCINFO(_Lobj)
         _Init(_Lobj);
         _END_LOCINFO()
     }
 
-    __CLR_OR_THIS_CALL ctype(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : ctype_base(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL ctype(const _Locinfo& _Lobj, size_t _Refs = 0) : ctype_base(_Refs) {
         _Init(_Lobj);
     }
 
-    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr,
-        const locale* _Ploc = nullptr) { // return locale category mask and construct standard facet
+    static size_t __CLRCALL_OR_CDECL _Getcat(const locale::facet** _Ppf = nullptr, const locale* _Ploc = nullptr) {
         if (_Ppf && !*_Ppf) {
             *_Ppf = new ctype<_Elem>(_Locinfo(_Ploc->c_str()));
         }
@@ -3277,12 +3254,10 @@ public:
     static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t>, _FACET_SPECIALIZATION_MESSAGE);
 
     explicit __CLR_OR_THIS_CALL ctype_byname(const char* _Locname, size_t _Refs = 0)
-        : ctype<_Elem>(_Locinfo(_Locname), _Refs) { // construct for named locale
-    }
+        : ctype<_Elem>(_Locinfo(_Locname), _Refs) {} // construct for named locale
 
     explicit __CLR_OR_THIS_CALL ctype_byname(const string& _Str, size_t _Refs = 0)
-        : ctype<_Elem>(_Locinfo(_Str.c_str()), _Refs) { // construct for named locale
-    }
+        : ctype<_Elem>(_Locinfo(_Str.c_str()), _Refs) {} // construct for named locale
 
 protected:
     virtual __CLR_OR_THIS_CALL ~ctype_byname() noexcept {}
@@ -3300,8 +3275,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XLOCALE_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

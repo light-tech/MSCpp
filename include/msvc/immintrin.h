@@ -1,7 +1,7 @@
 /***
 * imminitrin.h - Meta Header file for Intel(R) Architecture intrinsic functions.
 *
-* Copyright (C) 1985-2019 Intel Corporation.  All rights reserved.
+* Copyright (C) 1985-2020 Intel Corporation.  All rights reserved.
 *
 * The information and source code contained herein is the exclusive
 * property of Intel Corporation and may not be disclosed, examined
@@ -1343,10 +1343,10 @@ extern int __cdecl _rdrand64_step(unsigned __int64 *);
 /*
  * Return the value of the FS/GS segment base register.
  */
-extern unsigned int     __cdecl _readfsbase_u32();
-extern unsigned int     __cdecl _readgsbase_u32();
-extern unsigned __int64 __cdecl _readfsbase_u64();
-extern unsigned __int64 __cdecl _readgsbase_u64();
+extern unsigned int     __cdecl _readfsbase_u32(void);
+extern unsigned int     __cdecl _readgsbase_u32(void);
+extern unsigned __int64 __cdecl _readfsbase_u64(void);
+extern unsigned __int64 __cdecl _readgsbase_u64(void);
 
 /*
  * Write the value to the FS/GS segment base register.
@@ -1843,6 +1843,8 @@ extern __m128i __cdecl _mm_i64gather_epi64(__int64 const * /* ptr */,
 extern unsigned int     _bextr_u32(unsigned int /* src */,
                                    unsigned int /* start_bit */,
                                    unsigned int /* len_in_bits */);
+extern unsigned int     _bextr2_u32(unsigned int /* src */,
+                                    unsigned int /* start_and_len_in_bits */);
 extern unsigned int     _blsi_u32(unsigned int);
 extern unsigned int     _blsmsk_u32(unsigned int);
 extern unsigned int     _blsr_u32(unsigned int);
@@ -1868,6 +1870,8 @@ extern unsigned int     _shrx_u32(unsigned int /* src */,
 extern unsigned __int64 _bextr_u64(unsigned __int64 /* src */,
                                    unsigned int /* start_bit */,
                                    unsigned int /* len_in_bits */);
+extern unsigned __int64 _bextr2_u64(unsigned __int64 /* src */,
+                                    unsigned __int64 /* start_and_len_in_bits */);
 extern unsigned __int64 _blsi_u64(unsigned __int64);
 extern unsigned __int64 _blsmsk_u64(unsigned __int64);
 extern unsigned __int64 _blsr_u64(unsigned __int64);
@@ -2116,6 +2120,14 @@ extern __int64          __cdecl _div128(__int64 /* highdividend */, __int64 /* l
 #endif  // defined (_M_X64)
 extern unsigned         __cdecl _udiv64(unsigned __int64 /* dividend */, unsigned /* divisor */, unsigned* /* remainder */);
 extern int              __cdecl _div64(__int64 /* dividend */, int /* divisor */, int* /* remainder */);
+
+// Protection key rights for user pages
+extern unsigned int     __cdecl _rdpkru_u32(void);
+extern void             __cdecl _wrpkru(unsigned int);
+
+// Enqueue stores
+extern int              __cdecl _enqcmd(void * /* dst */, const void * /* src */);
+extern int              __cdecl _enqcmds(void * /* dst */, const void * /* src */);
 
 /*
 * Intel(R) Control-Flow Enforcement Technology (CET) shadow stack intrinsic functions
@@ -2383,6 +2395,11 @@ extern void _directstoreu_u32(void *, unsigned int);
 extern void _directstoreu_u64(void *, unsigned __int64);
 #endif  /* defined (_M_X64) */
 extern void _movdir64b(void *, void const *);
+
+/* serialize and TSX load tracking */
+extern void __cdecl _serialize(void);
+extern void __cdecl _xsusldtrk(void);
+extern void __cdecl _xresldtrk(void);
 
 /* User wait */
 extern void _umonitor(void *);

@@ -1,4 +1,8 @@
 // hash_map extension header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _HASH_MAP_
 #define _HASH_MAP_
@@ -57,59 +61,59 @@ namespace stdext {
         using _Deduce_key = const _Kty&;
         using key_equal   = _Tr;
 
-        _Hmap_traits(const _Tr& _Traits = _Tr())
-            : _Tr(_Traits), _Max_buckets(0.0F) { // construct with specified comparator
-        }
+        _Hmap_traits() = default;
 
-        class value_compare { // functor for comparing two element values
+        _Hmap_traits(const _Tr& _Traits) noexcept(_STD is_nothrow_copy_constructible_v<_Tr>) : _Tr(_Traits) {}
+
+        class value_compare {
         public:
             using first_argument_type  = value_type;
             using second_argument_type = value_type;
             using result_type          = bool;
 
-            bool operator()(const value_type& _Left,
-                const value_type& _Right) const { // test if _Left precedes _Right by comparing just keys
+            _NODISCARD bool operator()(const value_type& _Left, const value_type& _Right) const
+                noexcept(noexcept(_Keycompobj(_Left.first, _Right.first))) {
+                // test if _Left precedes _Right by comparing just keys
                 return _Keycompobj(_Left.first, _Right.first);
             }
 
-            value_compare(const key_compare& _Keycomparg)
-                : _Keycompobj(_Keycomparg) { // construct with specified predicate
-            }
+            value_compare(const key_compare& _Keycomparg) noexcept(_STD is_nothrow_copy_constructible_v<key_compare>)
+                : _Keycompobj(_Keycomparg) {}
 
             key_compare _Keycompobj;
         };
 
         template <class _Ty1, class _Ty2>
-        static const _Kty& _Kfn(const pair<_Ty1, _Ty2>& _Val) { // extract key from element value
+        static const _Kty& _Kfn(const pair<_Ty1, _Ty2>& _Val) noexcept { // extract key from element value
             return _Val.first;
         }
 
         template <class _Ty1, class _Ty2>
-        static const _Ty2& _Nonkfn(const pair<_Ty1, _Ty2>& _Val) { // extract non-key from element value
+        static const _Ty2& _Nonkfn(const pair<_Ty1, _Ty2>& _Val) noexcept { // extract non-key from element value
             return _Val.second;
         }
 
-        float& _Get_max_bucket_size() noexcept { // return reference to current maximum bucket size
+        float& _Get_max_bucket_size() noexcept {
             return _Max_buckets;
         }
 
-        const float& _Get_max_bucket_size() const noexcept { // return const reference to current maximum bucket size
+        const float& _Get_max_bucket_size() const noexcept {
             return _Max_buckets;
         }
 
-        void swap(_Hmap_traits& _Rhs) _NOEXCEPT_COND(_Is_nothrow_swappable<_Tr>::value) {
+        void swap(_Hmap_traits& _Rhs) noexcept(_Is_nothrow_swappable<_Tr>::value) {
             _Swap_adl(static_cast<_Tr&>(*this), static_cast<_Tr&>(_Rhs));
             _STD swap(_Max_buckets, _Rhs._Max_buckets);
         }
 
-        float _Max_buckets; // current maximum bucket size
+        float _Max_buckets = 0.0F; // current maximum bucket size
     };
 
     // CLASS TEMPLATE hash_map
     template <class _Kty, class _Ty, class _Tr = hash_compare<_Kty, less<_Kty>>,
         class _Alloc = allocator<pair<const _Kty, _Ty>>>
-    class hash_map
-        : public _Hash<_Hmap_traits<_Kty, _Ty, _Tr, _Alloc, false>> { // hash table of {key, mapped} values, unique keys
+    class hash_map : public _Hash<_Hmap_traits<_Kty, _Ty, _Tr, _Alloc, false>> {
+        // hash table of {key, mapped} values, unique keys
     public:
         using _Mybase         = _Hash<_Hmap_traits<_Kty, _Ty, _Tr, _Alloc, false>>;
         using key_type        = _Kty;
@@ -117,7 +121,7 @@ namespace stdext {
         using referent_type   = _Ty;
         using key_compare     = _Tr;
         using value_compare   = typename _Mybase::_Value_compare;
-        using value_type      = typename _Mybase::value_type;
+        using value_type      = pair<const _Kty, _Ty>;
         using allocator_type  = typename _Mybase::allocator_type;
         using size_type       = typename _Mybase::size_type;
         using difference_type = typename _Mybase::difference_type;
@@ -133,113 +137,94 @@ namespace stdext {
         using insert_return_type = _STD _Insert_return_type<iterator, typename _Mybase::node_type>;
 #endif // _HAS_CXX17
 
-        hash_map() : _Mybase(key_compare(), allocator_type()) { // construct empty map from defaults
-        }
+        hash_map() : _Mybase(key_compare(), allocator_type()) {}
 
-        explicit hash_map(const allocator_type& _Al)
-            : _Mybase(key_compare(), _Al) { // construct empty map from defaults, allocator
-        }
+        explicit hash_map(const allocator_type& _Al) : _Mybase(key_compare(), _Al) {}
 
         hash_map(const hash_map& _Right)
-            : _Mybase(_Right, _Alnode_traits::select_on_container_copy_construction(
-                                  _Right._Getal())) { // construct map by copying _Right
-        }
+            : _Mybase(_Right, _Alnode_traits::select_on_container_copy_construction(_Right._Getal())) {}
 
-        hash_map(const hash_map& _Right, const allocator_type& _Al)
-            : _Mybase(_Right, _Al) { // construct map by copying _Right, allocator
-        }
+        hash_map(const hash_map& _Right, const allocator_type& _Al) : _Mybase(_Right, _Al) {}
 
-        explicit hash_map(const key_compare& _Traits)
-            : _Mybase(_Traits, allocator_type()) { // construct empty map from comparator
-        }
+        explicit hash_map(const key_compare& _Traits) : _Mybase(_Traits, allocator_type()) {}
 
-        hash_map(const key_compare& _Traits, const allocator_type& _Al)
-            : _Mybase(_Traits, _Al) { // construct empty map from comparator and allocator
-        }
+        hash_map(const key_compare& _Traits, const allocator_type& _Al) : _Mybase(_Traits, _Al) {}
 
         template <class _Iter>
-        hash_map(_Iter _First, _Iter _Last)
-            : _Mybase(key_compare(), allocator_type()) { // construct map from sequence, defaults
+        hash_map(_Iter _First, _Iter _Last) : _Mybase(key_compare(), allocator_type()) {
             insert(_First, _Last);
         }
 
         template <class _Iter>
-        hash_map(_Iter _First, _Iter _Last, const key_compare& _Traits)
-            : _Mybase(_Traits, allocator_type()) { // construct map from sequence, comparator
+        hash_map(_Iter _First, _Iter _Last, const key_compare& _Traits) : _Mybase(_Traits, allocator_type()) {
             insert(_First, _Last);
         }
 
         template <class _Iter>
         hash_map(_Iter _First, _Iter _Last, const key_compare& _Traits, const allocator_type& _Al)
-            : _Mybase(_Traits, _Al) { // construct map from sequence, comparator, and allocator
+            : _Mybase(_Traits, _Al) {
             insert(_First, _Last);
         }
 
-        hash_map& operator=(const hash_map& _Right) { // assign by copying _Right
+        hash_map& operator=(const hash_map& _Right) {
             _Mybase::operator=(_Right);
             return *this;
         }
 
-        hash_map(hash_map&& _Right) : _Mybase(_STD move(_Right)) { // construct map by moving _Right
-        }
+        hash_map(hash_map&& _Right) : _Mybase(_STD move(_Right)) {}
 
-        hash_map(hash_map&& _Right, const allocator_type& _Al)
-            : _Mybase(_STD move(_Right), _Al) { // construct map by moving _Right, allocator
-        }
+        hash_map(hash_map&& _Right, const allocator_type& _Al) : _Mybase(_STD move(_Right), _Al) {}
 
-        hash_map& operator=(hash_map&& _Right) { // assign by moving _Right
+        hash_map& operator=(hash_map&& _Right) noexcept(noexcept(_Mybase::operator=(_STD move(_Right)))) {
             _Mybase::operator=(_STD move(_Right));
             return *this;
         }
 
-        mapped_type& operator[](key_type&& _Keyval) { // find element matching _Keyval or insert with default mapped
+        mapped_type& operator[](key_type&& _Keyval) {
             return this->_Try_emplace(_STD move(_Keyval)).first->_Myval.second;
         }
 
-        void swap(hash_map& _Right) _NOEXCEPT_COND(noexcept(_Mybase::swap(_Right))) { // strengthened
-            // exchange contents with non-movable _Right
+        void swap(hash_map& _Right) noexcept(noexcept(_Mybase::swap(_Right))) {
             _Mybase::swap(_Right);
         }
 
         using _Mybase::insert;
 
-        template <class _Valty, class = enable_if_t<is_constructible_v<value_type, _Valty>>>
-        pair<iterator, bool> insert(_Valty&& _Val) { // insert _Val
+        template <class _Valty, enable_if_t<is_constructible_v<value_type, _Valty>, int> = 0>
+        pair<iterator, bool> insert(_Valty&& _Val) {
             return this->emplace(_STD forward<_Valty>(_Val));
         }
 
-        template <class _Valty, class = enable_if_t<is_constructible_v<value_type, _Valty>>>
-        iterator insert(const_iterator _Where, _Valty&& _Val) { // insert _Val with hint
+        template <class _Valty, enable_if_t<is_constructible_v<value_type, _Valty>, int> = 0>
+        iterator insert(const_iterator _Where, _Valty&& _Val) {
             return this->emplace_hint(_Where, _STD forward<_Valty>(_Val));
         }
 
-        hash_map(_STD initializer_list<value_type> _Ilist)
-            : _Mybase(key_compare(), allocator_type()) { // construct from initializer_list, defaults
+        hash_map(_STD initializer_list<value_type> _Ilist) : _Mybase(key_compare(), allocator_type()) {
             insert(_Ilist);
         }
 
         hash_map(_STD initializer_list<value_type> _Ilist, const key_compare& _Pred)
-            : _Mybase(_Pred, allocator_type()) { // construct from initializer_list, comparator
+            : _Mybase(_Pred, allocator_type()) {
             insert(_Ilist);
         }
 
         hash_map(_STD initializer_list<value_type> _Ilist, const key_compare& _Pred, const allocator_type& _Al)
-            : _Mybase(_Pred, _Al) { // construct from initializer_list, comparator, and allocator
+            : _Mybase(_Pred, _Al) {
             insert(_Ilist);
         }
 
-        hash_map& operator=(_STD initializer_list<value_type> _Ilist) { // assign initializer_list
+        hash_map& operator=(_STD initializer_list<value_type> _Ilist) {
             this->clear();
             insert(_Ilist);
             return *this;
         }
 
         mapped_type& operator[](const key_type& _Keyval) {
-            // find element matching _Keyval or insert with default mapped
             return this->_Try_emplace(_Keyval).first->_Myval.second;
         }
 
-        mapped_type& at(const key_type& _Keyval) { // find element matching _Keyval
+        mapped_type& at(const key_type& _Keyval) {
             const auto _Target = this->_Find_last(_Keyval, this->_Traitsobj(_Keyval));
             if (_Target._Duplicate) {
                 return _Target._Duplicate->_Myval.second;
@@ -248,7 +233,7 @@ namespace stdext {
             _Xout_of_range("invalid hash_map<K, T> key");
         }
 
-        const mapped_type& at(const key_type& _Keyval) const { // find element matching _Keyval
+        const mapped_type& at(const key_type& _Keyval) const {
             const auto _Target = this->_Find_last(_Keyval, this->_Traitsobj(_Keyval));
             if (_Target._Duplicate) {
                 return _Target._Duplicate->_Myval.second;
@@ -260,37 +245,35 @@ namespace stdext {
         using reverse_iterator       = _STD reverse_iterator<iterator>;
         using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
 
-        reverse_iterator rbegin() noexcept { // return iterator for beginning of reversed mutable sequence
+        reverse_iterator rbegin() noexcept {
             return reverse_iterator(this->end());
         }
 
-        const_reverse_iterator rbegin() const
-            noexcept { // return iterator for beginning of reversed nonmutable sequence
+        const_reverse_iterator rbegin() const noexcept {
             return const_reverse_iterator(this->end());
         }
 
-        reverse_iterator rend() noexcept { // return iterator for end of reversed mutable sequence
+        reverse_iterator rend() noexcept {
             return reverse_iterator(this->begin());
         }
 
-        const_reverse_iterator rend() const noexcept { // return iterator for end of reversed nonmutable sequence
+        const_reverse_iterator rend() const noexcept {
             return const_reverse_iterator(this->begin());
         }
 
-        const_reverse_iterator crbegin() const
-            noexcept { // return iterator for beginning of reversed nonmutable sequence
+        const_reverse_iterator crbegin() const noexcept {
             return rbegin();
         }
 
-        const_reverse_iterator crend() const noexcept { // return iterator for end of reversed nonmutable sequence
+        const_reverse_iterator crend() const noexcept {
             return rend();
         }
 
-        _NODISCARD key_compare key_comp() const { // return object for comparing keys
+        _NODISCARD key_compare key_comp() const {
             return this->_Traitsobj;
         }
 
-        _NODISCARD value_compare value_comp() const { // return object for comparing values
+        _NODISCARD value_compare value_comp() const {
             return value_compare(key_comp());
         }
 
@@ -299,29 +282,28 @@ namespace stdext {
     };
 
     template <class _Kty, class _Ty, class _Tr, class _Alloc>
-    void swap(hash_map<_Kty, _Ty, _Tr, _Alloc>& _Left, hash_map<_Kty, _Ty, _Tr, _Alloc>& _Right)
-        _NOEXCEPT_COND(noexcept(_Left.swap(_Right))) { // strengthened
-        // swap _Left and _Right hash_maps
+    void swap(hash_map<_Kty, _Ty, _Tr, _Alloc>& _Left, hash_map<_Kty, _Ty, _Tr, _Alloc>& _Right) noexcept(
+        noexcept(_Left.swap(_Right))) {
         _Left.swap(_Right);
     }
 
     template <class _Kty, class _Ty, class _Tr, class _Alloc>
-    bool operator==(const hash_map<_Kty, _Ty, _Tr, _Alloc>& _Left,
-        const hash_map<_Kty, _Ty, _Tr, _Alloc>& _Right) { // test for hash_map equality
+    _NODISCARD bool operator==(
+        const hash_map<_Kty, _Ty, _Tr, _Alloc>& _Left, const hash_map<_Kty, _Ty, _Tr, _Alloc>& _Right) {
         return _STD _Hash_equal(_Left, _Right);
     }
 
     template <class _Kty, class _Ty, class _Tr, class _Alloc>
-    bool operator!=(const hash_map<_Kty, _Ty, _Tr, _Alloc>& _Left,
-        const hash_map<_Kty, _Ty, _Tr, _Alloc>& _Right) { // test for hash_map inequality
+    _NODISCARD bool operator!=(
+        const hash_map<_Kty, _Ty, _Tr, _Alloc>& _Left, const hash_map<_Kty, _Ty, _Tr, _Alloc>& _Right) {
         return !(_Left == _Right);
     }
 
     // CLASS TEMPLATE hash_multimap
     template <class _Kty, class _Ty, class _Tr = hash_compare<_Kty, less<_Kty>>,
         class _Alloc = allocator<pair<const _Kty, _Ty>>>
-    class hash_multimap : public _Hash<_Hmap_traits<_Kty, _Ty, _Tr, _Alloc, true>> { // hash table of {key, mapped}
-                                                                                     // values, non-unique keys
+    class hash_multimap : public _Hash<_Hmap_traits<_Kty, _Ty, _Tr, _Alloc, true>> {
+        // hash table of {key, mapped} values, non-unique keys
     public:
         using _Mybase         = _Hash<_Hmap_traits<_Kty, _Ty, _Tr, _Alloc, true>>;
         using key_type        = _Kty;
@@ -329,7 +311,7 @@ namespace stdext {
         using referent_type   = _Ty; // old name, magically gone
         using key_compare     = _Tr;
         using value_compare   = typename _Mybase::_Value_compare;
-        using value_type      = typename _Mybase::value_type;
+        using value_type      = pair<const _Kty, _Ty>;
         using allocator_type  = typename _Mybase::allocator_type;
         using size_type       = typename _Mybase::size_type;
         using difference_type = typename _Mybase::difference_type;
@@ -342,100 +324,80 @@ namespace stdext {
         using _Alnode         = typename _Mybase::_Alnode;
         using _Alnode_traits  = typename _Mybase::_Alnode_traits;
 
-        hash_multimap() : _Mybase(key_compare(), allocator_type()) { // construct empty map from defaults
-        }
+        hash_multimap() : _Mybase(key_compare(), allocator_type()) {}
 
-        explicit hash_multimap(const allocator_type& _Al)
-            : _Mybase(key_compare(), _Al) { // construct empty map from defaults, allocator
-        }
+        explicit hash_multimap(const allocator_type& _Al) : _Mybase(key_compare(), _Al) {}
 
         hash_multimap(const hash_multimap& _Right)
-            : _Mybase(_Right, _Alnode_traits::select_on_container_copy_construction(
-                                  _Right._Getal())) { // construct map by copying _Right
-        }
+            : _Mybase(_Right, _Alnode_traits::select_on_container_copy_construction(_Right._Getal())) {}
 
-        hash_multimap(const hash_multimap& _Right, const allocator_type& _Al)
-            : _Mybase(_Right, _Al) { // construct map by copying _Right, allocator
-        }
+        hash_multimap(const hash_multimap& _Right, const allocator_type& _Al) : _Mybase(_Right, _Al) {}
 
-        explicit hash_multimap(const key_compare& _Traits)
-            : _Mybase(_Traits, allocator_type()) { // construct empty map from comparator
-        }
+        explicit hash_multimap(const key_compare& _Traits) : _Mybase(_Traits, allocator_type()) {}
 
-        hash_multimap(const key_compare& _Traits, const allocator_type& _Al)
-            : _Mybase(_Traits, _Al) { // construct empty map from comparator and allocator
-        }
+        hash_multimap(const key_compare& _Traits, const allocator_type& _Al) : _Mybase(_Traits, _Al) {}
 
         template <class _Iter>
-        hash_multimap(_Iter _First, _Iter _Last)
-            : _Mybase(key_compare(), allocator_type()) { // construct map from sequence, defaults
+        hash_multimap(_Iter _First, _Iter _Last) : _Mybase(key_compare(), allocator_type()) {
             insert(_First, _Last);
         }
 
         template <class _Iter>
-        hash_multimap(_Iter _First, _Iter _Last, const key_compare& _Traits)
-            : _Mybase(_Traits, allocator_type()) { // construct map from sequence, comparator
+        hash_multimap(_Iter _First, _Iter _Last, const key_compare& _Traits) : _Mybase(_Traits, allocator_type()) {
             insert(_First, _Last);
         }
 
         template <class _Iter>
         hash_multimap(_Iter _First, _Iter _Last, const key_compare& _Traits, const allocator_type& _Al)
-            : _Mybase(_Traits, _Al) { // construct map from sequence, comparator, and allocator
+            : _Mybase(_Traits, _Al) {
             insert(_First, _Last);
         }
 
-        hash_multimap& operator=(const hash_multimap& _Right) { // assign by copying _Right
-
+        hash_multimap& operator=(const hash_multimap& _Right) {
             _Mybase::operator=(_Right);
             return *this;
         }
 
-        hash_multimap(hash_multimap&& _Right) : _Mybase(_STD move(_Right)) { // construct map by moving _Right
-        }
+        hash_multimap(hash_multimap&& _Right) : _Mybase(_STD move(_Right)) {}
 
-        hash_multimap(hash_multimap&& _Right, const allocator_type& _Al)
-            : _Mybase(_STD move(_Right), _Al) { // construct map by moving _Right, allocator
-        }
+        hash_multimap(hash_multimap&& _Right, const allocator_type& _Al) : _Mybase(_STD move(_Right), _Al) {}
 
-        hash_multimap& operator=(hash_multimap&& _Right) { // assign by moving _Right
-
+        hash_multimap& operator=(hash_multimap&& _Right) noexcept(noexcept(_Mybase::operator=(_STD move(_Right)))) {
             _Mybase::operator=(_STD move(_Right));
             return *this;
         }
 
-        void swap(hash_multimap& _Right) _NOEXCEPT_COND(noexcept(_Mybase::swap(_Right))) { // strengthened
-            // exchange contents with non-movable _Right
+        void swap(hash_multimap& _Right) noexcept(noexcept(_Mybase::swap(_Right))) {
             _Mybase::swap(_Right);
         }
 
         using _Mybase::insert;
 
-        template <class _Valty, class = enable_if_t<is_constructible_v<value_type, _Valty>>>
-        iterator insert(_Valty&& _Val) { // insert _Val
+        template <class _Valty, enable_if_t<is_constructible_v<value_type, _Valty>, int> = 0>
+        iterator insert(_Valty&& _Val) {
             return this->emplace(_STD forward<_Valty>(_Val));
         }
 
-        template <class _Valty, class = enable_if_t<is_constructible_v<value_type, _Valty>>>
-        iterator insert(const_iterator _Where, _Valty&& _Val) { // insert _Val with hint
+        template <class _Valty, enable_if_t<is_constructible_v<value_type, _Valty>, int> = 0>
+        iterator insert(const_iterator _Where, _Valty&& _Val) {
             return this->emplace_hint(_Where, _STD forward<_Valty>(_Val));
         }
 
-        hash_multimap(_STD initializer_list<value_type> _Ilist)
-            : _Mybase(key_compare(), allocator_type()) { // construct from initializer_list, defaults
+        hash_multimap(_STD initializer_list<value_type> _Ilist) : _Mybase(key_compare(), allocator_type()) {
             insert(_Ilist);
         }
 
         hash_multimap(_STD initializer_list<value_type> _Ilist, const key_compare& _Pred)
-            : _Mybase(_Pred, allocator_type()) { // construct from initializer_list, comparator
+            : _Mybase(_Pred, allocator_type()) {
             insert(_Ilist);
         }
 
         hash_multimap(_STD initializer_list<value_type> _Ilist, const key_compare& _Pred, const allocator_type& _Al)
-            : _Mybase(_Pred, _Al) { // construct from initializer_list, comparator, and allocator
+            : _Mybase(_Pred, _Al) {
             insert(_Ilist);
         }
 
-        hash_multimap& operator=(_STD initializer_list<value_type> _Ilist) { // assign initializer_list
+        hash_multimap& operator=(_STD initializer_list<value_type> _Ilist) {
             this->clear();
             insert(_Ilist);
             return *this;
@@ -444,37 +406,35 @@ namespace stdext {
         using reverse_iterator       = _STD reverse_iterator<iterator>;
         using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
 
-        reverse_iterator rbegin() noexcept { // return iterator for beginning of reversed mutable sequence
+        reverse_iterator rbegin() noexcept {
             return reverse_iterator(this->end());
         }
 
-        const_reverse_iterator rbegin() const
-            noexcept { // return iterator for beginning of reversed nonmutable sequence
+        const_reverse_iterator rbegin() const noexcept {
             return const_reverse_iterator(this->end());
         }
 
-        reverse_iterator rend() noexcept { // return iterator for end of reversed mutable sequence
+        reverse_iterator rend() noexcept {
             return reverse_iterator(this->begin());
         }
 
-        const_reverse_iterator rend() const noexcept { // return iterator for end of reversed nonmutable sequence
+        const_reverse_iterator rend() const noexcept {
             return const_reverse_iterator(this->begin());
         }
 
-        const_reverse_iterator crbegin() const
-            noexcept { // return iterator for beginning of reversed nonmutable sequence
+        const_reverse_iterator crbegin() const noexcept {
             return rbegin();
         }
 
-        const_reverse_iterator crend() const noexcept { // return iterator for end of reversed nonmutable sequence
+        const_reverse_iterator crend() const noexcept {
             return rend();
         }
 
-        _NODISCARD key_compare key_comp() const { // return object for comparing keys
+        _NODISCARD key_compare key_comp() const {
             return this->_Traitsobj;
         }
 
-        _NODISCARD value_compare value_comp() const { // return object for comparing values
+        _NODISCARD value_compare value_comp() const {
             return value_compare(key_comp());
         }
 
@@ -483,27 +443,26 @@ namespace stdext {
     };
 
     template <class _Kty, class _Ty, class _Tr, class _Alloc>
-    void swap(hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Left, hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Right)
-        _NOEXCEPT_COND(noexcept(_Left.swap(_Right))) { // strengthened
-        // swap _Left and _Right hash_multimaps
+    void swap(hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Left, hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Right) noexcept(
+        noexcept(_Left.swap(_Right))) {
         _Left.swap(_Right);
     }
 
     template <class _Kty, class _Ty, class _Tr, class _Alloc>
-    bool operator==(const hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Left,
-        const hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Right) { // test for hash_multimap equality
+    _NODISCARD bool operator==(
+        const hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Left, const hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Right) {
         return _STD _Hash_equal(_Left, _Right);
     }
 
     template <class _Kty, class _Ty, class _Tr, class _Alloc>
-    bool operator!=(const hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Left,
-        const hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Right) { // test for hash_multimap inequality
+    _NODISCARD bool operator!=(
+        const hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Left, const hash_multimap<_Kty, _Ty, _Tr, _Alloc>& _Right) {
         return !(_Left == _Right);
     }
 } // namespace stdext
 _STD_BEGIN
-using stdext::hash_map;
-using stdext::hash_multimap;
+using _STDEXT hash_map;
+using _STDEXT hash_multimap;
 _STD_END
 
 #pragma pop_macro("new")
@@ -512,8 +471,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _HASH_MAP_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

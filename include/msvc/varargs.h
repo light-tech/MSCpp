@@ -11,6 +11,9 @@
 
 #include <vcruntime.h>
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 _CRT_BEGIN_C_HEADER
 
 
@@ -30,9 +33,9 @@ _CRT_BEGIN_C_HEADER
 
     #if defined _M_IX86 || defined _M_ARM
         #define va_start(ap) ((void)(ap = (va_list)&va_alist))
-    #elif defined _M_X64
+    #elif defined _M_X64 && !defined(_M_ARM64EC)
         #define va_start(ap) ((void)(__va_start(&ap, 0)))
-    #elif defined _M_ARM64
+    #elif defined _M_ARM64 || defined _M_ARM64EC
         #define va_start(ap) ((void)(__va_start(&ap, 0, 0, 0, 0)))
     #else
         #error Unsupported architecture
@@ -42,3 +45,5 @@ _CRT_BEGIN_C_HEADER
 
 
 _CRT_END_C_HEADER
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS

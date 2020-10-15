@@ -79,9 +79,9 @@
 
 #define _mm_test_mix_ones_zeros(mask, val) _mm_testnzc_si128((mask), (val))
 
-#if __cplusplus
+#if defined (__cplusplus)
 extern "C" {
-#endif  /* __cplusplus */
+#endif  /* defined (__cplusplus) */
 
         // Integer blend instructions - select data from 2 sources
         // using constant or variable mask
@@ -250,11 +250,11 @@ extern "C" {
          * Load double quadword using non-temporal aligned hint
          */
 
-#if defined(_CRT_WINDOWS) || defined(BUILD_WINDOWS)
+#if defined(_CRT_WINDOWS) || defined(UNDOCKED_WINDOWS_UCRT)
         extern __m128i _mm_stream_load_si128(__m128i*);
-#else /* defined(_CRT_WINDOWS) || defined(BUILD_WINDOWS) */
+#else /* defined(_CRT_WINDOWS) || defined(UNDOCKED_WINDOWS_UCRT) */
         extern __m128i _mm_stream_load_si128(const __m128i*);
-#endif /* defined(_CRT_WINDOWS) || defined(BUILD_WINDOWS) */
+#endif /* defined(_CRT_WINDOWS) || defined(UNDOCKED_WINDOWS_UCRT) */
 
 #if defined __cplusplus
 }; /* End "C" */

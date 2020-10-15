@@ -1,4 +1,8 @@
 // streambuf standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _STREAMBUF_
 #define _STREAMBUF_
@@ -18,22 +22,20 @@ _STD_BEGIN
 template <class _Elem, class _Traits>
 class basic_streambuf { // control read/write buffers
 protected:
-    __CLR_OR_THIS_CALL basic_streambuf() : _Plocale(new locale) { // construct with no buffers
+    __CLR_OR_THIS_CALL basic_streambuf() : _Plocale(new locale) {
         _Init();
     }
 
-    __CLR_OR_THIS_CALL basic_streambuf(_Uninitialized) { // construct uninitialized
-    }
+    __CLR_OR_THIS_CALL basic_streambuf(_Uninitialized) {}
 
-    __CLR_OR_THIS_CALL basic_streambuf(const basic_streambuf& _Right)
-        : _Plocale(new locale(_Right.getloc())) { // construct by copying _Right
+    __CLR_OR_THIS_CALL basic_streambuf(const basic_streambuf& _Right) : _Plocale(new locale(_Right.getloc())) {
         _Init();
         setp(_Right.pbase(), _Right.pptr(), _Right.epptr());
         setg(_Right.eback(), _Right.gptr(), _Right.egptr());
     }
 
-    basic_streambuf& __CLR_OR_THIS_CALL operator=(const basic_streambuf& _Right) { // assign from _Right
-        if (this != _STD addressof(_Right)) { // different, worth copying
+    basic_streambuf& __CLR_OR_THIS_CALL operator=(const basic_streambuf& _Right) {
+        if (this != _STD addressof(_Right)) {
             setp(_Right.pbase(), _Right.pptr(), _Right.epptr());
             setg(_Right.eback(), _Right.gptr(), _Right.egptr());
             pubimbue(_Right.getloc());
@@ -41,8 +43,8 @@ protected:
         return *this;
     }
 
-    void __CLR_OR_THIS_CALL swap(basic_streambuf& _Right) { // swap with _Right
-        if (this != _STD addressof(_Right)) { // different, worth swapping
+    void __CLR_OR_THIS_CALL swap(basic_streambuf& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Elem* _Pfirst0 = pbase();
             _Elem* _Pnext0  = pptr();
             _Elem* _Pend    = epptr();
@@ -112,7 +114,7 @@ public:
         return *_Plocale;
     }
 
-    streamsize __CLR_OR_THIS_CALL in_avail() { // return count of buffered input characters
+    streamsize __CLR_OR_THIS_CALL in_avail() {
         streamsize _Res = _Gnavail();
         return 0 < _Res ? _Res : showmanyc();
     }
@@ -170,30 +172,28 @@ public:
         return xsputn(_Ptr, _Count);
     }
 
-    virtual void __CLR_OR_THIS_CALL _Lock() { // set the thread lock (overridden by basic_filebuf)
-    }
+    virtual void __CLR_OR_THIS_CALL _Lock() {} // set the thread lock (overridden by basic_filebuf)
 
-    virtual void __CLR_OR_THIS_CALL _Unlock() { // clear the thread lock (overridden by basic_filebuf)
-    }
+    virtual void __CLR_OR_THIS_CALL _Unlock() {} // clear the thread lock (overridden by basic_filebuf)
 
 protected:
-    _Elem* __CLR_OR_THIS_CALL eback() const { // return beginning of read buffer
+    _Elem* __CLR_OR_THIS_CALL eback() const {
         return *_IGfirst;
     }
 
-    _Elem* __CLR_OR_THIS_CALL gptr() const { // return current position in read buffer
+    _Elem* __CLR_OR_THIS_CALL gptr() const {
         return *_IGnext;
     }
 
-    _Elem* __CLR_OR_THIS_CALL pbase() const { // return beginning of write buffer
+    _Elem* __CLR_OR_THIS_CALL pbase() const {
         return *_IPfirst;
     }
 
-    _Elem* __CLR_OR_THIS_CALL pptr() const { // return current position in write buffer
+    _Elem* __CLR_OR_THIS_CALL pptr() const {
         return *_IPnext;
     }
 
-    _Elem* __CLR_OR_THIS_CALL egptr() const { // return end of read buffer
+    _Elem* __CLR_OR_THIS_CALL egptr() const {
         return *_IGnext + *_IGcount;
     }
 
@@ -208,7 +208,7 @@ protected:
         *_IGcount = static_cast<int>(_Last - _Next);
     }
 
-    _Elem* __CLR_OR_THIS_CALL epptr() const { // return end of write buffer
+    _Elem* __CLR_OR_THIS_CALL epptr() const {
         return *_IPnext + *_IPcount;
     }
 
@@ -269,8 +269,8 @@ protected:
         setg(nullptr, nullptr, nullptr);
     }
 
-    void __CLR_OR_THIS_CALL _Init(_Elem** _Gf, _Elem** _Gn, int* _Gc, _Elem** _Pf, _Elem** _Pn,
-        int* _Pc) { // initialize buffer parameters as specified
+    void __CLR_OR_THIS_CALL _Init(_Elem** _Gf, _Elem** _Gn, int* _Gc, _Elem** _Pf, _Elem** _Pn, int* _Pc) {
+        // initialize buffer parameters as specified
         _IGfirst = _Gf;
         _IPfirst = _Pf;
         _IGnext  = _Gn;
@@ -283,12 +283,12 @@ protected:
         return _Traits::eof();
     }
 
-    virtual int_type __CLR_OR_THIS_CALL pbackfail(
-        int_type = _Traits::eof()) { // put a character back to stream (always fail)
+    virtual int_type __CLR_OR_THIS_CALL pbackfail(int_type = _Traits::eof()) {
+        // put a character back to stream (always fail)
         return _Traits::eof();
     }
 
-    virtual streamsize __CLR_OR_THIS_CALL showmanyc() { // return count of input characters
+    virtual streamsize __CLR_OR_THIS_CALL showmanyc() {
         return 0;
     }
 
@@ -329,8 +329,8 @@ protected:
         return _Start_count - _Count;
     }
 
-    virtual streamsize __CLR_OR_THIS_CALL xsputn(
-        const _Elem* _Ptr, streamsize _Count) { // put _Count characters to stream
+    virtual streamsize __CLR_OR_THIS_CALL xsputn(const _Elem* _Ptr, streamsize _Count) {
+        // put _Count characters to stream
         const streamsize _Start_count = _Count;
         while (0 < _Count) {
             streamsize _Size = _Pnavail();
@@ -354,18 +354,19 @@ protected:
         return _Start_count - _Count;
     }
 
-    virtual pos_type __CLR_OR_THIS_CALL seekoff(off_type, ios_base::seekdir,
-        ios_base::openmode = ios_base::in | ios_base::out) { // change position by offset, according to way and mode
+    virtual pos_type __CLR_OR_THIS_CALL seekoff(
+        off_type, ios_base::seekdir, ios_base::openmode = ios_base::in | ios_base::out) {
+        // change position by offset, according to way and mode
         return streampos(-1);
     }
 
-    virtual pos_type __CLR_OR_THIS_CALL seekpos(pos_type,
-        ios_base::openmode = ios_base::in | ios_base::out) { // change to specified position, according to mode
+    virtual pos_type __CLR_OR_THIS_CALL seekpos(pos_type, ios_base::openmode = ios_base::in | ios_base::out) {
+        // change to specified position, according to mode
         return streampos(-1);
     }
 
-    virtual basic_streambuf* __CLR_OR_THIS_CALL setbuf(
-        _Elem*, streamsize) { // offer buffer to external agent (do nothing)
+    virtual basic_streambuf* __CLR_OR_THIS_CALL setbuf(_Elem*, streamsize) {
+        // offer buffer to external agent (do nothing)
         return this;
     }
 
@@ -373,8 +374,7 @@ protected:
         return 0;
     }
 
-    virtual void __CLR_OR_THIS_CALL imbue(const locale&) { // set locale to argument (do nothing)
-    }
+    virtual void __CLR_OR_THIS_CALL imbue(const locale&) {} // set locale to argument (do nothing)
 
 private:
     _Elem* _Gfirst; // beginning of read buffer
@@ -406,187 +406,6 @@ template class _CRTIMP2_PURE_IMPORT basic_streambuf<wchar_t, char_traits<wchar_t
 template class _CRTIMP2_PURE_IMPORT basic_streambuf<unsigned short, char_traits<unsigned short>>;
 #endif // __FORCE_INSTANCE
 #endif // defined(_DLL_CPPLIB)
-
-// CLASS TEMPLATE istreambuf_iterator
-template <class _Elem, class _Traits>
-class istreambuf_iterator { // wrap stream buffer as input iterator
-public:
-    using iterator_category = input_iterator_tag;
-    using value_type        = _Elem;
-    using difference_type   = typename _Traits::off_type;
-    using pointer           = const _Elem*;
-    using reference         = _Elem;
-
-    using char_type      = _Elem;
-    using traits_type    = _Traits;
-    using streambuf_type = basic_streambuf<_Elem, _Traits>;
-    using istream_type   = basic_istream<_Elem, _Traits>;
-
-    using int_type = typename traits_type::int_type;
-
-    constexpr istreambuf_iterator() noexcept : _Strbuf(nullptr), _Got(true), _Val() {}
-
-    istreambuf_iterator(streambuf_type* _Sb) noexcept
-        : _Strbuf(_Sb), _Got(!_Sb), _Val() { // construct from stream buffer _Sb
-    }
-
-    istreambuf_iterator(istream_type& _Istr) noexcept
-        : _Strbuf(_Istr.rdbuf()), _Got(!_Strbuf), _Val() { // construct from stream buffer in istream _Istr
-    }
-
-private:
-    class _Istreambuf_proxy {
-    public:
-        _NODISCARD _Elem operator*() const {
-            return _Keep;
-        }
-
-    private:
-        friend istreambuf_iterator;
-        _Istreambuf_proxy(streambuf_type* _Strbuf_, _Elem _Keep_) : _Strbuf(_Strbuf_), _Keep(_Keep_) {}
-
-        streambuf_type* _Strbuf;
-        _Elem _Keep;
-    };
-
-public:
-    istreambuf_iterator(const _Istreambuf_proxy& _Px) noexcept
-        : _Strbuf(_Px._Strbuf), _Got(!_Strbuf), _Val() { // construct from proxy
-    }
-
-    _NODISCARD _Elem operator*() const {
-        if (!_Got) {
-            _Peek();
-        }
-
-#if _ITERATOR_DEBUG_LEVEL == 2
-        _STL_VERIFY(_Strbuf, "istreambuf_iterator is not dereferencable");
-#endif // _ITERATOR_DEBUG_LEVEL == 2
-
-        return _Val;
-    }
-
-    istreambuf_iterator& operator++() {
-#if _ITERATOR_DEBUG_LEVEL == 2
-        _STL_VERIFY(_Strbuf, "istreambuf_iterator is not incrementable");
-#endif // _ITERATOR_DEBUG_LEVEL == 2
-
-        _Inc();
-        return *this;
-    }
-
-    _Istreambuf_proxy operator++(int) {
-        if (!_Got) {
-            _Peek();
-        }
-
-        _Istreambuf_proxy _Tmp{_Strbuf, _Val};
-        ++*this;
-        return _Tmp;
-    }
-
-    _NODISCARD bool equal(const istreambuf_iterator& _Right) const { // test for equality
-        if (!_Got) {
-            _Peek();
-        }
-
-        if (!_Right._Got) {
-            _Right._Peek();
-        }
-
-        return (!_Strbuf && !_Right._Strbuf) || (_Strbuf && _Right._Strbuf);
-    }
-
-private:
-    void _Inc() { // skip to next input element
-        if (!_Strbuf || traits_type::eq_int_type(traits_type::eof(), _Strbuf->sbumpc())) {
-            _Strbuf = nullptr;
-            _Got    = true;
-        } else {
-            _Got = false;
-        }
-    }
-
-    _Elem _Peek() const { // peek at next input element
-        int_type _Meta;
-        if (!_Strbuf || traits_type::eq_int_type(traits_type::eof(), _Meta = _Strbuf->sgetc())) {
-            _Strbuf = nullptr;
-        } else {
-            _Val = traits_type::to_char_type(_Meta);
-        }
-
-        _Got = true;
-        return _Val;
-    }
-
-    mutable streambuf_type* _Strbuf; // the wrapped stream buffer
-    mutable bool _Got; // true if _Val is valid
-    mutable _Elem _Val; // next element to deliver
-};
-
-template <class _Elem, class _Traits>
-_NODISCARD bool operator==(const istreambuf_iterator<_Elem, _Traits>& _Left,
-    const istreambuf_iterator<_Elem, _Traits>& _Right) { // test for istreambuf_iterator equality
-    return _Left.equal(_Right);
-}
-
-template <class _Elem, class _Traits>
-_NODISCARD bool operator!=(const istreambuf_iterator<_Elem, _Traits>& _Left,
-    const istreambuf_iterator<_Elem, _Traits>& _Right) { // test for istreambuf_iterator inequality
-    return !(_Left == _Right);
-}
-
-// CLASS TEMPLATE ostreambuf_iterator
-template <class _Elem, class _Traits>
-class ostreambuf_iterator { // wrap stream buffer as output iterator
-public:
-    using iterator_category = output_iterator_tag;
-    using value_type        = void;
-    using difference_type   = void;
-    using pointer           = void;
-    using reference         = void;
-
-    using char_type      = _Elem;
-    using traits_type    = _Traits;
-    using streambuf_type = basic_streambuf<_Elem, _Traits>;
-    using ostream_type   = basic_ostream<_Elem, _Traits>;
-
-    ostreambuf_iterator(streambuf_type* _Sb) noexcept
-        : _Failed(false), _Strbuf(_Sb) { // construct from stream buffer _Sb
-    }
-
-    ostreambuf_iterator(ostream_type& _Ostr) noexcept
-        : _Failed(false), _Strbuf(_Ostr.rdbuf()) { // construct from stream buffer in _Ostr
-    }
-
-    ostreambuf_iterator& operator=(_Elem _Right) { // store element and increment
-        if (!_Strbuf || traits_type::eq_int_type(_Traits::eof(), _Strbuf->sputc(_Right))) {
-            _Failed = true;
-        }
-
-        return *this;
-    }
-
-    _NODISCARD ostreambuf_iterator& operator*() { // pretend to get designated element
-        return *this;
-    }
-
-    ostreambuf_iterator& operator++() { // pretend to preincrement
-        return *this;
-    }
-
-    ostreambuf_iterator& operator++(int) { // pretend to postincrement
-        return *this;
-    }
-
-    _NODISCARD bool failed() const noexcept { // return true if any stores failed
-        return _Failed;
-    }
-
-private:
-    bool _Failed; // true if any stores have failed
-    streambuf_type* _Strbuf; // the wrapped stream buffer
-};
 _STD_END
 
 #pragma pop_macro("new")
@@ -595,8 +414,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _STREAMBUF_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

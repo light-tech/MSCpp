@@ -1,4 +1,8 @@
 // istream standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _ISTREAM_
 #define _ISTREAM_
@@ -27,38 +31,36 @@ public:
     using _Nget  = num_get<_Elem, _Iter>;
 
 #if defined(__FORCE_INSTANCE)
-    explicit __CLR_OR_THIS_CALL basic_istream(_Mysb* _Strbuf, bool _Isstd, bool _Noinit)
-        : _Chcount(0) { // construct from stream buffer pointer
-        if (!_Noinit) {
+    explicit __CLR_OR_THIS_CALL basic_istream(_Mysb* _Strbuf, bool _Isstd, bool _Skip_init) : _Chcount(0) {
+        if (!_Skip_init) {
             _Myios::init(_Strbuf, _Isstd);
         }
     }
 #endif // defined(__FORCE_INSTANCE)
 
-    explicit __CLR_OR_THIS_CALL basic_istream(_Mysb* _Strbuf,
-        bool _Isstd = false)
+    explicit __CLR_OR_THIS_CALL basic_istream(_Mysb* _Strbuf, bool _Isstd = false)
 
-        : _Chcount(0) { // construct from stream buffer pointer
+        : _Chcount(0) {
         _Myios::init(_Strbuf, _Isstd);
     }
 
-    __CLR_OR_THIS_CALL basic_istream(_Uninitialized) { // construct uninitialized
+    __CLR_OR_THIS_CALL basic_istream(_Uninitialized) {
         this->_Addstd(this);
     }
 
 protected:
-    __CLR_OR_THIS_CALL basic_istream(basic_istream&& _Right) : _Chcount(_Right._Chcount) { // construct by moving _Right
+    __CLR_OR_THIS_CALL basic_istream(basic_istream&& _Right) : _Chcount(_Right._Chcount) {
         _Myios::init();
         _Myios::move(_STD move(_Right));
         _Right._Chcount = 0;
     }
 
-    basic_istream& __CLR_OR_THIS_CALL operator=(basic_istream&& _Right) { // move from _Right
+    basic_istream& __CLR_OR_THIS_CALL operator=(basic_istream&& _Right) {
         this->swap(_Right);
         return *this;
     }
 
-    void __CLR_OR_THIS_CALL swap(basic_istream& _Right) { // swap with _Right
+    void __CLR_OR_THIS_CALL swap(basic_istream& _Right) {
         _Myios::swap(_Right);
         _STD swap(_Chcount, _Right._Chcount);
     }
@@ -74,35 +76,33 @@ public:
     using off_type = typename _Traits::off_type;
 
     // CLASS TEMPLATE sentry
-    class _Sentry_base { // stores thread lock and reference to input stream
+    class _Sentry_base {
     public:
-        __CLR_OR_THIS_CALL _Sentry_base(basic_istream& _Istr) : _Myistr(_Istr) { // lock the stream buffer, if there
+        __CLR_OR_THIS_CALL _Sentry_base(basic_istream& _Istr) : _Myistr(_Istr) {
             const auto _Rdbuf = _Myistr.rdbuf();
             if (_Rdbuf) {
                 _Rdbuf->_Lock();
             }
         }
 
-        __CLR_OR_THIS_CALL ~_Sentry_base() noexcept { // destroy after unlocking
+        __CLR_OR_THIS_CALL ~_Sentry_base() noexcept {
             const auto _Rdbuf = _Myistr.rdbuf();
             if (_Rdbuf) {
                 _Rdbuf->_Unlock();
             }
         }
 
-        basic_istream& _Myistr; // the input stream, for _Unlock call at destruction
+        basic_istream& _Myistr;
 
         _Sentry_base& operator=(const _Sentry_base&) = delete;
     };
 
-    class sentry : public _Sentry_base { // stores thread lock and result of _Ipfx call
+    class sentry : public _Sentry_base {
     public:
         explicit __CLR_OR_THIS_CALL sentry(basic_istream& _Istr, bool _Noskip = false)
-            : _Sentry_base(_Istr) { // construct locking and calling _Ipfx
-            _Ok = this->_Myistr._Ipfx(_Noskip);
-        }
+            : _Sentry_base(_Istr), _Ok(_Sentry_base::_Myistr._Ipfx(_Noskip)) {}
 
-        explicit __CLR_OR_THIS_CALL operator bool() const { // test if _Ipfx succeeded
+        explicit __CLR_OR_THIS_CALL operator bool() const {
             return _Ok;
         }
 
@@ -150,16 +150,17 @@ public:
         return this->good();
     }
 
-    bool __CLR_OR_THIS_CALL ipfx(bool _Noskip = false) { // test stream state and skip whitespace as needed (retained)
+    // TRANSITION, ABI: non-Standard ipfx() is preserved for binary compatibility
+    bool __CLR_OR_THIS_CALL ipfx(bool _Noskip = false) { // test stream state and skip whitespace as needed
         return _Ipfx(_Noskip);
     }
 
-    void __CLR_OR_THIS_CALL isfx() { // perform any wrapup (retained)
-    }
+    // TRANSITION, ABI: non-Standard isfx() is preserved for binary compatibility
+    void __CLR_OR_THIS_CALL isfx() {} // perform any wrapup
 
 #ifdef _M_CEE_PURE
-    basic_istream& __CLR_OR_THIS_CALL operator>>(
-        basic_istream&(__clrcall* _Pfn)(basic_istream&) ) { // call basic_istream manipulator
+    basic_istream& __CLR_OR_THIS_CALL operator>>(basic_istream&(__clrcall* _Pfn)(basic_istream&) ) {
+        // call basic_istream manipulator
         return _Pfn(*this);
     }
 
@@ -174,8 +175,8 @@ public:
     }
 #endif // _M_CEE_PURE
 
-    basic_istream& __CLR_OR_THIS_CALL operator>>(
-        basic_istream&(__cdecl* _Pfn)(basic_istream&) ) { // call basic_istream manipulator
+    basic_istream& __CLR_OR_THIS_CALL operator>>(basic_istream&(__cdecl* _Pfn)(basic_istream&) ) {
+        // call basic_istream manipulator
         return _Pfn(*this);
     }
 
@@ -540,7 +541,7 @@ public:
         return gcount();
     }
 
-    int_type __CLR_OR_THIS_CALL peek() { // return next character, unconsumed
+    int_type __CLR_OR_THIS_CALL peek() {
         ios_base::iostate _State = ios_base::goodbit;
         _Chcount                 = 0;
         int_type _Meta           = 0;
@@ -649,7 +650,7 @@ public:
         return *this;
     }
 
-    pos_type __CLR_OR_THIS_CALL tellg() { // return input stream position
+    pos_type __CLR_OR_THIS_CALL tellg() {
         const sentry _Ok(*this, true);
 
         if (!this->fail()) {
@@ -711,22 +712,20 @@ public:
     using off_type    = typename _Traits::off_type;
 
     explicit __CLR_OR_THIS_CALL basic_iostream(basic_streambuf<_Elem, _Traits>* _Strbuf)
-        : _Myis(_Strbuf, false), _Myos(_Noinit, false) { // construct from stream buffer pointer
-    }
+        : _Myis(_Strbuf, false), _Myos(_Noinit, false) {}
 
 protected:
-    __CLR_OR_THIS_CALL basic_iostream(basic_iostream&& _Right)
-        : _Myis(_Right.rdbuf(), false), _Myos(_Noinit, false) { // construct by moving _Right
+    __CLR_OR_THIS_CALL basic_iostream(basic_iostream&& _Right) : _Myis(_Right.rdbuf(), false), _Myos(_Noinit, false) {
         _Myios::init();
         _Myios::move(_STD move(_Right));
     }
 
-    basic_iostream& __CLR_OR_THIS_CALL operator=(basic_iostream&& _Right) { // move from _Right
+    basic_iostream& __CLR_OR_THIS_CALL operator=(basic_iostream&& _Right) {
         this->swap(_Right);
         return *this;
     }
 
-    void __CLR_OR_THIS_CALL swap(basic_iostream& _Right) { // swap with _Right
+    void __CLR_OR_THIS_CALL swap(basic_iostream& _Right) {
         if (this != _STD addressof(_Right)) {
             _Myios::swap(_Right);
         }
@@ -787,7 +786,7 @@ basic_istream<_Elem, _Traits>& _Istream_extract_into_buffer(
         }
         _CATCH_IO_(ios_base, _Istr)
     }
-    __analysis_assume(static_cast<size_t>(_Current) < _Size); // TRANSITION, VSO#860375
+    __analysis_assume(static_cast<size_t>(_Current) < _Size); // TRANSITION, VSO-860375
     _Str[_Current] = _Elem(); // add terminating null character
     _Istr.width(0);
     if (_Current == 0) {
@@ -917,8 +916,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _ISTREAM_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

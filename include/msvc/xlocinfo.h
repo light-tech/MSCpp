@@ -1,4 +1,8 @@
-// xlocinfo.h internal header for Microsoft
+// xlocinfo.h internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XLOCINFO
 #define _XLOCINFO
@@ -7,7 +11,7 @@
 
 #include <ctype.h>
 #include <locale.h>
-#include <stdio.h> // TRANSITION, VSO#661721
+#include <stdio.h> // TRANSITION, VSO-661721
 #include <wchar.h>
 
 #pragma pack(push, _CRT_PACKING)
@@ -17,11 +21,7 @@ _STL_DISABLE_CLANG_WARNINGS
 #pragma push_macro("new")
 #undef new
 
-#if !defined(MRTDLL) || !defined(_CRTBLD)
-#ifndef _M_CEE_PURE
-_EXTERN_C
-#endif // _M_CEE_PURE
-#endif // !MRTDLL || !_CRTBLD
+_EXTERN_C_UNLESS_PURE
 
 // CTYPE CODE BITS
 #define _XB 0x000 // extra blank
@@ -37,56 +37,49 @@ _EXTERN_C
 #define _XD _HEX // '0'-'9', 'A'-'F', 'a'-'f'
 
 // SUPPLEMENTAL LOCALE MACROS AND DECLARATIONS
-#define _X_ALL LC_ALL
-#define _X_COLLATE LC_COLLATE
-#define _X_CTYPE LC_CTYPE
+#define _X_ALL      LC_ALL
+#define _X_COLLATE  LC_COLLATE
+#define _X_CTYPE    LC_CTYPE
 #define _X_MONETARY LC_MONETARY
-#define _X_NUMERIC LC_NUMERIC
-#define _X_TIME LC_TIME
-#define _X_MAX LC_MAX
+#define _X_NUMERIC  LC_NUMERIC
+#define _X_TIME     LC_TIME
+#define _X_MAX      LC_MAX
 #define _X_MESSAGES 6
-#define _NCAT (_X_MESSAGES + 1) // maximum + 1
+#define _NCAT       (_X_MESSAGES + 1) // maximum + 1
 
 #define _CATMASK(n) ((1 << (n)) >> 1)
-#define _M_COLLATE _CATMASK(_X_COLLATE)
-#define _M_CTYPE _CATMASK(_X_CTYPE)
+#define _M_COLLATE  _CATMASK(_X_COLLATE)
+#define _M_CTYPE    _CATMASK(_X_CTYPE)
 #define _M_MONETARY _CATMASK(_X_MONETARY)
-#define _M_NUMERIC _CATMASK(_X_NUMERIC)
-#define _M_TIME _CATMASK(_X_TIME)
+#define _M_NUMERIC  _CATMASK(_X_NUMERIC)
+#define _M_TIME     _CATMASK(_X_TIME)
 #define _M_MESSAGES _CATMASK(_X_MESSAGES)
-#define _M_ALL (_CATMASK(_NCAT) - 1)
+#define _M_ALL      (_CATMASK(_NCAT) - 1)
 
-typedef struct _Collvec { // stuff needed by _Strcoll, etc.
+struct _Collvec { // stuff needed by _Strcoll, etc.
     unsigned int _Page; // UINT
     wchar_t* _LocaleName;
-} _Collvec;
+};
 
-typedef struct _Ctypevec { // stuff needed by _Tolower, etc.
+struct _Ctypevec { // stuff needed by _Tolower, etc.
     unsigned int _Page; // UINT
     const short* _Table;
     int _Delfl;
     wchar_t* _LocaleName;
-} _Ctypevec;
+};
 
-typedef struct _Cvtvec { // stuff needed by _Mbrtowc, etc.
+struct _Cvtvec { // stuff needed by _Mbrtowc, etc.
     unsigned int _Page; // UINT
     unsigned int _Mbcurmax;
     int _Isclocale; // LCID == _CLOCALEHANDLE
     unsigned char _Isleadbyte[32]; // 256 bits
-} _Cvtvec;
+};
 
 // FUNCTION DECLARATIONS
-_CRTIMP2_PURE _Collvec __CLRCALL_PURE_OR_CDECL _Getcoll(void);
-_CRTIMP2_PURE _Ctypevec __CLRCALL_PURE_OR_CDECL _Getctype(void);
-_CRTIMP2_PURE _Cvtvec __CLRCALL_PURE_OR_CDECL _Getcvt(void);
-
-#ifdef __cplusplus
-#if !defined(MRTDLL) && !defined(_M_CEE_PURE)
-extern "C"
-#endif // !MRTDLL && !_M_CEE_PURE
-    _CRTIMP2_PURE int __CLRCALL_PURE_OR_CDECL
-    _Getdateorder(void);
-#endif // __cplusplus
+_CRTIMP2_PURE _Collvec __CLRCALL_PURE_OR_CDECL _Getcoll();
+_CRTIMP2_PURE _Ctypevec __CLRCALL_PURE_OR_CDECL _Getctype();
+_CRTIMP2_PURE _Cvtvec __CLRCALL_PURE_OR_CDECL _Getcvt();
+_CRTIMP2_PURE int __CLRCALL_PURE_OR_CDECL _Getdateorder();
 
 #ifdef _M_CEE_PURE
 [System::Runtime::InteropServices::DllImport(_CRT_MSVCP_CURRENT, EntryPoint = "_Mbrtowc",
@@ -120,37 +113,32 @@ _CRTIMP2_PURE const wchar_t* __CLRCALL_PURE_OR_CDECL _Getwctypes(
 _CRTIMP2_PURE wchar_t __CLRCALL_PURE_OR_CDECL _Towlower(wchar_t, const _Ctypevec*);
 _CRTIMP2_PURE wchar_t __CLRCALL_PURE_OR_CDECL _Towupper(wchar_t, const _Ctypevec*);
 
-#if !defined(MRTDLL) || !defined(_CRTBLD)
-#ifndef _M_CEE_PURE
-_END_EXTERN_C
-#endif // _M_CEE_PURE
-#endif // !MRTDLL || !_CRTBLD
+_END_EXTERN_C_UNLESS_PURE
 
 _EXTERN_C
-_Success_(return != 0) _Ret_z_ _ACRTIMP char* __cdecl _Getdays(void);
+_Success_(return != 0) _Ret_z_ _ACRTIMP char* __cdecl _Getdays();
 
-_Success_(return != 0) _Ret_z_ _ACRTIMP char* __cdecl _Getmonths(void);
+_Success_(return != 0) _Ret_z_ _ACRTIMP char* __cdecl _Getmonths();
 
-_ACRTIMP void* __cdecl _Gettnames(void);
+_ACRTIMP void* __cdecl _Gettnames();
 
 _Success_(return > 0) _ACRTIMP size_t __cdecl _Strftime(
-    _Out_writes_z_(_Maxsize) char*, _In_ size_t _Maxsize, _In_z_ const char*, _In_ const struct tm*, _In_opt_ void*);
+    _Out_writes_z_(_Maxsize) char*, _In_ size_t _Maxsize, _In_z_ const char*, _In_ const tm*, _In_opt_ void*);
 
-_Success_(return != 0) _Ret_z_ _ACRTIMP wchar_t* __cdecl _W_Getdays(void);
+_Success_(return != 0) _Ret_z_ _ACRTIMP wchar_t* __cdecl _W_Getdays();
 
-_Success_(return != 0) _Ret_z_ _ACRTIMP wchar_t* __cdecl _W_Getmonths(void);
+_Success_(return != 0) _Ret_z_ _ACRTIMP wchar_t* __cdecl _W_Getmonths();
 
-_ACRTIMP void* __cdecl _W_Gettnames(void);
+_ACRTIMP void* __cdecl _W_Gettnames();
 
-_Success_(return > 0) _ACRTIMP size_t __cdecl _Wcsftime(_Out_writes_z_(_Maxsize) wchar_t*, _In_ size_t _Maxsize,
-    _In_z_ const wchar_t*, _In_ const struct tm*, _In_opt_ void*);
+_Success_(return > 0) _ACRTIMP size_t __cdecl _Wcsftime(
+    _Out_writes_z_(_Maxsize) wchar_t*, _In_ size_t _Maxsize, _In_z_ const wchar_t*, _In_ const tm*, _In_opt_ void*);
 _END_EXTERN_C
 
 #ifdef _M_CEE_PURE
-    [System::Runtime::InteropServices::DllImport(_CRT_MSVCP_CURRENT, EntryPoint = "_GetLocaleForCP",
-        CallingConvention = System::Runtime::InteropServices::CallingConvention::Cdecl)] extern "C" _locale_t
+[System::Runtime::InteropServices::DllImport(_CRT_MSVCP_CURRENT, EntryPoint = "_GetLocaleForCP",
+    CallingConvention = System::Runtime::InteropServices::CallingConvention::Cdecl)] extern "C" _locale_t
     _GetLocaleForCP(unsigned int);
-
 #else // _M_CEE_PURE
 _MRTIMP2 _locale_t __cdecl _GetLocaleForCP(unsigned int);
 #endif // _M_CEE_PURE
@@ -161,8 +149,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XLOCINFO
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

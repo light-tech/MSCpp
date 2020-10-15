@@ -8,8 +8,12 @@
 #pragma once
 
 #include <vcruntime.h>
+
 #if _VCRT_COMPILER_PREPROCESSOR
 #include <vcruntime_exception.h>
+
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
 
 #pragma pack(push, _CRT_PACKING)
 
@@ -112,7 +116,7 @@ private:
 #pragma warning(pop)
 
 namespace std {
-	using ::type_info;
+    using ::type_info;
 }
 
 #if _HAS_EXCEPTIONS
@@ -192,4 +196,5 @@ private:
 
 #endif // _HAS_EXCEPTIONS
 #pragma pack(pop)
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 #endif // _VCRT_COMPILER_PREPROCESSOR

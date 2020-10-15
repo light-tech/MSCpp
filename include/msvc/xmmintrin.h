@@ -390,6 +390,8 @@ extern void __cdecl _mm_free(void *_P);
  /******************************************************/
 
 #if defined(_M_IX86)
+#pragma warning(push)
+#pragma warning(disable: 4514) // unreferenced inline function
  /*********************************************************/
  /*  NAME : _mm_cvtpi16_ps                                */
  /*  DESCRIPTION : Convert 4 16-bit signed integer values */
@@ -502,6 +504,7 @@ __inline __m128 _mm_cvtpi32x2_ps(__m64 _A, __m64 _B)
   return _mm_movelh_ps(_mm_cvt_pi2ps(_mm_setzero_ps(), _A),
                        _mm_cvt_pi2ps(_mm_setzero_ps(), _B));
 }
+#pragma warning(pop)
 #endif // _M_IX86
 
 

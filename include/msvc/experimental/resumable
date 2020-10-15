@@ -1,16 +1,10 @@
 // resumable experimental header
 
-/***
- *resumable
- *
- *       Copyright (c) Microsoft Corporation. All rights reserved.
- *
- *       Purpose: Library support of coroutines
- *       https://wg21.link/p0057
- *
- *       [Public]
- *
- ****/
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+// Library support of coroutines TS, https://wg21.link/p0057
+
 #pragma once
 #ifndef _EXPERIMENTAL_RESUMABLE_
 #define _EXPERIMENTAL_RESUMABLE_
@@ -30,6 +24,12 @@
 _STL_DISABLE_CLANG_WARNINGS
 #pragma push_macro("new")
 #undef new
+
+#if defined(__clang__) && !defined(_SILENCE_CLANG_COROUTINE_MESSAGE)
+#error The <experimental/coroutine>, <experimental/generator>, and <experimental/resumable> headers currently do not \
+support Clang. You can define _SILENCE_CLANG_COROUTINE_MESSAGE to silence this message and acknowledge that this is \
+unsupported.
+#endif // defined(__clang__) && !defined(_SILENCE_CLANG_COROUTINE_MESSAGE)
 
 // intrinsics used in implementation of coroutine_handle
 extern "C" size_t _coro_resume(void*);
@@ -80,8 +80,8 @@ namespace experimental {
             return _Ptr;
         }
 
-        __declspec(deprecated("is deprecated. Use coroutine_handle::address() instead")) void* to_address() const
-            noexcept {
+        __declspec(
+            deprecated("is deprecated. Use coroutine_handle::address() instead")) void* to_address() const noexcept {
             return _Ptr;
         }
 
@@ -242,7 +242,7 @@ namespace experimental {
         static void _ConstructPromise(void* _Addr, void* _Resume_addr, int _HeapElision) {
             *reinterpret_cast<void**>(_Addr) = _Resume_addr;
             *reinterpret_cast<uint32_t*>(reinterpret_cast<uintptr_t>(_Addr) + sizeof(void*)) =
-                2 + (_HeapElision ? 0 : 0x10000);
+                2u + (_HeapElision ? 0u : 0x10000u);
             auto _Prom = _Promise_from_frame(_Addr);
             ::new (static_cast<void*>(_Prom)) _PromiseT();
         }

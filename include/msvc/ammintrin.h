@@ -248,7 +248,7 @@ __m256d _mm256_permute2_pd(__m256d, __m256d, __m256i, int);
 
 /* LWP intrinsics */
 void __llwpcb(void *);
-void *__slwpcb();
+void *__slwpcb(void);
 void __lwpval32(unsigned int, unsigned int, unsigned int);
 unsigned char __lwpins32(unsigned int, unsigned int, unsigned int);
 #if defined (_M_X64)
@@ -302,6 +302,30 @@ void _mm_monitorx(void const *, unsigned int, unsigned int);
 void _mm_mwaitx(unsigned int, unsigned int, unsigned int);
 
 void _mm_clzero(void const *);
+
+#if defined (_M_X64)
+// Secure Nested Paging
+typedef struct rmp_seg {
+    unsigned __int64 rmp_gpa;
+    __int8           rmp_entry;
+    __int8           rmp_pageSize;
+    __int8           rmp_pageMark;
+    __int8           rmp_reserved;
+    __int32          rmp_ASID;
+} rmp_seg;
+
+unsigned int __rmpupdate(unsigned __int64, rmp_seg *, int);
+#pragma warning(suppress:4392) // PDB toolset uses this header file, build break if changing prototype, need to remove this warning after tools updated, see VSO#1087712
+unsigned int __pvalidate(unsigned __int64, int, int, int *);
+unsigned int __psmash(unsigned __int64);
+unsigned int __rmpadjust(unsigned __int64, int, int);
+#endif  /* defined (_M_X64) */
+
+
+//TLB extension
+void __svm_invlpgb(void*, int);
+void __svm_tlbsync(void);
+
 
 #if defined __cplusplus
 }; /* End "C" */

@@ -9,6 +9,9 @@
 
 #include <vcruntime_new.h>
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 #ifdef __cplusplus
 extern "C++" {
 
@@ -57,3 +60,5 @@ extern "C++" {
 
 } // extern "C++"
 #endif // __cplusplus
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS

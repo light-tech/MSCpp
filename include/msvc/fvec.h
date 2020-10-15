@@ -198,7 +198,7 @@ public:
     {
     /* To use: cout << "Elements of F32vec4 fvec are: " << fvec; */
       float *_Fp = (float*)&_A;
-	  _Os << "[3]:" << *(_Fp+3)
+      _Os << "[3]:" << *(_Fp+3)
             << " [2]:" << *(_Fp+2)
             << " [1]:" << *(_Fp+1)
             << " [0]:" << *_Fp;

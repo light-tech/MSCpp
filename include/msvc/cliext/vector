@@ -1,4 +1,5 @@
 // vector stl/clr header
+// Copyright (c) Microsoft Corporation. All rights reserved.
 #ifndef _CLI_VECTOR_
  #define _CLI_VECTOR_
 #include <cliext/iterator>
@@ -1466,8 +1467,3 @@ template<typename _Value_t> inline
 	}
 }	// namespace cliext
 #endif // _CLI_VECTOR_
-
-/*
- * Copyright (c) 2004-2007 by Dinkumware, Ltd.  ALL RIGHTS RESERVED.
- * Consult your license regarding permissions and restrictions.
-V5.03:0009 */

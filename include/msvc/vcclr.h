@@ -40,8 +40,7 @@ inline __const_Char_ptr PtrToStringChars(__const_String_handle s) {
 
 	_Byte_ptr bp = const_cast<_Byte_ptr>(reinterpret_cast<__const_Byte_ptr>(s));
 	if( bp != _NULLPTR ) {
-		unsigned offset = System::Runtime::CompilerServices::RuntimeHelpers::OffsetToStringData;
-		bp += offset;
+		bp += System::Runtime::CompilerServices::RuntimeHelpers::OffsetToStringData;
 	}
 	return reinterpret_cast<__const_Char_ptr>(bp);
 }

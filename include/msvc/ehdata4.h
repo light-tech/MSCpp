@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+
 #pragma once
 
 #include "ehdata4_export.h"

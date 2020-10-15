@@ -1,4 +1,8 @@
 // codecvt standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _CODECVT_
 #define _CODECVT_
@@ -17,16 +21,14 @@ _STL_DISABLE_CLANG_WARNINGS
 #pragma warning(disable : 4127) // conditional expression is constant
 
 _STD_BEGIN
-#define _LITTLE_FIRST 1
-#define _BIG_FIRST 2
-#define _BYTES_PER_WORD 4
+_INLINE_VAR constexpr int _Little_first = 1;
+_INLINE_VAR constexpr int _Big_first    = 2;
 
 enum _CXX17_DEPRECATE_CODECVT_HEADER codecvt_mode { consume_header = 4, generate_header = 2, little_endian = 1 };
 
 using _Statype = _CSTD mbstate_t;
 
-#pragma warning(push)
-#pragma warning(disable : 4996) // was declared deprecated
+_STL_DISABLE_DEPRECATED_WARNING
 // CLASS TEMPLATE codecvt_utf8
 template <class _Elem, unsigned long _Mymax = 0x10ffff, codecvt_mode _Mymode = codecvt_mode{}>
 class _CXX17_DEPRECATE_CODECVT_HEADER codecvt_utf8 : public codecvt<_Elem, char, _Statype> {
@@ -39,7 +41,7 @@ public:
     using extern_type = _Byte;
     using state_type  = _Statype;
 
-    explicit codecvt_utf8(size_t _Refs = 0) : _Mybase(_Refs) {} // construct with ref count
+    explicit codecvt_utf8(size_t _Refs = 0) : _Mybase(_Refs) {}
 
     virtual __CLR_OR_THIS_CALL ~codecvt_utf8() noexcept {}
 
@@ -94,19 +96,18 @@ protected:
                 *_Pstate = 1;
 
                 constexpr bool _Consuming = (_Mymode & consume_header) != 0;
-                if
-                    _CONSTEXPR_IF(_Consuming) {
-                        if (_Ch == 0xfeff) { // drop header and retry
-                            const result _Ans = do_in(_State, _Mid1, _Last1, _Mid1, _First2, _Last2, _Mid2);
+                if _CONSTEXPR_IF (_Consuming) {
+                    if (_Ch == 0xfeff) { // drop header and retry
+                        const result _Ans = do_in(_State, _Mid1, _Last1, _Mid1, _First2, _Last2, _Mid2);
 
-                            if (_Ans == _Mybase::partial) { // roll back header determination
-                                *_Pstate = 0;
-                                _Mid1    = _First1;
-                            }
-
-                            return _Ans;
+                        if (_Ans == _Mybase::partial) { // roll back header determination
+                            *_Pstate = 0;
+                            _Mid1    = _First1;
                         }
+
+                        return _Ans;
                     }
+                }
             }
 
             if (_Mymax < _Ch) {
@@ -158,17 +159,16 @@ protected:
             if (*_Pstate == 0) { // first time, maybe generate header
                 *_Pstate                   = 1;
                 constexpr bool _Generating = (_Mymode & generate_header) != 0;
-                if
-                    _CONSTEXPR_IF(_Generating) {
-                        if (_Last2 - _Mid2 < 3 + 1 + _Nextra) {
-                            return _Mybase::partial; // not enough room for both
-                        }
-
-                        // prepend header
-                        *_Mid2++ = '\xef';
-                        *_Mid2++ = '\xbb';
-                        *_Mid2++ = '\xbf';
+                if _CONSTEXPR_IF (_Generating) {
+                    if (_Last2 - _Mid2 < 3 + 1 + _Nextra) {
+                        return _Mybase::partial; // not enough room for both
                     }
+
+                    // prepend header
+                    *_Mid2++ = '\xef';
+                    *_Mid2++ = '\xbb';
+                    *_Mid2++ = '\xbf';
+                }
             }
 
             if (_Last2 - _Mid2 < 1 + _Nextra) {
@@ -228,13 +228,13 @@ public:
     using extern_type = _Byte;
     using state_type  = _Statype;
 
-    explicit codecvt_utf16(size_t _Refs = 0) : _Mybase(_Refs) {} // construct with ref count
+    explicit codecvt_utf16(size_t _Refs = 0) : _Mybase(_Refs) {}
 
     virtual __CLR_OR_THIS_CALL ~codecvt_utf16() noexcept {}
 
 protected:
     virtual result __CLR_OR_THIS_CALL do_in(_Statype& _State, const _Byte* _First1, const _Byte* _Last1,
-        const _Byte*& _Mid1, _Elem* _First2, _Elem* _Last2, _Elem*& _Mid2) const {
+        const _Byte*& _Mid1, _Elem* _First2, _Elem* _Last2, _Elem*& _Mid2) const override {
         // convert bytes [_First1, _Last1) to [_First2, _Last2)
         char* _Pstate = reinterpret_cast<char*>(&_State);
         _Mid1         = _First1;
@@ -246,42 +246,39 @@ protected:
             unsigned short _Ch0;
             unsigned short _Ch1;
 
-            if (*_Pstate == _LITTLE_FIRST) {
+            if (*_Pstate == _Little_first) {
                 _Ch0 = static_cast<unsigned short>(_Ptr[1] << 8 | _Ptr[0]);
-            } else if (*_Pstate == _BIG_FIRST) {
+            } else if (*_Pstate == _Big_first) {
                 _Ch0 = static_cast<unsigned short>(_Ptr[0] << 8 | _Ptr[1]);
             } else { // no header seen yet, try preferred mode
                 constexpr bool _Prefer_LE      = (_Mymode & little_endian) != 0;
-                constexpr char _Default_endian = _Prefer_LE ? _LITTLE_FIRST : _BIG_FIRST;
+                constexpr char _Default_endian = _Prefer_LE ? _Little_first : _Big_first;
 
-                if
-                    _CONSTEXPR_IF(_Prefer_LE) {
-                        _Ch0 = static_cast<unsigned short>(_Ptr[1] << 8 | _Ptr[0]);
-                    }
-                else {
+                if _CONSTEXPR_IF (_Prefer_LE) {
+                    _Ch0 = static_cast<unsigned short>(_Ptr[1] << 8 | _Ptr[0]);
+                } else {
                     _Ch0 = static_cast<unsigned short>(_Ptr[0] << 8 | _Ptr[1]);
                 }
 
                 *_Pstate                  = _Default_endian;
                 constexpr bool _Consuming = (_Mymode & consume_header) != 0;
-                if
-                    _CONSTEXPR_IF(_Consuming) {
-                        if (_Ch0 == 0xfffeu) {
-                            *_Pstate = 3 - _Default_endian;
-                        }
-
-                        if (_Ch0 == 0xfffeu || _Ch0 == 0xfeffu) { // consume header, fixate on endianness, and retry
-                            _Mid1 += _Bytes_per_word;
-                            result _Ans = do_in(_State, _Mid1, _Last1, _Mid1, _First2, _Last2, _Mid2);
-
-                            if (_Ans == _Mybase::partial) { // not enough bytes, roll back header
-                                *_Pstate = 0;
-                                _Mid1    = _First1;
-                            }
-
-                            return _Ans;
-                        }
+                if _CONSTEXPR_IF (_Consuming) {
+                    if (_Ch0 == 0xfffeu) {
+                        *_Pstate = 3 - _Default_endian;
                     }
+
+                    if (_Ch0 == 0xfffeu || _Ch0 == 0xfeffu) { // consume header, fixate on endianness, and retry
+                        _Mid1 += _Bytes_per_word;
+                        result _Ans = do_in(_State, _Mid1, _Last1, _Mid1, _First2, _Last2, _Mid2);
+
+                        if (_Ans == _Mybase::partial) { // not enough bytes, roll back header
+                            *_Pstate = 0;
+                            _Mid1    = _First1;
+                        }
+
+                        return _Ans;
+                    }
+                }
             }
 
             if (_Ch0 < 0xd800u || 0xdc00u <= _Ch0) { // one word, consume bytes
@@ -290,7 +287,7 @@ protected:
             } else if (_Last1 - _Mid1 < 2 * _Bytes_per_word) {
                 break;
             } else { // get second word
-                if (*_Pstate == _LITTLE_FIRST) {
+                if (*_Pstate == _Little_first) {
                     _Ch1 = static_cast<unsigned short>(_Ptr[3] << 8 | _Ptr[2]);
                 } else {
                     _Ch1 = static_cast<unsigned short>(_Ptr[2] << 8 | _Ptr[3]);
@@ -315,29 +312,28 @@ protected:
     }
 
     virtual result __CLR_OR_THIS_CALL do_out(_Statype& _State, const _Elem* _First1, const _Elem* _Last1,
-        const _Elem*& _Mid1, _Byte* _First2, _Byte* _Last2, _Byte*& _Mid2) const {
+        const _Elem*& _Mid1, _Byte* _First2, _Byte* _Last2, _Byte*& _Mid2) const override {
         // convert [_First1, _Last1) to bytes [_First2, _Last2)
         char* _Pstate = reinterpret_cast<char*>(&_State);
         _Mid1         = _First1;
         _Mid2         = _First2;
 
         if (*_Pstate == 0) { // determine endianness once, maybe generate header
-            *_Pstate                   = (_Mymode & little_endian) != 0 ? _LITTLE_FIRST : _BIG_FIRST;
+            *_Pstate                   = (_Mymode & little_endian) != 0 ? _Little_first : _Big_first;
             constexpr bool _Generating = (_Mymode & generate_header) != 0;
-            if
-                _CONSTEXPR_IF(_Generating) {
-                    if (_Last2 - _Mid2 < 3 * _Bytes_per_word) {
-                        return _Mybase::partial; // not enough room for all
-                    }
-
-                    if (*_Pstate == _LITTLE_FIRST) { // put header LS byte first
-                        *_Mid2++ = '\xff';
-                        *_Mid2++ = '\xfe';
-                    } else { // put header MS byte first
-                        *_Mid2++ = '\xfe';
-                        *_Mid2++ = '\xff';
-                    }
+            if _CONSTEXPR_IF (_Generating) {
+                if (_Last2 - _Mid2 < 3 * _Bytes_per_word) {
+                    return _Mybase::partial; // not enough room for all
                 }
+
+                if (*_Pstate == _Little_first) { // put header LS byte first
+                    *_Mid2++ = '\xff';
+                    *_Mid2++ = '\xfe';
+                } else { // put header MS byte first
+                    *_Mid2++ = '\xfe';
+                    *_Mid2++ = '\xff';
+                }
+            }
         }
 
         while (_Mid1 != _Last1 && _Bytes_per_word <= _Last2 - _Mid2) { // convert and put a wide char
@@ -359,7 +355,7 @@ protected:
                 _Extra = true;
             }
 
-            if (*_Pstate == _LITTLE_FIRST) {
+            if (*_Pstate == _Little_first) {
                 if (_Extra) { // put a pair of words LS byte first
                     unsigned short _Ch0 =
                         static_cast<unsigned short>(0xd800 | static_cast<unsigned short>(_Ch >> 10) - 0x0040);
@@ -393,7 +389,7 @@ protected:
         return _First1 == _Mid1 ? _Mybase::partial : _Mybase::ok;
     }
 
-    virtual result __CLR_OR_THIS_CALL do_unshift(_Statype&, _Byte* _First2, _Byte*, _Byte*& _Mid2) const {
+    virtual result __CLR_OR_THIS_CALL do_unshift(_Statype&, _Byte* _First2, _Byte*, _Byte*& _Mid2) const override {
         // generate bytes to return to default shift state
         _Mid2 = _First2;
         return _Mybase::noconv;
@@ -402,21 +398,27 @@ protected:
     friend int _Codecvt_do_length<>(const codecvt_utf16&, _Statype&, const _Byte*, const _Byte*, size_t);
 
     virtual int __CLR_OR_THIS_CALL do_length(
-        _Statype& _State, const _Byte* _First1, const _Byte* _Last1, size_t _Count) const noexcept {
+        _Statype& _State, const _Byte* _First1, const _Byte* _Last1, size_t _Count) const noexcept override {
         return _Codecvt_do_length(*this, _State, _First1, _Last1, _Count);
     }
 
-    virtual bool __CLR_OR_THIS_CALL do_always_noconv() const noexcept { // return true if conversions never change input
+    virtual bool __CLR_OR_THIS_CALL do_always_noconv() const noexcept override {
+        // return true if conversions never change input
         return false;
     }
 
-    virtual int __CLR_OR_THIS_CALL do_max_length() const noexcept { // return maximum length required for a conversion
+    virtual int __CLR_OR_THIS_CALL do_max_length() const noexcept override {
+        // return maximum length required for a conversion
         return (_Mymode & (consume_header | generate_header)) != 0 ? 3 * _Bytes_per_word : 6 * _Bytes_per_word;
     }
 
-    virtual int __CLR_OR_THIS_CALL do_encoding() const noexcept { // return length of code sequence (from codecvt)
-        return (_Mymode & (consume_header | generate_header)) != 0 ? -1
-                                                                   : 0; // -1 => state dependent, 0 => varying length
+    virtual int __CLR_OR_THIS_CALL do_encoding() const noexcept override {
+        // return length of code sequence (from codecvt)
+        if ((_Mymode & (consume_header | generate_header)) != 0) {
+            return -1; // -1 => state dependent
+        } else {
+            return 0; // 0 => varying length
+        }
     }
 };
 
@@ -434,15 +436,14 @@ public:
 
     static_assert(sizeof(unsigned short) <= sizeof(state_type), "state_type too small");
 
-    explicit codecvt_utf8_utf16(size_t _Refs = 0) : _Mybase(_Refs) { // construct with ref count
-    }
+    explicit codecvt_utf8_utf16(size_t _Refs = 0) : _Mybase(_Refs) {}
 
     virtual __CLR_OR_THIS_CALL ~codecvt_utf8_utf16() noexcept {}
 
 protected:
     virtual result __CLR_OR_THIS_CALL do_in(_Statype& _State, const _Byte* _First1, const _Byte* _Last1,
-        const _Byte*& _Mid1, _Elem* _First2, _Elem* _Last2,
-        _Elem*& _Mid2) const { // convert bytes [_First1, _Last1) to [_First2, _Last2)
+        const _Byte*& _Mid1, _Elem* _First2, _Elem* _Last2, _Elem*& _Mid2) const override {
+        // convert bytes [_First1, _Last1) to [_First2, _Last2)
         unsigned short* _Pstate = reinterpret_cast<unsigned short*>(&_State);
         _Mid1                   = _First1;
         _Mid2                   = _First2;
@@ -535,19 +536,18 @@ protected:
                 *_Pstate = 1;
 
                 constexpr bool _Consuming = (_Mymode & consume_header) != 0;
-                if
-                    _CONSTEXPR_IF(_Consuming) {
-                        if (_Ch == 0xfeffu) { // drop header and retry
-                            result _Ans = do_in(_State, _Mid1, _Last1, _Mid1, _First2, _Last2, _Mid2);
+                if _CONSTEXPR_IF (_Consuming) {
+                    if (_Ch == 0xfeffu) { // drop header and retry
+                        result _Ans = do_in(_State, _Mid1, _Last1, _Mid1, _First2, _Last2, _Mid2);
 
-                            if (_Ans == _Mybase::partial) { // roll back header determination
-                                *_Pstate = 0;
-                                _Mid1    = _First1;
-                            }
-
-                            return _Ans;
+                        if (_Ans == _Mybase::partial) { // roll back header determination
+                            *_Pstate = 0;
+                            _Mid1    = _First1;
                         }
+
+                        return _Ans;
                     }
+                }
             }
 
             *_Mid2++ = static_cast<_Elem>(_Ch);
@@ -557,8 +557,8 @@ protected:
     }
 
     virtual result __CLR_OR_THIS_CALL do_out(_Statype& _State, const _Elem* _First1, const _Elem* _Last1,
-        const _Elem*& _Mid1, _Byte* _First2, _Byte* _Last2,
-        _Byte*& _Mid2) const { // convert [_First1, _Last1) to bytes [_First2, _Last2)
+        const _Elem*& _Mid1, _Byte* _First2, _Byte* _Last2, _Byte*& _Mid2) const override {
+        // convert [_First1, _Last1) to bytes [_First2, _Last2)
         unsigned short* _Pstate = reinterpret_cast<unsigned short*>(&_State);
         _Mid1                   = _First1;
         _Mid2                   = _First2;
@@ -631,7 +631,7 @@ protected:
         return _First1 == _Mid1 ? _Mybase::partial : _Mybase::ok;
     }
 
-    virtual result __CLR_OR_THIS_CALL do_unshift(_Statype&, _Byte* _First2, _Byte*, _Byte*& _Mid2) const {
+    virtual result __CLR_OR_THIS_CALL do_unshift(_Statype&, _Byte* _First2, _Byte*, _Byte*& _Mid2) const override {
         // generate bytes to return to default shift state
         _Mid2 = _First2;
         return _Mybase::noconv;
@@ -640,15 +640,17 @@ protected:
     friend int _Codecvt_do_length<>(const codecvt_utf8_utf16&, _Statype&, const _Byte*, const _Byte*, size_t);
 
     virtual int __CLR_OR_THIS_CALL do_length(
-        _Statype& _State, const _Byte* _First1, const _Byte* _Last1, size_t _Count) const noexcept {
+        _Statype& _State, const _Byte* _First1, const _Byte* _Last1, size_t _Count) const noexcept override {
         return _Codecvt_do_length(*this, _State, _First1, _Last1, _Count);
     }
 
-    virtual bool __CLR_OR_THIS_CALL do_always_noconv() const noexcept { // return true if conversions never change input
+    virtual bool __CLR_OR_THIS_CALL do_always_noconv() const noexcept override {
+        // return true if conversions never change input
         return false;
     }
 
-    virtual int __CLR_OR_THIS_CALL do_max_length() const noexcept { // return maximum length required for a conversion
+    virtual int __CLR_OR_THIS_CALL do_max_length() const noexcept override {
+        // return maximum length required for a conversion
         if ((_Mymode & consume_header) != 0) {
             return 9; // header + max input
         }
@@ -660,11 +662,12 @@ protected:
         return 6; // 6-byte max input sequence, no 3-byte header
     }
 
-    virtual int __CLR_OR_THIS_CALL do_encoding() const noexcept { // return length of code sequence (from codecvt)
+    virtual int __CLR_OR_THIS_CALL do_encoding() const noexcept override {
+        // return length of code sequence (from codecvt)
         return 0; // 0 => varying length
     }
 };
-#pragma warning(pop)
+_STL_RESTORE_DEPRECATED_WARNING
 _STD_END
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
@@ -672,8 +675,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CODECVT_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

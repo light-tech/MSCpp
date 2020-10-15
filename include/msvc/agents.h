@@ -1546,7 +1546,7 @@ public:
             // find the link that was added and could unlink it before
             // we are able to invoke the notification below. Keeping an
             // active iterator would prevent that from happening.
-            _M_iteratorCount++;
+            _M_iteratorCount = _M_iteratorCount + 1;
         }
 
         // Acquire a reference on this link by the target
@@ -1618,7 +1618,7 @@ public:
     void reference()
     {
         _LockHolder _Lock(_M_lock);
-        _M_iteratorCount++;
+        _M_iteratorCount = _M_iteratorCount + 1;
     }
 
     /// <summary>
@@ -1633,7 +1633,7 @@ public:
         {
             _LockHolder _Lock(_M_lock);
             _CONCRT_ASSERT(_M_iteratorCount > 0);
-            _M_iteratorCount--;
+            _M_iteratorCount = _M_iteratorCount - 1;
 
             if (_M_iteratorCount == 0)
             {
@@ -1709,7 +1709,7 @@ private:
     void _To_array(::Concurrency::details::_Dynamic_array<_EType>& _Array)
     {
         _LockHolder _Lock(_M_lock);
-        _M_iteratorCount++;
+        _M_iteratorCount = _M_iteratorCount + 1;
 
         for(auto _Link = _M_links.begin(); *_Link != nullptr; ++_Link)
         {
@@ -3204,7 +3204,7 @@ bool _Try_receive_impl(ISource<_Type> * _Src, _Type & _value, typename ITarget<_
     public:
         // Create an Immediate Recipient
         _Immediate_recipient(ISource<_Type> * _PSource) :
-            _M_pFilter(nullptr), _M_pConnectedTo(nullptr), _M_pMessage(nullptr), _M_isInitialized(0)
+            _M_pConnectedTo(nullptr), _M_pMessage(nullptr), _M_isInitialized(0), _M_pFilter(nullptr)
         {
             _Connect(_PSource);
         }
@@ -3212,7 +3212,7 @@ bool _Try_receive_impl(ISource<_Type> * _Src, _Type & _value, typename ITarget<_
         // Create an Immediate Recipient
         _Immediate_recipient(ISource<_Type> * _PSource,
             typename ITarget<_Type>::filter_method const& _Filter) :
-            _M_pFilter(nullptr), _M_pConnectedTo(nullptr), _M_pMessage(nullptr), _M_isInitialized(0)
+            _M_pConnectedTo(nullptr), _M_pMessage(nullptr), _M_isInitialized(0), _M_pFilter(nullptr)
         {
             if (_Filter != nullptr)
             {

@@ -1,4 +1,8 @@
 // mutex standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _MUTEX_
 #define _MUTEX_
@@ -10,9 +14,9 @@
 #endif // _M_CEE_PURE
 
 #include <chrono>
+#include <stdlib.h>
 #include <system_error>
 #include <thread>
-#include <tuple>
 #include <utility>
 #include <xcall_once.h>
 
@@ -32,22 +36,22 @@ class condition_variable_any;
 // MUTUAL EXCLUSION
 class _Mutex_base { // base class for all mutex types
 public:
-    _Mutex_base(int _Flags = 0) noexcept { // construct with _Flags
+    _Mutex_base(int _Flags = 0) noexcept {
         _Mtx_init_in_situ(_Mymtx(), _Flags | _Mtx_try);
     }
 
-    ~_Mutex_base() noexcept { // clean up
+    ~_Mutex_base() noexcept {
         _Mtx_destroy_in_situ(_Mymtx());
     }
 
     _Mutex_base(const _Mutex_base&) = delete;
     _Mutex_base& operator=(const _Mutex_base&) = delete;
 
-    void lock() { // lock the mutex
+    void lock() {
         _Check_C_return(_Mtx_lock(_Mymtx()));
     }
 
-    _NODISCARD bool try_lock() { // try to lock the mutex
+    _NODISCARD bool try_lock() {
         const auto _Res = _Mtx_trylock(_Mymtx());
         switch (_Res) {
         case _Thrd_success:
@@ -59,13 +63,13 @@ public:
         }
     }
 
-    void unlock() { // unlock the mutex
+    void unlock() {
         _Check_C_return(_Mtx_unlock(_Mymtx()));
     }
 
     using native_handle_type = void*;
 
-    _NODISCARD native_handle_type native_handle() { // return Concurrency::critical_section * as void *
+    _NODISCARD native_handle_type native_handle() {
         return _Mtx_getconcrtcs(_Mymtx());
     }
 
@@ -93,7 +97,7 @@ class recursive_mutex : public _Mutex_base { // class for recursive mutual exclu
 public:
     recursive_mutex() : _Mutex_base(_Mtx_recursive) {}
 
-    _NODISCARD bool try_lock() noexcept { // try to lock the mutex
+    _NODISCARD bool try_lock() noexcept {
         return _Mutex_base::try_lock();
     }
 
@@ -134,39 +138,34 @@ public:
     }
 
     unique_lock(_Mutex& _Mtx, adopt_lock_t)
-        : _Pmtx(_STD addressof(_Mtx)), _Owns(true) { // construct and assume already locked
-    }
+        : _Pmtx(_STD addressof(_Mtx)), _Owns(true) {} // construct and assume already locked
 
     unique_lock(_Mutex& _Mtx, defer_lock_t) noexcept
-        : _Pmtx(_STD addressof(_Mtx)), _Owns(false) { // construct but don't lock
-    }
+        : _Pmtx(_STD addressof(_Mtx)), _Owns(false) {} // construct but don't lock
 
     unique_lock(_Mutex& _Mtx, try_to_lock_t)
-        : _Pmtx(_STD addressof(_Mtx)), _Owns(_Pmtx->try_lock()) { // construct and try to lock
-    }
+        : _Pmtx(_STD addressof(_Mtx)), _Owns(_Pmtx->try_lock()) {} // construct and try to lock
 
     template <class _Rep, class _Period>
     unique_lock(_Mutex& _Mtx, const chrono::duration<_Rep, _Period>& _Rel_time)
-        : _Pmtx(_STD addressof(_Mtx)), _Owns(_Pmtx->try_lock_for(_Rel_time)) { // construct and lock with timeout
-    }
+        : _Pmtx(_STD addressof(_Mtx)), _Owns(_Pmtx->try_lock_for(_Rel_time)) {} // construct and lock with timeout
 
     template <class _Clock, class _Duration>
     unique_lock(_Mutex& _Mtx, const chrono::time_point<_Clock, _Duration>& _Abs_time)
-        : _Pmtx(_STD addressof(_Mtx)), _Owns(_Pmtx->try_lock_until(_Abs_time)) { // construct and lock with timeout
-    }
+        : _Pmtx(_STD addressof(_Mtx)), _Owns(_Pmtx->try_lock_until(_Abs_time)) {} // construct and lock with timeout
 
     unique_lock(_Mutex& _Mtx, const xtime* _Abs_time)
         : _Pmtx(_STD addressof(_Mtx)), _Owns(false) { // try to lock until _Abs_time
         _Owns = _Pmtx->try_lock_until(_Abs_time);
     }
 
-    unique_lock(unique_lock&& _Other) noexcept : _Pmtx(_Other._Pmtx), _Owns(_Other._Owns) { // destructive copy
+    unique_lock(unique_lock&& _Other) noexcept : _Pmtx(_Other._Pmtx), _Owns(_Other._Owns) {
         _Other._Pmtx = nullptr;
         _Other._Owns = false;
     }
 
-    unique_lock& operator=(unique_lock&& _Other) { // destructive copy
-        if (this != _STD addressof(_Other)) { // different, move contents
+    unique_lock& operator=(unique_lock&& _Other) {
+        if (this != _STD addressof(_Other)) {
             if (_Owns) {
                 _Pmtx->unlock();
             }
@@ -179,7 +178,7 @@ public:
         return *this;
     }
 
-    ~unique_lock() noexcept { // clean up
+    ~unique_lock() noexcept {
         if (_Owns) {
             _Pmtx->unlock();
         }
@@ -194,34 +193,33 @@ public:
         _Owns = true;
     }
 
-    _NODISCARD bool try_lock() { // try to lock the mutex
+    _NODISCARD bool try_lock() {
         _Validate();
         _Owns = _Pmtx->try_lock();
         return _Owns;
     }
 
     template <class _Rep, class _Period>
-    _NODISCARD bool try_lock_for(const chrono::duration<_Rep, _Period>& _Rel_time) { // try to lock mutex for _Rel_time
+    _NODISCARD bool try_lock_for(const chrono::duration<_Rep, _Period>& _Rel_time) {
         _Validate();
         _Owns = _Pmtx->try_lock_for(_Rel_time);
         return _Owns;
     }
 
     template <class _Clock, class _Duration>
-    _NODISCARD bool try_lock_until(
-        const chrono::time_point<_Clock, _Duration>& _Abs_time) { // try to lock mutex until _Abs_time
+    _NODISCARD bool try_lock_until(const chrono::time_point<_Clock, _Duration>& _Abs_time) {
         _Validate();
         _Owns = _Pmtx->try_lock_until(_Abs_time);
         return _Owns;
     }
 
-    _NODISCARD bool try_lock_until(const xtime* _Abs_time) { // try to lock the mutex until _Abs_time
+    _NODISCARD bool try_lock_until(const xtime* _Abs_time) {
         _Validate();
         _Owns = _Pmtx->try_lock_until(_Abs_time);
         return _Owns;
     }
 
-    void unlock() { // try to unlock the mutex
+    void unlock() {
         if (!_Pmtx || !_Owns) {
             _Throw_system_error(errc::operation_not_permitted);
         }
@@ -230,27 +228,27 @@ public:
         _Owns = false;
     }
 
-    void swap(unique_lock& _Other) noexcept { // swap with _Other
+    void swap(unique_lock& _Other) noexcept {
         _STD swap(_Pmtx, _Other._Pmtx);
         _STD swap(_Owns, _Other._Owns);
     }
 
-    _Mutex* release() noexcept { // disconnect
+    _Mutex* release() noexcept {
         _Mutex* _Res = _Pmtx;
         _Pmtx        = nullptr;
         _Owns        = false;
         return _Res;
     }
 
-    _NODISCARD bool owns_lock() const noexcept { // return true if this object owns the lock
+    _NODISCARD bool owns_lock() const noexcept {
         return _Owns;
     }
 
-    explicit operator bool() const noexcept { // return true if this object owns the lock
+    explicit operator bool() const noexcept {
         return _Owns;
     }
 
-    _NODISCARD _Mutex* mutex() const noexcept { // return pointer to managed mutex
+    _NODISCARD _Mutex* mutex() const noexcept {
         return _Pmtx;
     }
 
@@ -271,8 +269,7 @@ private:
 
 // FUNCTION TEMPLATE swap FOR unique_lock
 template <class _Mutex>
-void swap(unique_lock<_Mutex>& _Left,
-    unique_lock<_Mutex>& _Right) noexcept { // swap _Left and _Right
+void swap(unique_lock<_Mutex>& _Left, unique_lock<_Mutex>& _Right) noexcept {
     _Left.swap(_Right);
 }
 
@@ -295,8 +292,8 @@ bool _Try_lock_from_locks(
 
 // FUNCTION TEMPLATE _Unlock_locks
 template <size_t... _Indices, class... _LockN>
-void _Unlock_locks(
-    const int _First, const int _Last, index_sequence<_Indices...>, _LockN&... _LkN) noexcept { // enforces termination
+void _Unlock_locks(const int _First, const int _Last, index_sequence<_Indices...>, _LockN&... _LkN) noexcept
+/* terminates */ {
     // unlock locks in _LkN[_First, _Last)
     int _Ignored[] = {
         ((_First <= static_cast<int>(_Indices) && static_cast<int>(_Indices) < _Last ? (void) _LkN.unlock() : void()),
@@ -306,8 +303,7 @@ void _Unlock_locks(
 
 // FUNCTION TEMPLATE try_lock
 template <class... _LockN>
-int _Try_lock_range(
-    const int _First, const int _Last, _LockN&... _LkN) { // try to lock all locks in _LkN[_First, _Last)
+int _Try_lock_range(const int _First, const int _Last, _LockN&... _LkN) {
     using _Indices = index_sequence_for<_LockN...>;
     int _Next      = _First;
     _TRY_BEGIN
@@ -331,8 +327,8 @@ int _Try_lock1(_Lock0& _Lk0, _Lock1& _Lk1, _Lock2& _Lk2, _LockN&... _LkN) { // t
 }
 
 template <class _Lock0, class _Lock1>
-int _Try_lock1(_Lock0& _Lk0,
-    _Lock1& _Lk1) { // try to lock 2 locks, special case for better codegen and reduced metaprogramming for common case
+int _Try_lock1(_Lock0& _Lk0, _Lock1& _Lk1) {
+    // try to lock 2 locks, special case for better codegen and reduced metaprogramming for common case
     if (!_Lk0.try_lock()) {
         return 0;
     }
@@ -358,8 +354,8 @@ _NODISCARD int try_lock(_Lock0& _Lk0, _Lock1& _Lk1, _LockN&... _LkN) { // try to
 
 // FUNCTION TEMPLATE lock
 template <class... _LockN>
-int _Lock_attempt(const int _Hard_lock, _LockN&... _LkN) { // attempt to lock 3 or more locks, starting by locking
-                                                           // _LkN[_Hard_lock] and trying to lock the rest
+int _Lock_attempt(const int _Hard_lock, _LockN&... _LkN) {
+    // attempt to lock 3 or more locks, starting by locking _LkN[_Hard_lock] and trying to lock the rest
     using _Indices = index_sequence_for<_LockN...>;
     _Lock_from_locks(_Hard_lock, _Indices{}, _LkN...);
     int _Failed        = -1;
@@ -386,8 +382,8 @@ int _Lock_attempt(const int _Hard_lock, _LockN&... _LkN) { // attempt to lock 3 
 }
 
 template <class _Lock0, class _Lock1, class _Lock2, class... _LockN>
-void _Lock_nonmember1(
-    _Lock0& _Lk0, _Lock1& _Lk1, _Lock2& _Lk2, _LockN&... _LkN) { // lock 3 or more locks, without deadlock
+void _Lock_nonmember1(_Lock0& _Lk0, _Lock1& _Lk1, _Lock2& _Lk2, _LockN&... _LkN) {
+    // lock 3 or more locks, without deadlock
     int _Hard_lock = 0;
     while (_Hard_lock != -1) {
         _Hard_lock = _Lock_attempt(_Hard_lock, _Lk0, _Lk1, _Lk2, _LkN...);
@@ -395,8 +391,8 @@ void _Lock_nonmember1(
 }
 
 template <class _Lock0, class _Lock1>
-bool _Lock_attempt_small(_Lock0& _Lk0, _Lock1& _Lk1) { // attempt to lock 2 locks, by first locking _Lk0, and
-                                                       // then trying to lock _Lk1 returns whether to try again
+bool _Lock_attempt_small(_Lock0& _Lk0, _Lock1& _Lk1) {
+    // attempt to lock 2 locks, by first locking _Lk0, and then trying to lock _Lk1 returns whether to try again
     _Lk0.lock();
     _TRY_BEGIN
     if (_Lk1.try_lock()) {
@@ -413,8 +409,8 @@ bool _Lock_attempt_small(_Lock0& _Lk0, _Lock1& _Lk1) { // attempt to lock 2 lock
 }
 
 template <class _Lock0, class _Lock1>
-void _Lock_nonmember1(_Lock0& _Lk0, _Lock1& _Lk1) { // lock 2 locks, without deadlock, special case for better
-                                                    // codegen and reduced metaprogramming for common case
+void _Lock_nonmember1(_Lock0& _Lk0, _Lock1& _Lk1) {
+    // lock 2 locks, without deadlock, special case for better codegen and reduced metaprogramming for common case
     while (_Lock_attempt_small(_Lk0, _Lk1) && _Lock_attempt_small(_Lk1, _Lk0)) { // keep trying
     }
 }
@@ -435,10 +431,9 @@ public:
         _MyMutex.lock();
     }
 
-    lock_guard(_Mutex& _Mtx, adopt_lock_t) : _MyMutex(_Mtx) { // construct but don't lock
-    }
+    lock_guard(_Mutex& _Mtx, adopt_lock_t) : _MyMutex(_Mtx) {} // construct but don't lock
 
-    ~lock_guard() noexcept { // unlock
+    ~lock_guard() noexcept {
         _MyMutex.unlock();
     }
 
@@ -458,12 +453,10 @@ public:
         _STD lock(_Mtxes...);
     }
 
-    explicit scoped_lock(adopt_lock_t, _Mutexes&... _Mtxes) : _MyMutexes(_Mtxes...) { // construct but don't lock
-    }
+    explicit scoped_lock(adopt_lock_t, _Mutexes&... _Mtxes) : _MyMutexes(_Mtxes...) {} // construct but don't lock
 
-    ~scoped_lock() noexcept { // unlock all
-        _For_each_tuple_element(
-            _MyMutexes, [](auto& _Mutex) noexcept { _Mutex.unlock(); });
+    ~scoped_lock() noexcept {
+        _STD apply([](_Mutexes&... _Mtxes) { (..., (void) _Mtxes.unlock()); }, _MyMutexes);
     }
 
     scoped_lock(const scoped_lock&) = delete;
@@ -474,7 +467,7 @@ private:
 };
 
 template <class _Mutex>
-class scoped_lock<_Mutex> { // specialization for a single mutex
+class scoped_lock<_Mutex> {
 public:
     using mutex_type = _Mutex;
 
@@ -482,10 +475,9 @@ public:
         _MyMutex.lock();
     }
 
-    explicit scoped_lock(adopt_lock_t, _Mutex& _Mtx) : _MyMutex(_Mtx) { // construct but don't lock
-    }
+    explicit scoped_lock(adopt_lock_t, _Mutex& _Mtx) : _MyMutex(_Mtx) {} // construct but don't lock
 
-    ~scoped_lock() noexcept { // unlock
+    ~scoped_lock() noexcept {
         _MyMutex.unlock();
     }
 
@@ -497,76 +489,82 @@ private:
 };
 
 template <>
-class scoped_lock<> { // specialization for no mutexes
+class scoped_lock<> {
 public:
-    explicit scoped_lock() { // no effects
-    }
-
-    explicit scoped_lock(adopt_lock_t) { // no effects
-    }
-
-    ~scoped_lock() noexcept { // no effects
-    }
+    explicit scoped_lock() {}
+    explicit scoped_lock(adopt_lock_t) {}
+    ~scoped_lock() noexcept {}
 
     scoped_lock(const scoped_lock&) = delete;
     scoped_lock& operator=(const scoped_lock&) = delete;
 };
 #endif // _HAS_CXX17
 
-// FUNCTION TEMPLATE _Invoke_stored_explicit
-template <class... _Types, size_t... _Indices>
-auto _Invoke_stored_explicit(tuple<_Types...>&& _Tuple, index_sequence<_Indices...>) -> decltype(
-    _STD invoke(_STD get<_Indices>(_STD move(_Tuple))...)) { // invoke() a tuple with explicit parameter ordering
-    return _STD invoke(_STD get<_Indices>(_STD move(_Tuple))...);
-}
-
-// FUNCTION TEMPLATE _Invoke_stored
-template <class... _Types>
-auto _Invoke_stored(tuple<_Types...>&& _Tuple)
-    -> decltype(_Invoke_stored_explicit(_STD move(_Tuple), index_sequence_for<_Types...>())) { // invoke() a tuple
-    return _Invoke_stored_explicit(_STD move(_Tuple), index_sequence_for<_Types...>());
-}
-
 // FUNCTION TEMPLATE call_once
-[[noreturn]] _CRTIMP2_PURE void __CLRCALL_PURE_OR_CDECL _XGetLastError();
+#ifdef _M_CEE
+#define _WINDOWS_API              __stdcall
+#define _RENAME_WINDOWS_API(_Api) _Api##_clr
+#else // ^^^ _M_CEE // !_M_CEE vvv
+#define _WINDOWS_API              __declspec(dllimport) __stdcall
+#define _RENAME_WINDOWS_API(_Api) _Api
+#endif // _M_CEE
 
-template <class _Tuple, class _Seq, size_t _Idx>
-int __stdcall _Callback_once(void*, void* _Pv, void**) { // adapt call_once() to callback API
-    _Tuple* _Ptup = static_cast<_Tuple*>(_Pv);
+// WINBASEAPI
+// BOOL
+// WINAPI
+// InitOnceBeginInitialize(
+//     _Inout_ LPINIT_ONCE lpInitOnce,
+//     _In_ DWORD dwFlags,
+//     _Out_ PBOOL fPending,
+//     _Outptr_opt_result_maybenull_ LPVOID* lpContext
+//     );
+extern "C" _NODISCARD int _WINDOWS_API _RENAME_WINDOWS_API(__std_init_once_begin_initialize)(
+    void** _LpInitOnce, unsigned long _DwFlags, int* _FPending, void** _LpContext) noexcept;
 
-    _TRY_BEGIN
-    // Note explicit _Seq() selects every element from *_Ptup except the last,
-    // which contains call_once's exception_ptr.
-    _Invoke_stored_explicit(_STD move(*_Ptup), _Seq());
-    _CATCH_ALL
-    auto& _Ref = _STD get<_Idx>(*_Ptup);
-    _Ref       = _STD current_exception();
-    return 0;
-    _CATCH_END
+// WINBASEAPI
+// BOOL
+// WINAPI
+// InitOnceComplete(
+//     _Inout_ LPINIT_ONCE lpInitOnce,
+//     _In_ DWORD dwFlags,
+//     _In_opt_ LPVOID lpContext
+//     );
+extern "C" _NODISCARD int _WINDOWS_API _RENAME_WINDOWS_API(__std_init_once_complete)(
+    void** _LpInitOnce, unsigned long _DwFlags, void* _LpContext) noexcept;
 
-    return 1;
-}
+// #define RTL_RUN_ONCE_INIT_FAILED    0x00000004UL
+// #define INIT_ONCE_INIT_FAILED       RTL_RUN_ONCE_INIT_FAILED
+_INLINE_VAR constexpr unsigned long _Init_once_init_failed = 0x4UL;
+
+struct _Init_once_completer {
+    once_flag& _Once;
+    unsigned long _DwFlags;
+    ~_Init_once_completer() {
+        if (_RENAME_WINDOWS_API(__std_init_once_complete)(&_Once._Opaque, _DwFlags, nullptr) == 0) {
+            _CSTD abort();
+        }
+    }
+};
 
 template <class _Fn, class... _Args>
-void(call_once)(once_flag& _Flag, _Fn&& _Fx, _Args&&... _Ax) { // call _Fx(_Ax...) once
-    using _Tuple = tuple<_Fn&&, _Args&&..., exception_ptr&>;
-    using _Seq   = make_index_sequence<1 + sizeof...(_Args)>;
-
-    exception_ptr _Exc;
-    _Tuple _Tup(_STD forward<_Fn>(_Fx), _STD forward<_Args>(_Ax)..., _Exc);
-
-    _Execute_once_fp_t _Fp = &_Callback_once<_Tuple, _Seq, 1 + sizeof...(_Args)>;
-
-    if (_Execute_once(_Flag, _Fp, _STD addressof(_Tup)) != 0) {
-        return;
+void(call_once)(once_flag& _Once, _Fn&& _Fx, _Args&&... _Ax) noexcept(
+    noexcept(_STD invoke(_STD forward<_Fn>(_Fx), _STD forward<_Args>(_Ax)...))) /* strengthened */ {
+    // call _Fx(_Ax...) once
+    // parentheses against common "#define call_once(flag,func) pthread_once(flag,func)"
+    int _Pending;
+    if (_RENAME_WINDOWS_API(__std_init_once_begin_initialize)(&_Once._Opaque, 0, &_Pending, nullptr) == 0) {
+        _CSTD abort();
     }
 
-    if (_Exc) {
-        _STD rethrow_exception(_Exc);
+    if (_Pending != 0) {
+        _Init_once_completer _Op{_Once, _Init_once_init_failed};
+        _STD invoke(_STD forward<_Fn>(_Fx), _STD forward<_Args>(_Ax)...);
+        _Op._DwFlags = 0;
     }
-
-    _XGetLastError();
 }
+
+#undef _WINDOWS_API
+#undef _RENAME_WINDOWS_API
 
 // condition_variable, timed_mutex, and recursive_timed_mutex are not supported under /clr
 #ifndef _M_CEE
@@ -579,11 +577,11 @@ class condition_variable { // class for waiting for conditions
 public:
     using native_handle_type = _Cnd_t;
 
-    condition_variable() { // construct
+    condition_variable() {
         _Cnd_init_in_situ(_Mycnd());
     }
 
-    ~condition_variable() noexcept { // destroy
+    ~condition_variable() noexcept {
         _Cnd_destroy_in_situ(_Mycnd());
     }
 
@@ -599,7 +597,7 @@ public:
     }
 
     void wait(unique_lock<mutex>& _Lck) { // wait for signal
-        // Nothing to do to comply with LWG 2135 because std::mutex lock/unlock are nothrow
+        // Nothing to do to comply with LWG-2135 because std::mutex lock/unlock are nothrow
         _Check_C_return(_Cnd_wait(_Mycnd(), _Lck.mutex()->_Mymtx()));
     }
 
@@ -617,8 +615,8 @@ public:
             return cv_status::timeout;
         }
 
-        // The standard says that we should use a steady clock, but unfortunately our ABI
-        // speaks struct xtime, which is relative to the system clock.
+        // TRANSITION, ABI: The standard says that we should use a steady clock,
+        // but unfortunately our ABI speaks struct xtime, which is relative to the system clock.
         _CSTD xtime _Tgt;
         const bool _Clamped     = _To_xtime_10_day_clamped(_Tgt, _Rel_time);
         const cv_status _Result = wait_until(_Lck, &_Tgt);
@@ -666,7 +664,7 @@ public:
             _Throw_Cpp_error(_OPERATION_NOT_PERMITTED);
         }
 
-        // Nothing to do to comply with LWG 2135 because std::mutex lock/unlock are nothrow
+        // Nothing to do to comply with LWG-2135 because std::mutex lock/unlock are nothrow
         const int _Res = _Cnd_timedwait(_Mycnd(), _Lck.mutex()->_Mymtx(), _Abs_time);
         switch (_Res) {
         case _Thrd_success:
@@ -684,7 +682,7 @@ public:
         return _Wait_until1(_Lck, _Abs_time, _Pred);
     }
 
-    _NODISCARD native_handle_type native_handle() { // return condition variable handle
+    _NODISCARD native_handle_type native_handle() {
         return _Mycnd();
     }
 
@@ -929,8 +927,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _MUTEX_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

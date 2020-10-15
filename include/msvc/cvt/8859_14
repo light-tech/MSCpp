@@ -1,4 +1,8 @@
 // 8859_14 -- one- or two-byte/wide-character tables
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 
 #ifndef _CVT_8859_14_
@@ -11,8 +15,8 @@
 //  Table version:    1.0
 //  Table format:     Format A
 //  Date:             1999 July 27
-//  Authors:          Markus Kuhn <mkuhn@acm.org>
-//      Ken Whistler <kenw@sybase.com>
+//  Authors:          Markus Kuhn
+//      Ken Whistler
 //
 //  Copyright (c) 1998 - 1999 Unicode, Inc.  All Rights reserved.
 //
@@ -45,9 +49,8 @@
 //  Updated versions of this file may be found in:
 //   <ftp://ftp.unicode.org/Public/MAPPINGS/>
 //
-//  Any comments or problems, contact <errata@unicode.org>
-//  Please note that <errata@unicode.org> is an archival address;
-//  notices will be checked, but do not expect an immediate response.
+//  Use the Unicode reporting form <https://www.unicode.org/reporting.html>
+//    for any questions or comments or to report errors in the data.
 //
 #include <cvt/xone_byte>
 
@@ -109,8 +112,3 @@ _STL_RESTORE_CLANG_WARNINGS
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_8859_14_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

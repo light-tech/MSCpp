@@ -1,4 +1,5 @@
 // map stl/clr header
+// Copyright (c) Microsoft Corporation. All rights reserved.
 #ifndef _CLI_MAP_
  #define _CLI_MAP_
 #include <cliext/xtree>
@@ -2215,8 +2216,3 @@ template<typename _Key_t,
 	}
 }	// namespace cliext
 #endif // _CLI_MAP_
-
-/*
- * Copyright (c) 2004-2007 by Dinkumware, Ltd.  ALL RIGHTS RESERVED.
- * Consult your license regarding permissions and restrictions.
-V5.03:0009 */

@@ -10,6 +10,9 @@
 
 #include <vcruntime.h>
 
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
+
 _CRT_BEGIN_C_HEADER
 
 
@@ -22,3 +25,5 @@ _CRT_BEGIN_C_HEADER
 
 
 _CRT_END_C_HEADER
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS

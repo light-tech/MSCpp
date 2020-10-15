@@ -8,16 +8,20 @@
 #pragma once
 #define _INC_EH
 
+#include <vadefs.h>
 #include <corecrt_terminate.h>
 
 #if _VCRT_COMPILER_PREPROCESSOR
+
+#pragma warning(push)
+#pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
 
 _CRT_BEGIN_C_HEADER
 
 // unexpected_handler is the standard name; unexpected_function is defined for
 // source compatibility.
-typedef void (__CRTDECL* unexpected_handler )();
-typedef void (__CRTDECL* unexpected_function)();
+typedef void (__CRTDECL* unexpected_handler )(void);
+typedef void (__CRTDECL* unexpected_function)(void);
 
 #ifdef _M_CEE
     typedef void (__clrcall* __unexpected_function_m)();
@@ -59,5 +63,7 @@ struct _EXCEPTION_POINTERS;
 #endif
 
 _CRT_END_C_HEADER
+
+#pragma warning(pop) // _VCRUNTIME_DISABLED_WARNINGS
 
 #endif // _VCRT_COMPILER_PREPROCESSOR

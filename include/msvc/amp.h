@@ -2252,7 +2252,7 @@ template <typename _Value_type, int _Rank = 1> class array_view : public _Array_
     template <typename _T, int _R>
     friend class array;
 
-    friend const _Base::_Buffer_descriptor& details::_Get_buffer_descriptor<array_view<_Value_type, _Rank>>(const array_view<_Value_type, _Rank>& _Array) __GPU;
+    friend const typename _Base::_Buffer_descriptor& details::_Get_buffer_descriptor<array_view<_Value_type, _Rank>>(const array_view<_Value_type, _Rank>& _Array) __GPU;
 
 public:
     static const int rank = _Rank;
@@ -2999,7 +2999,7 @@ private:
         _Initialize();
     }
 
-    array_view(_Base::_Buffer_descriptor& _Src_buffer, const Concurrency::extent<_Rank>& _Extent) __GPU
+    array_view(typename _Base::_Buffer_descriptor& _Src_buffer, const Concurrency::extent<_Rank>& _Extent) __GPU
         :_Base(_Src_buffer,_Extent)
     {
         _Initialize();
@@ -3046,7 +3046,7 @@ class array_view<const _Value_type, _Rank> : public _Array_view_base<_Rank, size
     friend class array_view<_Value_type, _Rank+1>;
     friend class array_view<const _Value_type, _Rank+1>;
 
-    friend const _Base::_Buffer_descriptor& details::_Get_buffer_descriptor<array_view<const _Value_type, _Rank>>(const array_view<const _Value_type, _Rank>& _Array) __GPU;
+    friend const typename _Base::_Buffer_descriptor& details::_Get_buffer_descriptor<array_view<const _Value_type, _Rank>>(const array_view<const _Value_type, _Rank>& _Array) __GPU;
 
 public:
     static const int rank = _Rank;

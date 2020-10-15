@@ -1,5 +1,8 @@
 // xpolymorphic_allocator.h internal header
-// Copyright (c) Microsoft Corporation. All rights reserved.
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XPOLYMORPHIC_ALLOCATOR_H
 #define _XPOLYMORPHIC_ALLOCATOR_H
@@ -139,7 +142,7 @@ namespace pmr {
     public:
         virtual ~memory_resource() noexcept {}
 
-        _NODISCARD _DECLSPEC_ALLOCATOR void* allocate(_CRT_GUARDOVERFLOW const size_t _Bytes,
+        _NODISCARD __declspec(allocator) void* allocate(_CRT_GUARDOVERFLOW const size_t _Bytes,
             const size_t _Align = alignof(max_align_t)) { // allocate _Bytes bytes of memory with alignment _Align
             _STL_ASSERT(_Is_pow_2(_Align), "memory_resource::allocate(): Alignment must be a power of two.");
             return do_allocate(_Bytes, _Align);
@@ -203,18 +206,17 @@ namespace pmr {
 
         template <class _Uty>
         polymorphic_allocator(const polymorphic_allocator<_Uty>& _That) noexcept
-            : _Resource{_That._Resource} { // initialize with _That's resource
-        }
+            : _Resource{_That._Resource} {} // initialize with _That's resource
 
         polymorphic_allocator& operator=(const polymorphic_allocator&) = delete;
 
-        _NODISCARD _DECLSPEC_ALLOCATOR _Ty* allocate(_CRT_GUARDOVERFLOW const size_t _Count) {
+        _NODISCARD __declspec(allocator) _Ty* allocate(_CRT_GUARDOVERFLOW const size_t _Count) {
             // get space for _Count objects of type _Ty from _Resource
             void* const _Vp = _Resource->allocate(_Get_size_of_n<sizeof(_Ty)>(_Count), alignof(_Ty));
             return static_cast<_Ty*>(_Vp);
         }
 
-        void deallocate(_Ty* const _Ptr, const size_t _Count) noexcept { // strengthened
+        void deallocate(_Ty* const _Ptr, const size_t _Count) noexcept /* strengthened */ {
             // return space for _Count objects of type _Ty to _Resource
             // No need to verify that size_t can represent the size of _Ty[_Count].
             _Resource->deallocate(_Ptr, _Count * sizeof(_Ty), alignof(_Ty));
@@ -227,12 +229,12 @@ namespace pmr {
             _Uses_allocator_construct(_Ptr, _Al, *this, _STD forward<_Types>(_Args)...);
         }
 
-        _NODISCARD polymorphic_allocator select_on_container_copy_construction() const noexcept { // strengthened
+        _NODISCARD polymorphic_allocator select_on_container_copy_construction() const noexcept /* strengthened */ {
             // don't propagate on copy
             return {};
         }
 
-        _NODISCARD memory_resource* resource() const noexcept { // strengthened
+        _NODISCARD memory_resource* resource() const noexcept /* strengthened */ {
             // retrieve this allocator's memory_resource
             return _Resource;
         }

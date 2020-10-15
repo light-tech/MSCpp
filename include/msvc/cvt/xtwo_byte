@@ -1,4 +1,8 @@
 // xtwo_byte -- convert one- or two-byte code to 16-bit wide
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _CVT_XTWO_BYTE_
 #define _CVT_XTWO_BYTE_
@@ -36,14 +40,13 @@ namespace stdext {
             using extern_type = _Byte;
             using state_type  = _Statype;
 
-            explicit _Cvt_two_byte(size_t _Refs = 0) : _Mybase(_Refs) { // construct with ref count
-            }
+            explicit _Cvt_two_byte(size_t _Refs = 0) : _Mybase(_Refs) {}
 
             virtual ~_Cvt_two_byte() noexcept {}
 
         protected:
             virtual result do_in(_Statype&, const _Byte* _First1, const _Byte* _Last1, const _Byte*& _Mid1,
-                _Elem* _First2, _Elem* _Last2, _Elem*& _Mid2) const {
+                _Elem* _First2, _Elem* _Last2, _Elem*& _Mid2) const override {
                 // convert bytes [_First1, _Last1) to [_First2, _Last)
                 _Mid1 = _First1;
                 _Mid2 = _First2;
@@ -54,11 +57,9 @@ namespace stdext {
                     if (_Bytecode < _Table::_Nlow) {
                         _Widecode = _Bytecode; // map byte to same wide value
                     } else if ((_Widecode = _Table::_Btw[_Bytecode - _Table::_Nlow]) == 0) {
-                        if
-                            _CONSTEXPR_IF(_Table::_Nbytes < 2) {
-                                return _Mybase::error; // no single-byte mapping
-                            }
-                        else {
+                        if _CONSTEXPR_IF (_Table::_Nbytes < 2) {
+                            return _Mybase::error; // no single-byte mapping
+                        } else {
                             if (_Mid1 + 1 == _Last1) {
                                 break; // need another input byte
                             }
@@ -99,7 +100,7 @@ namespace stdext {
             }
 
             virtual result do_out(_Statype&, const _Elem* _First1, const _Elem* _Last1, const _Elem*& _Mid1,
-                _Byte* _First2, _Byte* _Last2, _Byte*& _Mid2) const {
+                _Byte* _First2, _Byte* _Last2, _Byte*& _Mid2) const override {
                 // convert [_First1, _Last1) to bytes [_First2, _Last)
                 _Mid1 = _First1;
                 _Mid2 = _First2;
@@ -149,14 +150,15 @@ namespace stdext {
                 return _First1 == _Mid1 ? _Mybase::partial : _Mybase::ok;
             }
 
-            virtual result do_unshift(_Statype&, _Byte* _First2, _Byte*,
-                _Byte*& _Mid2) const { // generate bytes to return to default shift state
+            virtual result do_unshift(_Statype&, _Byte* _First2, _Byte*, _Byte*& _Mid2) const override {
+                // generate bytes to return to default shift state
                 _Mid2 = _First2;
                 return _Mybase::ok;
             }
 
-            virtual int do_length(_Statype& _State, const _Byte* _First1, const _Byte* _Last1, size_t _Count) const
-                noexcept { // return min(_Count, converted length of bytes [_First1, _Last1))
+            virtual int do_length(
+                _Statype& _State, const _Byte* _First1, const _Byte* _Last1, size_t _Count) const noexcept override {
+                // return min(_Count, converted length of bytes [_First1, _Last1))
                 size_t _Wchars    = 0;
                 _Statype _Mystate = _State;
 
@@ -185,15 +187,15 @@ namespace stdext {
                 return static_cast<int>(_Wchars);
             }
 
-            virtual bool do_always_noconv() const noexcept { // return true if conversions never change input
+            virtual bool do_always_noconv() const noexcept override { // return true if conversions never change input
                 return false;
             }
 
-            virtual int do_max_length() const noexcept { // return maximum length required for a conversion
+            virtual int do_max_length() const noexcept override { // return maximum length required for a conversion
                 return _Table::_Nbytes; // length of sequence
             }
 
-            virtual int do_encoding() const noexcept { // return length of code sequence (from codecvt)
+            virtual int do_encoding() const noexcept override { // return length of code sequence (from codecvt)
                 return 0; // 0 => varying length
             }
         };
@@ -207,8 +209,3 @@ _STL_RESTORE_CLANG_WARNINGS
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_XTWO_BYTE_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

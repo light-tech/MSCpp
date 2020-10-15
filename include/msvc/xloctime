@@ -1,10 +1,15 @@
-// xloctime internal header (from <locale>)
+// xloctime internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XLOCTIME_
 #define _XLOCTIME_
 #include <yvals_core.h>
 #if _STL_COMPILER_PREPROCESSOR
 #include <ctime>
+#include <iterator>
 #include <xlocnum>
 
 #pragma pack(push, _CRT_PACKING)
@@ -16,7 +21,7 @@ _STL_DISABLE_CLANG_WARNINGS
 
 _STD_BEGIN
 // STRUCT time_base
-struct _CRTIMP2_PURE_IMPORT time_base : public locale::facet { // base class for time_get
+struct _CRTIMP2_PURE_IMPORT time_base : locale::facet { // base class for time_get
     enum dateorder { // constants for different orders of date components
         no_order,
         dmy,
@@ -46,7 +51,7 @@ public:
 
     __PURE_APPDOMAIN_GLOBAL static locale::id id; // unique facet id
 
-    dateorder __CLR_OR_THIS_CALL date_order() const { // return date order code
+    dateorder __CLR_OR_THIS_CALL date_order() const {
         return do_date_order();
     }
 
@@ -143,8 +148,7 @@ public:
         _END_LOCINFO()
     }
 
-    __CLR_OR_THIS_CALL time_get(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : time_base(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL time_get(const _Locinfo& _Lobj, size_t _Refs = 0) : time_base(_Refs) {
         _Init(_Lobj);
     }
 
@@ -162,8 +166,7 @@ protected:
         _Tidy();
     }
 
-    __CLR_OR_THIS_CALL time_get(const char* _Locname, size_t _Refs = 0)
-        : time_base(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL time_get(const char* _Locname, size_t _Refs = 0) : time_base(_Refs) {
         _BEGIN_LOCINFO(_Lobj(_Locname))
         _Init(_Lobj);
         _END_LOCINFO()
@@ -196,7 +199,7 @@ protected:
         _Guard._Target = nullptr;
     }
 
-    virtual dateorder __CLR_OR_THIS_CALL do_date_order() const { // return date order code
+    virtual dateorder __CLR_OR_THIS_CALL do_date_order() const {
         return _Dateorder;
     }
 
@@ -619,12 +622,10 @@ public:
     static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t>, _FACET_SPECIALIZATION_MESSAGE);
 
     explicit time_get_byname(const char* _Locname, size_t _Refs = 0)
-        : time_get<_Elem, _InIt>(_Locname, _Refs) { // construct for named locale
-    }
+        : time_get<_Elem, _InIt>(_Locname, _Refs) {} // construct for named locale
 
     explicit time_get_byname(const string& _Str, size_t _Refs = 0)
-        : time_get<_Elem, _InIt>(_Locinfo(_Str.c_str()), _Refs) { // construct for named locale
-    }
+        : time_get<_Elem, _InIt>(_Locinfo(_Str.c_str()), _Refs) {} // construct for named locale
 
 protected:
     virtual __CLR_OR_THIS_CALL ~time_get_byname() noexcept {}
@@ -688,8 +689,7 @@ public:
         _END_LOCINFO()
     }
 
-    __CLR_OR_THIS_CALL time_put(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : locale::facet(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL time_put(const _Locinfo& _Lobj, size_t _Refs = 0) : locale::facet(_Refs) {
         _Init(_Lobj);
     }
 
@@ -808,8 +808,7 @@ public:
         _END_LOCINFO()
     }
 
-    __CLR_OR_THIS_CALL time_put(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : locale::facet(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL time_put(const _Locinfo& _Lobj, size_t _Refs = 0) : locale::facet(_Refs) {
         _Init(_Lobj);
     }
 
@@ -825,8 +824,7 @@ public:
 protected:
     virtual __CLR_OR_THIS_CALL ~time_put() noexcept {}
 
-    __CLR_OR_THIS_CALL time_put(const char* _Locname, size_t _Refs = 0)
-        : locale::facet(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL time_put(const char* _Locname, size_t _Refs = 0) : locale::facet(_Refs) {
         _BEGIN_LOCINFO(_Lobj(_Locname))
         _Init(_Lobj);
         _END_LOCINFO()
@@ -935,8 +933,7 @@ public:
         _END_LOCINFO()
     }
 
-    __CLR_OR_THIS_CALL time_put(const _Locinfo& _Lobj, size_t _Refs = 0)
-        : locale::facet(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL time_put(const _Locinfo& _Lobj, size_t _Refs = 0) : locale::facet(_Refs) {
         _Init(_Lobj);
     }
 
@@ -952,8 +949,7 @@ public:
 protected:
     virtual __CLR_OR_THIS_CALL ~time_put() noexcept {}
 
-    __CLR_OR_THIS_CALL time_put(const char* _Locname, size_t _Refs = 0)
-        : locale::facet(_Refs) { // construct from specified locale
+    __CLR_OR_THIS_CALL time_put(const char* _Locname, size_t _Refs = 0) : locale::facet(_Refs) {
         _BEGIN_LOCINFO(_Lobj(_Locname))
         _Init(_Lobj);
         _END_LOCINFO()
@@ -1012,12 +1008,10 @@ public:
     static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t>, _FACET_SPECIALIZATION_MESSAGE);
 
     explicit time_put_byname(const char* _Locname, size_t _Refs = 0)
-        : time_put<_Elem, _OutIt>(_Locname, _Refs) { // construct for named locale
-    }
+        : time_put<_Elem, _OutIt>(_Locname, _Refs) {} // construct for named locale
 
     explicit time_put_byname(const string& _Str, size_t _Refs = 0)
-        : time_put<_Elem, _OutIt>(_Str.c_str(), _Refs) { // construct for named locale
-    }
+        : time_put<_Elem, _OutIt>(_Str.c_str(), _Refs) {} // construct for named locale
 
 protected:
     virtual __CLR_OR_THIS_CALL ~time_put_byname() noexcept {}
@@ -1055,8 +1049,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XLOCTIME_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

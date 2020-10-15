@@ -1,4 +1,8 @@
-// xlocmes internal header (from <locale>)
+// xlocmes internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XLOCMES_
 #define _XLOCMES_
@@ -15,7 +19,7 @@ _STL_DISABLE_CLANG_WARNINGS
 
 _STD_BEGIN
 // STRUCT messages_base
-struct messages_base : public locale::facet { // base class for messages
+struct messages_base : locale::facet { // base class for messages
     using catalog = int;
 
     explicit messages_base(size_t _Refs = 0) : locale::facet(_Refs) {}
@@ -52,7 +56,7 @@ public:
         _END_LOCINFO()
     }
 
-    messages(const _Locinfo& _Lobj, size_t _Refs = 0) : messages_base(_Refs) { // construct from specified locale
+    messages(const _Locinfo& _Lobj, size_t _Refs = 0) : messages_base(_Refs) {
         _Init(_Lobj);
     }
 
@@ -66,7 +70,7 @@ public:
     }
 
 protected:
-    messages(const char* _Locname, size_t _Refs = 0) : messages_base(_Refs) { // construct from specified locale
+    messages(const char* _Locname, size_t _Refs = 0) : messages_base(_Refs) {
         _BEGIN_LOCINFO(_Lobj(_Locname))
         _Init(_Lobj);
         _END_LOCINFO()
@@ -74,8 +78,7 @@ protected:
 
     virtual __CLR_OR_THIS_CALL ~messages() noexcept {}
 
-    void _Init(const _Locinfo&) { // initialize from _Locinfo object (do nothing)
-    }
+    void _Init(const _Locinfo&) {} // initialize from _Locinfo object (do nothing)
 
     virtual catalog __CLR_OR_THIS_CALL do_open(const string&, const locale&) const { // open catalog (do nothing)
         return -1;
@@ -86,8 +89,7 @@ protected:
         return _Dflt;
     }
 
-    virtual void __CLR_OR_THIS_CALL do_close(catalog) const { // close catalog (do nothing)
-    }
+    virtual void __CLR_OR_THIS_CALL do_close(catalog) const {} // close catalog (do nothing)
 };
 
 // STATIC messages::id OBJECT
@@ -110,12 +112,10 @@ public:
     static_assert(!_ENFORCE_FACET_SPECIALIZATIONS || _Is_any_of_v<_Elem, char, wchar_t>, _FACET_SPECIALIZATION_MESSAGE);
 
     explicit messages_byname(const char* _Locname, size_t _Refs = 0)
-        : messages<_Elem>(_Locname, _Refs) { // construct for named locale
-    }
+        : messages<_Elem>(_Locname, _Refs) {} // construct for named locale
 
     explicit messages_byname(const string& _Str, size_t _Refs = 0)
-        : messages<_Elem>(_Str.c_str(), _Refs) { // construct for named locale
-    }
+        : messages<_Elem>(_Str.c_str(), _Refs) {} // construct for named locale
 
 protected:
     virtual __CLR_OR_THIS_CALL ~messages_byname() noexcept {}
@@ -139,8 +139,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XLOCMES_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

@@ -196,7 +196,7 @@ typedef const struct _s_UnwindMapEntry {
 #define UWE_ACTION(uwe)			((uwe).action)
 #endif
 
-#if defined(_M_AMD64) || defined(_M_ARM) || defined(_M_ARM64) || defined(_CHPE_X86_ARM64_EH_)
+#if defined(_M_X64) || defined(_M_ARM) || defined(_M_ARM64) || defined(_CHPE_X86_ARM64_EH_)
 typedef struct IptoStateMapEntry {
 	unsigned int	Ip;		// Image relative offset of IP
 	__ehstate_t		State;
@@ -367,7 +367,7 @@ typedef struct _xDISPATCHER_CONTEXT {
 
 typedef ULONG EHRegistrationNode;
 
-#elif defined(_M_AMD64)
+#elif defined(_M_X64)
 
 #define PRN_NEXT(prn)		__ERROR__
 #define PRN_HANDLER(prn)	__ERROR__

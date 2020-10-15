@@ -1,7 +1,7 @@
 /***
 * zmminitrin.h - Meta Header file for Intel(R) Architecture intrinsic functions.
 *
-* Copyright (C) 2007-2019 Intel Corporation.  All rights reserved.
+* Copyright (C) 2007-2020 Intel Corporation.  All rights reserved.
 *
 * The information and source code contained herein is the exclusive
 * property of Intel Corporation and may not be disclosed, examined
@@ -2945,20 +2945,28 @@ extern __m128    __cdecl _mm_mask_load_ps(__m128, __mmask8, void const*);
 extern __m128    __cdecl _mm_maskz_load_ps(__mmask8, void const*);
 extern __m256    __cdecl _mm256_mask_load_ps(__m256, __mmask8, void const*);
 extern __m256    __cdecl _mm256_maskz_load_ps(__mmask8, void const*);
+extern __m128i   __cdecl _mm_loadu_epi16(void const*);
 extern __m128i   __cdecl _mm_mask_loadu_epi16(__m128i, __mmask8, void const*);
 extern __m128i   __cdecl _mm_maskz_loadu_epi16(__mmask8, void const*);
+extern __m256i   __cdecl _mm256_loadu_epi16(void const*);
 extern __m256i   __cdecl _mm256_mask_loadu_epi16(__m256i, __mmask16, void const*);
 extern __m256i   __cdecl _mm256_maskz_loadu_epi16(__mmask16, void const*);
+extern __m128i   __cdecl _mm_loadu_epi32(void const*);
 extern __m128i   __cdecl _mm_mask_loadu_epi32(__m128i, __mmask8, void const*);
 extern __m128i   __cdecl _mm_maskz_loadu_epi32(__mmask8, void const*);
+extern __m256i   __cdecl _mm256_loadu_epi32(void const*);
 extern __m256i   __cdecl _mm256_mask_loadu_epi32(__m256i, __mmask8, void const*);
 extern __m256i   __cdecl _mm256_maskz_loadu_epi32(__mmask8, void const*);
+extern __m128i   __cdecl _mm_loadu_epi64(void const*);
 extern __m128i   __cdecl _mm_mask_loadu_epi64(__m128i, __mmask8, void const*);
 extern __m128i   __cdecl _mm_maskz_loadu_epi64(__mmask8, void const*);
+extern __m256i   __cdecl _mm256_loadu_epi64(void const*);
 extern __m256i   __cdecl _mm256_mask_loadu_epi64(__m256i, __mmask8, void const*);
 extern __m256i   __cdecl _mm256_maskz_loadu_epi64(__mmask8, void const*);
+extern __m128i   __cdecl _mm_loadu_epi8(void const*);
 extern __m128i   __cdecl _mm_mask_loadu_epi8(__m128i, __mmask16, void const*);
 extern __m128i   __cdecl _mm_maskz_loadu_epi8(__mmask16, void const*);
+extern __m256i   __cdecl _mm256_loadu_epi8(void const*);
 extern __m256i   __cdecl _mm256_mask_loadu_epi8(__m256i, __mmask32, void const*);
 extern __m256i   __cdecl _mm256_maskz_loadu_epi8(__mmask32, void const*);
 extern __m128d   __cdecl _mm_mask_loadu_pd(__m128d, __mmask8, void const*);
@@ -3587,12 +3595,20 @@ extern void      __cdecl _mm_mask_store_pd(void*, __mmask8, __m128d);
 extern void      __cdecl _mm256_mask_store_pd(void*, __mmask8, __m256d);
 extern void      __cdecl _mm_mask_store_ps(void*, __mmask8, __m128);
 extern void      __cdecl _mm256_mask_store_ps(void*, __mmask8, __m256);
+extern void      __cdecl _mm_storeu_epi16(void*, __m128i);
+extern void      __cdecl _mm256_storeu_epi16(void*, __m256i);
 extern void      __cdecl _mm_mask_storeu_epi16(void*, __mmask8, __m128i);
 extern void      __cdecl _mm256_mask_storeu_epi16(void*, __mmask16, __m256i);
+extern void      __cdecl _mm_storeu_epi32(void*, __m128i);
+extern void      __cdecl _mm256_storeu_epi32(void*, __m256i);
 extern void      __cdecl _mm_mask_storeu_epi32(void*, __mmask8, __m128i);
 extern void      __cdecl _mm256_mask_storeu_epi32(void*, __mmask8, __m256i);
+extern void      __cdecl _mm_storeu_epi64(void*, __m128i);
+extern void      __cdecl _mm256_storeu_epi64(void*, __m256i);
 extern void      __cdecl _mm_mask_storeu_epi64(void*, __mmask8, __m128i);
 extern void      __cdecl _mm256_mask_storeu_epi64(void*, __mmask8, __m256i);
+extern void      __cdecl _mm_storeu_epi8(void*, __m128i);
+extern void      __cdecl _mm256_storeu_epi8(void*, __m256i);
 extern void      __cdecl _mm_mask_storeu_epi8(void*, __mmask16, __m128i);
 extern void      __cdecl _mm256_mask_storeu_epi8(void*, __mmask32, __m256i);
 extern void      __cdecl _mm_mask_storeu_pd(void*, __mmask8, __m128d);
@@ -5060,6 +5076,14 @@ extern void __cdecl _mm512_mask_prefetch_i64gather_pd(__m512i vindex, __mmask8 m
 extern void __cdecl _mm512_mask_prefetch_i64gather_ps(__m512i vindex, __mmask8 mask, void const* base_addr, int scale, const int hint);
 extern void __cdecl _mm512_mask_prefetch_i64scatter_pd(void* base_addr, __mmask8 mask, __m512i vindex, int scale, const int hint);
 extern void __cdecl _mm512_mask_prefetch_i64scatter_ps(void* base_addr, __mmask8 mask, __m512i vindex, int scale, const int hint);
+
+// AVX512_VP2INTERSECT
+extern void __cdecl _mm_2intersect_epi32(__m128i, __m128i, __mmask8 *, __mmask8 *);
+extern void __cdecl _mm256_2intersect_epi32(__m256i, __m256i, __mmask8 *, __mmask8 *);
+extern void __cdecl _mm512_2intersect_epi32(__m512i, __m512i, __mmask16 *, __mmask16 *);
+extern void __cdecl _mm_2intersect_epi64(__m128i, __m128i, __mmask8 *, __mmask8 *);
+extern void __cdecl _mm256_2intersect_epi64(__m256i, __m256i, __mmask8 *, __mmask8 *);
+extern void __cdecl _mm512_2intersect_epi64(__m512i, __m512i, __mmask8 *, __mmask8 *);
 
 #ifdef __cplusplus
 }

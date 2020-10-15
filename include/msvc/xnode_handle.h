@@ -1,5 +1,8 @@
 // xnode_handle.h internal header
-// Copyright (c) Microsoft Corporation. All rights reserved.
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XNODE_HANDLE_H
 #define _XNODE_HANDLE_H
@@ -33,10 +36,10 @@ struct _Node_handle_map_base { // map-specific node handle behavior
     using key_type    = _KeyTy;
     using mapped_type = _ValueTy;
 
-    key_type& key() const noexcept { // strengthened
+    key_type& key() const noexcept /* strengthened */ {
         return _Datum().first;
     }
-    mapped_type& mapped() const noexcept { // strengthened
+    mapped_type& mapped() const noexcept /* strengthened */ {
         return _Datum().second;
     }
 
@@ -55,7 +58,7 @@ template <class _Derived_type, class _ValueTy>
 struct _Node_handle_set_base { // set-specific node handle behavior
     using value_type = _ValueTy;
 
-    value_type& value() const noexcept { // strengthened
+    value_type& value() const noexcept /* strengthened */ {
         const auto& _Self = static_cast<const _Derived_type&>(*this);
         return _Self._Getptr()->_Myval;
     }
@@ -95,10 +98,9 @@ private:
     }
 
 public:
-    constexpr _Node_handle() noexcept : _Alloc_storage{} { // initialize node handle in the empty state
-    }
+    constexpr _Node_handle() noexcept : _Alloc_storage{} {}
 
-    ~_Node_handle() noexcept { // destroy any contained node/allocator
+    ~_Node_handle() noexcept {
         _Clear();
     }
 
@@ -111,7 +113,7 @@ public:
         }
     }
 
-    _Node_handle& operator=(_Node_handle&& _That) noexcept { // strengthened
+    _Node_handle& operator=(_Node_handle&& _That) noexcept /* strengthened */ {
         // steal state from _That
         if (!_Ptr) {
             if (_That._Ptr) {
@@ -153,16 +155,16 @@ public:
         return reinterpret_cast<const _Alloc&>(_Alloc_storage);
     }
 
-    _NODISCARD allocator_type get_allocator() const noexcept { // strengthened
+    _NODISCARD allocator_type get_allocator() const noexcept /* strengthened */ {
         // pre: !empty()
         return _Getal();
     }
 
-    explicit operator bool() const noexcept { // determine if node handle is not empty
+    explicit operator bool() const noexcept {
         return _Ptr != nullptr;
     }
 
-    _NODISCARD bool empty() const noexcept { // determine if node handle is empty
+    _NODISCARD bool empty() const noexcept {
         return _Ptr == nullptr;
     }
 
@@ -172,8 +174,7 @@ public:
         return _STD exchange(_Ptr, nullptr);
     }
 
-    void swap(_Node_handle& _That) noexcept { // strengthened
-        // exchange values of *this and _That
+    void swap(_Node_handle& _That) noexcept /* strengthened */ {
         if (_Ptr) {
             if (_That._Ptr) {
                 _Pocs(_Getal(), _That._Getal());
@@ -193,7 +194,7 @@ public:
         }
         _Swap_adl(_Ptr, _That._Ptr);
     }
-    friend void swap(_Node_handle& _Left, _Node_handle& _Right) noexcept { // strengthened, sort of
+    friend void swap(_Node_handle& _Left, _Node_handle& _Right) noexcept /* strengthened */ {
         _Left.swap(_Right);
     }
 

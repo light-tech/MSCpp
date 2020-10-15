@@ -1,4 +1,8 @@
 // xtree internal header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XTREE_
 #define _XTREE_
@@ -30,9 +34,9 @@ public:
     using pointer         = typename _Mytree::const_pointer;
     using reference       = const value_type&;
 
-    _Tree_unchecked_const_iterator() : _Ptr() {}
+    _Tree_unchecked_const_iterator() noexcept : _Ptr() {}
 
-    _Tree_unchecked_const_iterator(_Nodeptr _Pnode, const _Mytree* _Plist) : _Ptr(_Pnode) {
+    _Tree_unchecked_const_iterator(_Nodeptr _Pnode, const _Mytree* _Plist) noexcept : _Ptr(_Pnode) {
         this->_Adopt(_Plist);
     }
 
@@ -123,9 +127,7 @@ public:
     using pointer         = typename _Mytree::pointer;
     using reference       = value_type&;
 
-    _Tree_unchecked_iterator() {}
-
-    _Tree_unchecked_iterator(_Nodeptr _Pnode, const _Mytree* _Plist) : _Mybase(_Pnode, _Plist) {}
+    using _Mybase::_Mybase;
 
     _NODISCARD reference operator*() const {
         return const_cast<reference>(_Mybase::operator*());
@@ -171,9 +173,7 @@ public:
     using pointer         = typename _Mytree::const_pointer;
     using reference       = const value_type&;
 
-    _Tree_const_iterator() : _Mybase() {}
-
-    _Tree_const_iterator(_Nodeptr _Pnode, const _Mytree* _Plist) : _Mybase(_Pnode, _Plist) {}
+    using _Mybase::_Mybase;
 
     _NODISCARD reference operator*() const {
 #if _ITERATOR_DEBUG_LEVEL == 2
@@ -267,9 +267,7 @@ public:
     using pointer   = typename _Mytree::pointer;
     using reference = value_type&;
 
-    _Tree_iterator() {}
-
-    _Tree_iterator(_Nodeptr _Pnode, const _Mytree* _Plist) : _Mybase(_Pnode, _Plist) {}
+    using _Mybase::_Mybase;
 
     _NODISCARD reference operator*() const {
         return const_cast<reference>(_Mybase::operator*());
@@ -384,7 +382,7 @@ struct _Tree_node {
 };
 
 template <class _Ty>
-struct _Tree_simple_types : public _Simple_types<_Ty> {
+struct _Tree_simple_types : _Simple_types<_Ty> {
     using _Node    = _Tree_node<_Ty, void*>;
     using _Nodeptr = _Node*;
 };
@@ -434,14 +432,14 @@ public:
     using _Unchecked_const_iterator = _Tree_unchecked_const_iterator<_Tree_val>;
     using const_iterator            = _Tree_const_iterator<_Tree_val>;
 
-    _Tree_val() : _Myhead(), _Mysize(0) {}
+    _Tree_val() noexcept : _Myhead(), _Mysize(0) {}
 
     enum _Redbl { // colors for link to parent
         _Red,
         _Black
     };
 
-    static _Nodeptr _Max(_Nodeptr _Pnode) { // return rightmost node in subtree at _Pnode
+    static _Nodeptr _Max(_Nodeptr _Pnode) noexcept { // return rightmost node in subtree at _Pnode
         while (!_Pnode->_Right->_Isnil) {
             _Pnode = _Pnode->_Right;
         }
@@ -449,7 +447,7 @@ public:
         return _Pnode;
     }
 
-    static _Nodeptr _Min(_Nodeptr _Pnode) { // return leftmost node in subtree at _Pnode
+    static _Nodeptr _Min(_Nodeptr _Pnode) noexcept { // return leftmost node in subtree at _Pnode
         while (!_Pnode->_Left->_Isnil) {
             _Pnode = _Pnode->_Left;
         }
@@ -457,7 +455,7 @@ public:
         return _Pnode;
     }
 
-    void _Lrotate(_Nodeptr _Wherenode) { // promote right node to root of subtree
+    void _Lrotate(_Nodeptr _Wherenode) noexcept { // promote right node to root of subtree
         _Nodeptr _Pnode    = _Wherenode->_Right;
         _Wherenode->_Right = _Pnode->_Left;
 
@@ -479,7 +477,7 @@ public:
         _Wherenode->_Parent = _Pnode;
     }
 
-    void _Rrotate(_Nodeptr _Wherenode) { // promote left node to root of subtree
+    void _Rrotate(_Nodeptr _Wherenode) noexcept { // promote left node to root of subtree
         _Nodeptr _Pnode   = _Wherenode->_Left;
         _Wherenode->_Left = _Pnode->_Right;
 
@@ -501,7 +499,7 @@ public:
         _Wherenode->_Parent = _Pnode;
     }
 
-    _Nodeptr _Extract(_Unchecked_const_iterator _Where) {
+    _Nodeptr _Extract(_Unchecked_const_iterator _Where) noexcept {
         _Nodeptr _Erasednode = _Where._Ptr; // node to erase
         ++_Where; // save successor iterator for return
 
@@ -712,7 +710,7 @@ public:
         return _Newnode;
     }
 
-    void _Orphan_ptr(const _Nodeptr _Ptr) {
+    void _Orphan_ptr(const _Nodeptr _Ptr) noexcept {
 #if _ITERATOR_DEBUG_LEVEL == 2
         _Lockit _Lock(_LOCK_DEBUG);
         _Iterator_base12** _Pnext = &this->_Myproxy->_Myfirstiter;
@@ -876,67 +874,71 @@ public:
     using reverse_iterator       = _STD reverse_iterator<iterator>;
     using const_reverse_iterator = _STD reverse_iterator<const_iterator>;
 
-    struct _Copy_tag {};
-    struct _Move_tag {};
+    struct _Copy_tag {
+        explicit _Copy_tag() = default;
+    };
 
-    _Tree(const key_compare& _Parg) : _Mypair(_One_then_variadic_args_t(), _Parg, _Zero_then_variadic_args_t()) {
+    struct _Move_tag {
+        explicit _Move_tag() = default;
+    };
+
+    _Tree(const key_compare& _Parg) : _Mypair(_One_then_variadic_args_t{}, _Parg, _Zero_then_variadic_args_t{}) {
         _Alloc_sentinel_and_proxy();
     }
 
     _Tree(const key_compare& _Parg, const allocator_type& _Al)
-        : _Mypair(_One_then_variadic_args_t(), _Parg, _One_then_variadic_args_t(), _Al) {
+        : _Mypair(_One_then_variadic_args_t{}, _Parg, _One_then_variadic_args_t{}, _Al) {
         _Alloc_sentinel_and_proxy();
     }
 
     template <class _Any_alloc>
     _Tree(const _Tree& _Right, _Any_alloc&& _Al)
-        : _Mypair(_One_then_variadic_args_t(), _Right.key_comp(), _One_then_variadic_args_t(),
+        : _Mypair(_One_then_variadic_args_t{}, _Right.key_comp(), _One_then_variadic_args_t{},
             _STD forward<_Any_alloc>(_Al)) {
         auto&& _Alproxy   = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
         const auto _Scary = _Get_scary();
         _Container_proxy_ptr<_Alty> _Proxy(_Alproxy, *_Scary);
         _Tree_head_scoped_ptr<_Alnode, _Scary_val> _Sentinel(_Getal(), *_Scary);
-        _Copy(_Right, _Copy_tag());
+        _Copy(_Right, _Copy_tag{});
         _Sentinel._Release();
         _Proxy._Release();
     }
 
     _Tree(_Tree&& _Right)
         : _Mypair(
-            _One_then_variadic_args_t(), _Right.key_comp(), _One_then_variadic_args_t(), _STD move(_Right._Getal())) {
+            _One_then_variadic_args_t{}, _Right.key_comp(), _One_then_variadic_args_t{}, _STD move(_Right._Getal())) {
         _Alloc_sentinel_and_proxy();
         _Swap_val(_Right);
     }
 
 private:
     void _Different_allocator_move_construct(_Tree&& _Right) {
-        // TRANSITION, VSO#675959 (inline into only caller when that is fixed)
+        // TRANSITION, VSO-761321 (inline into only caller when that is fixed)
         auto&& _Alproxy   = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
         const auto _Scary = _Get_scary();
         _Container_proxy_ptr<_Alty> _Proxy(_Alproxy, *_Scary);
         _Tree_head_scoped_ptr<_Alnode, _Scary_val> _Sentinel(_Getal(), *_Scary);
-        _Copy(_Right, _Move_tag());
+        _Copy(_Right, _Move_tag{});
         _Sentinel._Release();
         _Proxy._Release();
     }
 
 public:
     _Tree(_Tree&& _Right, const allocator_type& _Al)
-        : _Mypair(_One_then_variadic_args_t(), _Right.key_comp(), _One_then_variadic_args_t(), _Al) {
-        if
-            _CONSTEXPR_IF(!_Alnode_traits::is_always_equal::value) {
-                if (_Getal() != _Right._Getal()) {
-                    _Different_allocator_move_construct(_STD move(_Right));
-                    return;
-                }
+        : _Mypair(_One_then_variadic_args_t{}, _Right.key_comp(), _One_then_variadic_args_t{}, _Al) {
+        if _CONSTEXPR_IF (!_Alnode_traits::is_always_equal::value) {
+            if (_Getal() != _Right._Getal()) {
+                _Different_allocator_move_construct(_STD move(_Right));
+                return;
             }
+        }
 
         _Alloc_sentinel_and_proxy();
         _Swap_val(_Right);
     }
 
 private:
-    void _Move_assign(_Tree& _Right, _Equal_allocators) _NOEXCEPT_COND(is_nothrow_move_assignable_v<key_compare>) {
+    void _Move_assign(_Tree& _Right, _Equal_allocators) noexcept(is_nothrow_move_assignable_v<key_compare>) {
         clear();
         _Getcomp() = _Right._Getcomp();
         _Pocma(_Getal(), _Right._Getal());
@@ -971,13 +973,13 @@ private:
         } else {
             clear();
             _Getcomp() = _Right._Getcomp();
-            _Copy(_Right, _Move_tag());
+            _Copy(_Right, _Move_tag{});
         }
     }
 
 public:
-    _Tree& operator=(_Tree&& _Right) _NOEXCEPT_COND(noexcept(_Move_assign(_Right, _Choose_pocma<_Alnode>{}))) {
-        if (this != _STD addressof(_Right)) { // different, move it
+    _Tree& operator=(_Tree&& _Right) noexcept(noexcept(_Move_assign(_Right, _Choose_pocma<_Alnode>{}))) {
+        if (this != _STD addressof(_Right)) {
             _Move_assign(_Right, _Choose_pocma<_Alnode>{});
         }
 
@@ -1060,11 +1062,9 @@ protected:
         {
             _Tree_temp_node<_Alnode> _Newnode(_Getal(), _Scary->_Myhead, _STD forward<_Valtys>(_Vals)...);
             const auto& _Keyval = _Traits::_Kfn(_Newnode._Ptr->_Myval);
-            if
-                _CONSTEXPR_IF(_Multi) { // duplicate check if unique
-                    _Loc = _Find_upper_bound(_Keyval);
-                }
-            else {
+            if _CONSTEXPR_IF (_Multi) { // duplicate check if unique
+                _Loc = _Find_upper_bound(_Keyval);
+            } else {
                 _Loc = _Find_lower_bound(_Keyval);
                 if (_Lower_bound_duplicate(_Loc._Bound, _Keyval)) {
                     return {_Loc._Bound, false};
@@ -1186,13 +1186,13 @@ public:
         return iterator(_Emplace_hint(_Where._Ptr, _STD forward<_Valtys>(_Vals)...), _Scary);
     }
 
-    ~_Tree() noexcept { // destroy tree
+    ~_Tree() noexcept {
         const auto _Scary = _Get_scary();
         _Scary->_Erase_head(_Getal());
 #if _ITERATOR_DEBUG_LEVEL != 0 // TRANSITION, ABI
         auto&& _Alproxy = _GET_PROXY_ALLOCATOR(_Alnode, _Getal());
         _Delete_plain_internal(_Alproxy, _Scary->_Myproxy);
-#endif /* _ITERATOR_DEBUG_LEVEL != 0 */
+#endif // _ITERATOR_DEBUG_LEVEL != 0
     }
 
 private:
@@ -1200,7 +1200,7 @@ private:
         clear();
         _Getcomp() = _Right._Getcomp();
         _Pocca(_Getal(), _Right._Getal());
-        _Copy(_Right, _Copy_tag());
+        _Copy(_Right, _Copy_tag{});
     }
 
     void _Copy_assign(const _Tree& _Right, true_type) {
@@ -1222,13 +1222,13 @@ private:
             _Scary->_Myhead = _Newhead;
             _Proxy._Bind(_Alproxy, _Scary);
             _Getcomp() = _Right._Getcomp();
-            _Copy(_Right, _Copy_tag());
+            _Copy(_Right, _Copy_tag{});
         }
     }
 
 public:
     _Tree& operator=(const _Tree& _Right) {
-        if (this != _STD addressof(_Right)) { // different, assign it
+        if (this != _STD addressof(_Right)) {
             _Copy_assign(_Right, _Choose_pocca<_Alnode>{});
         }
 
@@ -1308,7 +1308,7 @@ public:
     }
 
     _NODISCARD size_type max_size() const noexcept {
-        return _Min_value(
+        return (_STD min)(
             static_cast<size_type>((numeric_limits<difference_type>::max)()), _Alnode_traits::max_size(_Getal()));
     }
 
@@ -1382,7 +1382,7 @@ public:
     }
 
 private:
-    _Nodeptr _Erase_unchecked(_Unchecked_const_iterator _Where) {
+    _Nodeptr _Erase_unchecked(_Unchecked_const_iterator _Where) noexcept {
         const auto _Scary                    = _Get_scary();
         _Unchecked_const_iterator _Successor = _Where;
         ++_Successor; // save successor iterator for return
@@ -1392,7 +1392,7 @@ private:
         return _Successor._Ptr; // return successor nodeptr
     }
 
-    _Nodeptr _Erase_unchecked(_Unchecked_const_iterator _First, _Unchecked_const_iterator _Last) {
+    _Nodeptr _Erase_unchecked(_Unchecked_const_iterator _First, _Unchecked_const_iterator _Last) noexcept {
         const auto _Begin = _Unchecked_begin();
         if (_First == _Begin && _Last._Ptr->_Isnil) {
             // erase all
@@ -1409,8 +1409,8 @@ private:
     }
 
 public:
-    template <class _Iter = iterator, class = enable_if_t<!is_same_v<_Iter, const_iterator>>>
-    iterator erase(iterator _Where) {
+    template <class _Iter = iterator, enable_if_t<!is_same_v<_Iter, const_iterator>, int> = 0>
+    iterator erase(iterator _Where) noexcept /* strengthened */ {
         const auto _Scary = _Get_scary();
 #if _ITERATOR_DEBUG_LEVEL == 2
         _STL_VERIFY(_Where._Getcont() == _Scary, "map/set erase iterator from incorrect container");
@@ -1419,7 +1419,7 @@ public:
         return iterator(_Erase_unchecked(_Where._Unwrapped()), _Scary);
     }
 
-    iterator erase(const_iterator _Where) {
+    iterator erase(const_iterator _Where) noexcept /* strengthened */ {
         const auto _Scary = _Get_scary();
 #if _ITERATOR_DEBUG_LEVEL == 2
         _STL_VERIFY(_Where._Getcont() == _Scary, "map/set erase iterator from incorrect container");
@@ -1428,11 +1428,11 @@ public:
         return iterator(_Erase_unchecked(_Where._Unwrapped()), _Scary);
     }
 
-    iterator erase(const_iterator _First, const_iterator _Last) {
+    iterator erase(const_iterator _First, const_iterator _Last) noexcept /* strengthened */ {
         return iterator(_Erase_unchecked(_First._Unwrapped(), _Last._Unwrapped()), _Get_scary());
     }
 
-    size_type erase(const key_type& _Keyval) {
+    size_type erase(const key_type& _Keyval) noexcept(noexcept(_Eqrange(_Keyval))) /* strengthened */ {
         const auto _Where = _Eqrange(_Keyval);
         const _Unchecked_const_iterator _First(_Where.first, nullptr);
         const _Unchecked_const_iterator _Last(_Where.second, nullptr);
@@ -1494,13 +1494,11 @@ public:
 #endif // _HAS_CXX20
 
     _NODISCARD size_type count(const key_type& _Keyval) const {
-        if
-            _CONSTEXPR_IF(_Multi) {
-                const auto _Ans = _Eqrange(_Keyval);
-                return static_cast<size_type>(_STD distance(
-                    _Unchecked_const_iterator(_Ans.first, nullptr), _Unchecked_const_iterator(_Ans.second, nullptr)));
-            }
-        else {
+        if _CONSTEXPR_IF (_Multi) {
+            const auto _Ans = _Eqrange(_Keyval);
+            return static_cast<size_type>(_STD distance(
+                _Unchecked_const_iterator(_Ans.first, nullptr), _Unchecked_const_iterator(_Ans.second, nullptr)));
+        } else {
             return _Lower_bound_duplicate(_Find_lower_bound(_Keyval)._Bound, _Keyval);
         }
     }
@@ -1574,8 +1572,8 @@ public:
         return {const_iterator(_Result.first, _Scary), const_iterator(_Result.second, _Scary)};
     }
 
-    void swap(_Tree& _Right) _NOEXCEPT_COND(_Is_nothrow_swappable<key_compare>::value) { // strengthened
-        if (this != _STD addressof(_Right)) { // (maybe) swap allocators, swap control information
+    void swap(_Tree& _Right) noexcept(_Is_nothrow_swappable<key_compare>::value) /* strengthened */ {
+        if (this != _STD addressof(_Right)) {
             _Pocs(_Getal(), _Right._Getal());
             _Swap_val(_Right);
         }
@@ -1586,49 +1584,46 @@ protected:
     _Tree_find_hint_result<_Nodeptr> _Find_hint(const _Nodeptr _Hint, const _Keyty& _Keyval) const {
         const auto& _Comp = _Getcomp();
         const auto _Head  = _Get_scary()->_Myhead;
-        if
-            _CONSTEXPR_IF(_Multi) { // insert even if duplicate
-                if (_Hint->_Isnil) {
-                    // insert at end if greater than or equal to last element
-                    if (_Head->_Parent->_Isnil
-                        || !_DEBUG_LT_PRED(_Comp, _Keyval, _Traits::_Kfn(_Head->_Right->_Myval))) {
-                        return {{_Head->_Right, _Tree_child::_Right}, false};
-                    }
-
-                    // _Hint is end(); it must be closer to the end of equivalents
-                    return {_Find_upper_bound(_Keyval)._Location, false};
+        if _CONSTEXPR_IF (_Multi) { // insert even if duplicate
+            if (_Hint->_Isnil) {
+                // insert at end if greater than or equal to last element
+                if (_Head->_Parent->_Isnil || !_DEBUG_LT_PRED(_Comp, _Keyval, _Traits::_Kfn(_Head->_Right->_Myval))) {
+                    return {{_Head->_Right, _Tree_child::_Right}, false};
                 }
 
-                if (_Hint == _Head->_Left) {
-                    // insert at beginning if less than or equal to first element
-                    if (!_DEBUG_LT_PRED(_Comp, _Traits::_Kfn(_Hint->_Myval), _Keyval)) {
-                        return {{_Hint, _Tree_child::_Left}, false};
-                    }
+                // _Hint is end(); it must be closer to the end of equivalents
+                return {_Find_upper_bound(_Keyval)._Location, false};
+            }
 
-                    // _Hint is begin(); it must be closer to the beginning of equivalents
-                    return {_Find_lower_bound(_Keyval)._Location, false};
-                }
-
+            if (_Hint == _Head->_Left) {
+                // insert at beginning if less than or equal to first element
                 if (!_DEBUG_LT_PRED(_Comp, _Traits::_Kfn(_Hint->_Myval), _Keyval)) {
-                    // _Val <= *_Hint
-                    const auto _Prev = (--(_Unchecked_const_iterator(_Hint, nullptr)))._Ptr;
-                    if (!_DEBUG_LT_PRED(_Comp, _Keyval, _Traits::_Kfn(_Prev->_Myval))) {
-                        // _Val <= *_Hint and _Val >= *prev(_Hint); insert here
-                        if (_Prev->_Right->_Isnil) {
-                            return {{_Prev, _Tree_child::_Right}, false};
-                        } else {
-                            return {{_Hint, _Tree_child::_Left}, false};
-                        }
-                    }
-
-                    // _Val goes before *_Hint; _Hint must be closer to the end of equivalents
-                    return {_Find_upper_bound(_Keyval)._Location, false};
+                    return {{_Hint, _Tree_child::_Left}, false};
                 }
 
-                // _Val goes after *_Hint; _Hint must be closer to the beginning of equivalents
+                // _Hint is begin(); it must be closer to the beginning of equivalents
                 return {_Find_lower_bound(_Keyval)._Location, false};
             }
-        else { // insert only if unique
+
+            if (!_DEBUG_LT_PRED(_Comp, _Traits::_Kfn(_Hint->_Myval), _Keyval)) {
+                // _Val <= *_Hint
+                const auto _Prev = (--(_Unchecked_const_iterator(_Hint, nullptr)))._Ptr;
+                if (!_DEBUG_LT_PRED(_Comp, _Keyval, _Traits::_Kfn(_Prev->_Myval))) {
+                    // _Val <= *_Hint and _Val >= *prev(_Hint); insert here
+                    if (_Prev->_Right->_Isnil) {
+                        return {{_Prev, _Tree_child::_Right}, false};
+                    } else {
+                        return {{_Hint, _Tree_child::_Left}, false};
+                    }
+                }
+
+                // _Val goes before *_Hint; _Hint must be closer to the end of equivalents
+                return {_Find_upper_bound(_Keyval)._Location, false};
+            }
+
+            // _Val goes after *_Hint; _Hint must be closer to the beginning of equivalents
+            return {_Find_lower_bound(_Keyval)._Location, false};
+        } else { // insert only if unique
             if (_Hint->_Isnil) { // insert at end if after last element
                 // insert at end if greater than last element
                 if (_Head->_Parent->_Isnil || _DEBUG_LT_PRED(_Comp, _Traits::_Kfn(_Head->_Right->_Myval), _Keyval)) {
@@ -1784,7 +1779,9 @@ protected:
     }
 
     template <class _Other>
-    pair<_Nodeptr, _Nodeptr> _Eqrange(const _Other& _Keyval) const { // find range of nodes equivalent to _Keyval
+    pair<_Nodeptr, _Nodeptr> _Eqrange(const _Other& _Keyval) const
+        noexcept(_Nothrow_compare<key_compare, key_type, _Other>&& _Nothrow_compare<key_compare, _Other, key_type>) {
+        // find range of nodes equivalent to _Keyval
         const auto _Scary = _Get_scary();
         const auto& _Comp = _Getcomp();
         _Nodeptr _Pnode   = _Scary->_Myhead->_Parent;
@@ -2097,8 +2094,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _XTREE_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

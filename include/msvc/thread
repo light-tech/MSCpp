@@ -1,4 +1,8 @@
 // thread standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _THREAD_
 #define _THREAD_
@@ -7,8 +11,8 @@
 #include <chrono>
 #include <memory>
 #include <process.h>
-#include <thr/xthreads.h>
 #include <tuple>
+#include <xthreads.h>
 
 #ifdef _M_CEE_PURE
 #error <thread> is not supported when compiling with /clr:pure.
@@ -28,12 +32,11 @@ public:
 
     using native_handle_type = void*;
 
-    thread() noexcept : _Thr{} { // construct with no thread
-    }
+    thread() noexcept : _Thr{} {}
 
 private:
     template <class _Tuple, size_t... _Indices>
-    static unsigned int __stdcall _Invoke(void* _RawVals) noexcept { // enforces termination
+    static unsigned int __stdcall _Invoke(void* _RawVals) noexcept /* terminates */ {
         // adapt invoke of user's callable object to _beginthreadex's thread procedure
         const unique_ptr<_Tuple> _FnVals(static_cast<_Tuple*>(_RawVals));
         _Tuple& _Tup = *_FnVals;
@@ -43,14 +46,13 @@ private:
     }
 
     template <class _Tuple, size_t... _Indices>
-    _NODISCARD static constexpr auto _Get_invoke(
-        index_sequence<_Indices...>) noexcept { // select specialization of _Invoke to use
+    _NODISCARD static constexpr auto _Get_invoke(index_sequence<_Indices...>) noexcept {
         return &_Invoke<_Tuple, _Indices...>;
     }
 
 public:
-    template <class _Fn, class... _Args, class = enable_if_t<!is_same_v<_Remove_cvref_t<_Fn>, thread>>>
-    explicit thread(_Fn&& _Fx, _Args&&... _Ax) { // construct with _Fx(_Ax...)
+    template <class _Fn, class... _Args, enable_if_t<!is_same_v<_Remove_cvref_t<_Fn>, thread>, int> = 0>
+    explicit thread(_Fn&& _Fx, _Args&&... _Ax) {
         using _Tuple                 = tuple<decay_t<_Fn>, decay_t<_Args>...>;
         auto _Decay_copied           = _STD make_unique<_Tuple>(_STD forward<_Fn>(_Fx), _STD forward<_Args>(_Ax)...);
         constexpr auto _Invoker_proc = _Get_invoke<_Tuple>(make_index_sequence<1 + sizeof...(_Args)>{});
@@ -71,17 +73,15 @@ public:
         }
     }
 
-    ~thread() noexcept { // clean up
+    ~thread() noexcept {
         if (joinable()) {
             _STD terminate();
         }
     }
 
-    thread(thread&& _Other) noexcept : _Thr(_STD exchange(_Other._Thr, {})) { // move from _Other
-    }
+    thread(thread&& _Other) noexcept : _Thr(_STD exchange(_Other._Thr, {})) {}
 
-    thread& operator=(thread&& _Other) noexcept { // move from _Other
-
+    thread& operator=(thread&& _Other) noexcept {
         if (joinable()) {
             _STD terminate();
         }
@@ -93,15 +93,15 @@ public:
     thread(const thread&) = delete;
     thread& operator=(const thread&) = delete;
 
-    void swap(thread& _Other) noexcept { // swap with _Other
+    void swap(thread& _Other) noexcept {
         _STD swap(_Thr, _Other._Thr);
     }
 
-    _NODISCARD bool joinable() const noexcept { // return true if this thread can be joined
+    _NODISCARD bool joinable() const noexcept {
         return _Thr._Id != 0;
     }
 
-    void join() { // join thread
+    void join() {
         if (!joinable()) {
             _Throw_Cpp_error(_INVALID_ARGUMENT);
         }
@@ -117,7 +117,7 @@ public:
         _Thr = {};
     }
 
-    void detach() { // detach thread
+    void detach() {
         if (!joinable()) {
             _Throw_Cpp_error(_INVALID_ARGUMENT);
         }
@@ -128,7 +128,7 @@ public:
 
     _NODISCARD id get_id() const noexcept;
 
-    _NODISCARD static unsigned int hardware_concurrency() noexcept { // return number of hardware thread contexts
+    _NODISCARD static unsigned int hardware_concurrency() noexcept {
         return _Thrd_hardware_concurrency();
     }
 
@@ -143,16 +143,16 @@ private:
 namespace this_thread {
     _NODISCARD thread::id get_id() noexcept;
 
-    inline void yield() noexcept { // give up balance of time slice
+    inline void yield() noexcept {
         _Thrd_yield();
     }
 
-    inline void sleep_until(const xtime* _Abs_time) { // sleep until _Abs_time
+    inline void sleep_until(const xtime* _Abs_time) {
         _Thrd_sleep(_Abs_time);
     }
 
     template <class _Clock, class _Duration>
-    void sleep_until(const chrono::time_point<_Clock, _Duration>& _Abs_time) { // sleep until time point
+    void sleep_until(const chrono::time_point<_Clock, _Duration>& _Abs_time) {
         for (;;) {
             const auto _Now = _Clock::now();
             if (_Abs_time <= _Now) {
@@ -166,19 +166,17 @@ namespace this_thread {
     }
 
     template <class _Rep, class _Period>
-    void sleep_for(const chrono::duration<_Rep, _Period>& _Rel_time) { // sleep for duration
+    void sleep_for(const chrono::duration<_Rep, _Period>& _Rel_time) {
         sleep_until(chrono::steady_clock::now() + _Rel_time);
     }
 } // namespace this_thread
 
 class thread::id { // thread id
 public:
-    id() noexcept : _Id(0) { // id for no thread
-    }
+    id() noexcept : _Id(0) {} // id for no thread
 
 private:
-    id(_Thrd_id_t _Other_id) : _Id(_Other_id) { // construct from unique id
-    }
+    id(_Thrd_id_t _Other_id) : _Id(_Other_id) {}
 
     _Thrd_id_t _Id;
 
@@ -191,59 +189,54 @@ private:
     friend hash<thread::id>;
 };
 
-_NODISCARD inline thread::id thread::get_id() const noexcept { // return id for current thread
+_NODISCARD inline thread::id thread::get_id() const noexcept {
     return _Thr._Id;
 }
 
-_NODISCARD inline thread::id this_thread::get_id() noexcept { // return id for current thread
+_NODISCARD inline thread::id this_thread::get_id() noexcept {
     return _Thrd_id();
 }
 
-inline void swap(thread& _Left, thread& _Right) noexcept { // swap _Left with _Right
+inline void swap(thread& _Left, thread& _Right) noexcept {
     _Left.swap(_Right);
 }
 
-_NODISCARD inline bool operator==(
-    thread::id _Left, thread::id _Right) noexcept { // return true if _Left and _Right identify the same thread
+_NODISCARD inline bool operator==(thread::id _Left, thread::id _Right) noexcept {
     return _Left._Id == _Right._Id;
 }
 
-_NODISCARD inline bool operator!=(
-    thread::id _Left, thread::id _Right) noexcept { // return true if _Left and _Right do not identify the same thread
+_NODISCARD inline bool operator!=(thread::id _Left, thread::id _Right) noexcept {
     return !(_Left == _Right);
 }
 
-_NODISCARD inline bool operator<(thread::id _Left, thread::id _Right) noexcept { // return true if _Left precedes _Right
+_NODISCARD inline bool operator<(thread::id _Left, thread::id _Right) noexcept {
     return _Left._Id < _Right._Id;
 }
 
-_NODISCARD inline bool operator<=(
-    thread::id _Left, thread::id _Right) noexcept { // return true if _Left precedes or equals _Right
+_NODISCARD inline bool operator<=(thread::id _Left, thread::id _Right) noexcept {
     return !(_Right < _Left);
 }
 
-_NODISCARD inline bool operator>(thread::id _Left, thread::id _Right) noexcept { // return true if _Left follows _Right
+_NODISCARD inline bool operator>(thread::id _Left, thread::id _Right) noexcept {
     return _Right < _Left;
 }
 
-_NODISCARD inline bool operator>=(
-    thread::id _Left, thread::id _Right) noexcept { // return true if _Left follows or equals _Right
+_NODISCARD inline bool operator>=(thread::id _Left, thread::id _Right) noexcept {
     return !(_Left < _Right);
 }
 
 template <class _Ch, class _Tr>
-basic_ostream<_Ch, _Tr>& operator<<(basic_ostream<_Ch, _Tr>& _Str, thread::id _Id) { // insert id into stream
+basic_ostream<_Ch, _Tr>& operator<<(basic_ostream<_Ch, _Tr>& _Str, thread::id _Id) {
     return _Str << _Id._Id;
 }
 
 // STRUCT TEMPLATE SPECIALIZATION hash
 template <>
-struct hash<thread::id> { // hash functor for thread::id
-    _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef thread::id argument_type;
-    _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef size_t result_type;
+struct hash<thread::id> {
+    _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef thread::id _ARGUMENT_TYPE_NAME;
+    _CXX17_DEPRECATE_ADAPTOR_TYPEDEFS typedef size_t _RESULT_TYPE_NAME;
 
-    _NODISCARD size_t operator()(const thread::id _Keyval) const
-        noexcept { // hash _Keyval to size_t value by pseudorandomizing transform
+    _NODISCARD size_t operator()(const thread::id _Keyval) const noexcept {
         return _Hash_representation(_Keyval._Id);
     }
 };
@@ -255,8 +248,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _THREAD_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

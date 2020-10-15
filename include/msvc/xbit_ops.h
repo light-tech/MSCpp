@@ -1,5 +1,8 @@
 // xbit_ops.h internal header
-// Copyright (c) Microsoft Corporation. All rights reserved.
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _XBIT_OPS_H
 #define _XBIT_OPS_H

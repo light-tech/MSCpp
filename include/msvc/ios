@@ -1,4 +1,8 @@
 // ios standard header
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 #ifndef _IOS_
 #define _IOS_
@@ -27,7 +31,7 @@ public:
     using pos_type    = typename _Traits::pos_type;
     using off_type    = typename _Traits::off_type;
 
-    explicit __CLR_OR_THIS_CALL basic_ios(_Mysb* _Strbuf) { // construct from stream buffer pointer
+    explicit __CLR_OR_THIS_CALL basic_ios(_Mysb* _Strbuf) {
         init(_Strbuf);
     }
 
@@ -62,7 +66,7 @@ public:
         return *this;
     }
 
-    _Myos* __CLR_OR_THIS_CALL tie() const { // return tie pointer
+    _Myos* __CLR_OR_THIS_CALL tie() const {
         return _Tiestr;
     }
 
@@ -72,7 +76,7 @@ public:
         return _Oldtie;
     }
 
-    _NODISCARD _Mysb* __CLR_OR_THIS_CALL rdbuf() const { // return stream buffer pointer
+    _NODISCARD _Mysb* __CLR_OR_THIS_CALL rdbuf() const {
         return _Mystrbuf;
     }
 
@@ -93,7 +97,7 @@ public:
         return _Oldlocale;
     }
 
-    _Elem __CLR_OR_THIS_CALL fill() const { // return fill character
+    _Elem __CLR_OR_THIS_CALL fill() const {
         return _Fillch;
     }
 
@@ -111,16 +115,16 @@ public:
         return _STD use_facet<_Ctype>(getloc()).widen(_Byte);
     }
 
-    void __CLR_OR_THIS_CALL move(basic_ios& _Right) { // assign by moving _Right
-        if (this != _STD addressof(_Right)) { // different, do the move
+    void __CLR_OR_THIS_CALL move(basic_ios& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Mystrbuf = nullptr;
             _Tiestr   = nullptr;
             this->swap(_Right);
         }
     }
 
-    void __CLR_OR_THIS_CALL move(basic_ios&& _Right) { // assign by moving _Right
-        if (this != _STD addressof(_Right)) { // different, do the move
+    void __CLR_OR_THIS_CALL move(basic_ios&& _Right) {
+        if (this != _STD addressof(_Right)) {
             _Mystrbuf = nullptr;
             _Tiestr   = nullptr;
             this->swap(_Right);
@@ -313,8 +317,3 @@ _STL_RESTORE_CLANG_WARNINGS
 #pragma pack(pop)
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _IOS_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */

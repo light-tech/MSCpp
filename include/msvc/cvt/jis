@@ -1,4 +1,8 @@
 // jis -- one- or two-byte/wide-character tables
+
+// Copyright (c) Microsoft Corporation.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 
 #ifndef _CVT_JIS_
@@ -62,7 +66,7 @@
 //    [v0.9, 8 March 1994]
 //    First release.
 //
-//  Use the Unicode reporting form <http://www.unicode.org/reporting.html>
+//  Use the Unicode reporting form <https://www.unicode.org/reporting.html>
 //    for any questions or comments or to report errors in the data.
 //
 #include <cvt/xtwo_byte>
@@ -2256,8 +2260,3 @@ _STL_RESTORE_CLANG_WARNINGS
 
 #endif // _STL_COMPILER_PREPROCESSOR
 #endif // _CVT_JIS_
-
-/*
- * Copyright (c) by P.J. Plauger. All rights reserved.
- * Consult your license regarding permissions and restrictions.
-V6.50:0009 */
